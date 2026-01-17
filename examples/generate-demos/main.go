@@ -89,6 +89,8 @@ func recordDemo(path string, root runtime.Widget) error {
 				app.ExecuteCommand(runtime.Quit{})
 				return false
 			}
+			// Forward tick to widgets so animations work
+			runtime.DefaultUpdate(app, msg)
 			return true
 		}
 		return runtime.DefaultUpdate(app, msg)
