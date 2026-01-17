@@ -5,9 +5,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/odvcencio/furry-ui/backend"
-	"github.com/odvcencio/furry-ui/backend/tcell"
-	"github.com/odvcencio/furry-ui/terminal"
+	"github.com/odvcencio/fluffy-ui/backend"
+	"github.com/odvcencio/fluffy-ui/backend/tcell"
+	"github.com/odvcencio/fluffy-ui/terminal"
 	tcellv2 "github.com/gdamore/tcell/v2"
 )
 

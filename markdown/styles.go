@@ -3,8 +3,8 @@
 package markdown
 
 import (
-	"github.com/odvcencio/furry-ui/compositor"
-	"github.com/odvcencio/furry-ui/theme"
+	"github.com/odvcencio/fluffy-ui/compositor"
+	"github.com/odvcencio/fluffy-ui/theme"
 )
 
 // StyledSpan represents a span of text with consistent styling.

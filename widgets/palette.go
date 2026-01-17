@@ -1,11 +1,12 @@
 package widgets
 
 import (
+	"sort"
 	"strings"
 
-	"github.com/odvcencio/furry-ui/backend"
-	"github.com/odvcencio/furry-ui/runtime"
-	"github.com/odvcencio/furry-ui/terminal"
+	"github.com/odvcencio/fluffy-ui/backend"
+	"github.com/odvcencio/fluffy-ui/runtime"
+	"github.com/odvcencio/fluffy-ui/terminal"
 )
 
 // PaletteItem represents a single item in the palette.
@@ -30,6 +31,7 @@ type PaletteWidget struct {
 	// Callbacks
 	onSelect func(item PaletteItem)
 	filterFn func(item PaletteItem, query string) bool
+	scoreFn  func(item PaletteItem, query string) int
 
 	// Configuration
 	title       string
@@ -65,6 +67,7 @@ func NewPaletteWidget(title string) *PaletteWidget {
 		shortcutStyle: backend.DefaultStyle().Foreground(backend.ColorDefault),
 	}
 	p.filterFn = p.defaultFilter
+	p.scoreFn = p.defaultScore
 	return p
 }
 
@@ -82,6 +85,11 @@ func (p *PaletteWidget) SetOnSelect(fn func(item PaletteItem)) {
 // SetFilterFn sets a custom filter function.
 func (p *PaletteWidget) SetFilterFn(fn func(item PaletteItem, query string) bool) {
 	p.filterFn = fn
+}
+
+// SetScoreFn sets a custom scoring function.
+func (p *PaletteWidget) SetScoreFn(fn func(item PaletteItem, query string) int) {
+	p.scoreFn = fn
 }
 
 // SetPlaceholder sets the query placeholder text.
@@ -123,11 +131,33 @@ func (p *PaletteWidget) updateFiltered() {
 	if p.query == "" {
 		p.filtered = p.items
 	} else {
-		p.filtered = nil
-		for _, item := range p.items {
-			if p.filterFn(item, p.query) {
-				p.filtered = append(p.filtered, item)
+		type scoredItem struct {
+			item  PaletteItem
+			score int
+			index int
+		}
+		scored := make([]scoredItem, 0, len(p.items))
+		for i, item := range p.items {
+			if p.filterFn != nil && !p.filterFn(item, p.query) {
+				continue
 			}
+			score := 0
+			if p.scoreFn != nil {
+				score = p.scoreFn(item, p.query)
+			}
+			scored = append(scored, scoredItem{item: item, score: score, index: i})
+		}
+		if p.scoreFn != nil {
+			sort.Slice(scored, func(i, j int) bool {
+				if scored[i].score == scored[j].score {
+					return scored[i].index < scored[j].index
+				}
+				return scored[i].score > scored[j].score
+			})
+		}
+		p.filtered = make([]PaletteItem, 0, len(scored))
+		for _, item := range scored {
+			p.filtered = append(p.filtered, item.item)
 		}
 	}
 
@@ -145,7 +175,77 @@ func (p *PaletteWidget) defaultFilter(item PaletteItem, query string) bool {
 	queryLower := strings.ToLower(query)
 	return strings.Contains(strings.ToLower(item.Label), queryLower) ||
 		strings.Contains(strings.ToLower(item.Description), queryLower) ||
-		strings.Contains(strings.ToLower(item.Category), queryLower)
+		strings.Contains(strings.ToLower(item.Category), queryLower) ||
+		strings.Contains(strings.ToLower(item.ID), queryLower) ||
+		p.defaultScore(item, query) > 0
+}
+
+func (p *PaletteWidget) defaultScore(item PaletteItem, query string) int {
+	best := 0
+	fields := []string{item.Label, item.Description, item.Category, item.ID}
+	for _, field := range fields {
+		if field == "" {
+			continue
+		}
+		score, ok := fuzzyScore(query, field)
+		if ok && score > best {
+			best = score
+		}
+	}
+	return best
+}
+
+func fuzzyScore(query, target string) (int, bool) {
+	q := []rune(strings.ToLower(query))
+	t := []rune(strings.ToLower(target))
+	if len(q) == 0 {
+		return 0, true
+	}
+	score := 0
+	lastMatch := -1
+	ti := 0
+	for _, qc := range q {
+		found := false
+		for ti < len(t) {
+			if t[ti] == qc {
+				found = true
+				break
+			}
+			ti++
+		}
+		if !found {
+			return 0, false
+		}
+		if lastMatch >= 0 {
+			gap := ti - lastMatch - 1
+			if gap == 0 {
+				score += 12
+			} else {
+				score += 8 - gap
+			}
+		} else {
+			score += 8
+		}
+		if ti == 0 || isWordBoundary(t[ti-1]) {
+			score += 4
+		}
+		lastMatch = ti
+		ti++
+	}
+	score -= len(t) / 4
+	if score < 1 {
+		score = 1
+	}
+	return score, true
+}
+
+func isWordBoundary(r rune) bool {
+	switch r {
+	case ' ', '-', '_', '/', '.', ':':
+		return true
+	default:
+		return false
+	}
 }
 
 // Measure returns the preferred size.

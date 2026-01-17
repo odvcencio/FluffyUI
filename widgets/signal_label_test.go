@@ -3,7 +3,7 @@ package widgets
 import (
 	"testing"
 
-	"github.com/odvcencio/furry-ui/state"
+	"github.com/odvcencio/fluffy-ui/state"
 )
 
 func TestSignalLabel_LifecycleQueue(t *testing.T) {

@@ -3,8 +3,8 @@ package widgets
 import (
 	"strings"
 
-	"github.com/odvcencio/furry-ui/backend"
-	"github.com/odvcencio/furry-ui/runtime"
+	"github.com/odvcencio/fluffy-ui/backend"
+	"github.com/odvcencio/fluffy-ui/runtime"
 )
 
 // Text is a simple text display widget.

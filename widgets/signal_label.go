@@ -1,9 +1,9 @@
 package widgets
 
 import (
-	"github.com/odvcencio/furry-ui/backend"
-	"github.com/odvcencio/furry-ui/runtime"
-	"github.com/odvcencio/furry-ui/state"
+	"github.com/odvcencio/fluffy-ui/backend"
+	"github.com/odvcencio/fluffy-ui/runtime"
+	"github.com/odvcencio/fluffy-ui/state"
 )
 
 // SignalLabel is a tiny label bound to a signal.

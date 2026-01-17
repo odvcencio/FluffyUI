@@ -3,7 +3,7 @@ package runtime
 import (
 	"testing"
 
-	"github.com/odvcencio/furry-ui/state"
+	"github.com/odvcencio/fluffy-ui/state"
 )
 
 func TestQueueScheduler_PostsFlush(t *testing.T) {

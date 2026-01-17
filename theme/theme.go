@@ -3,7 +3,7 @@
 package theme
 
 import (
-	"github.com/odvcencio/furry-ui/compositor"
+	"github.com/odvcencio/fluffy-ui/compositor"
 )
 
 // Theme defines the complete visual language for the TUI.

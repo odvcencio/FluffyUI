@@ -1,4 +1,4 @@
-module github.com/odvcencio/furry-ui
+module github.com/odvcencio/fluffy-ui
 
 go 1.25.1
 

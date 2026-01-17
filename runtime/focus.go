@@ -3,13 +3,22 @@ package runtime
 // FocusScope manages focus within a layer/context.
 // Each modal layer has its own FocusScope, so overlays trap focus.
 type FocusScope struct {
-	widgets []Focusable
-	current int // Index of focused widget, -1 if none
+	widgets  []Focusable
+	current  int // Index of focused widget, -1 if none
+	onChange func(prev Focusable, next Focusable)
 }
 
 // NewFocusScope creates a new empty focus scope.
 func NewFocusScope() *FocusScope {
 	return &FocusScope{current: -1}
+}
+
+// SetOnChange registers a focus change callback.
+func (f *FocusScope) SetOnChange(fn func(prev Focusable, next Focusable)) {
+	if f == nil {
+		return
+	}
+	f.onChange = fn
 }
 
 // Register adds a focusable widget to the scope.
@@ -142,9 +151,24 @@ func (f *FocusScope) FocusPrev() bool {
 
 // ClearFocus removes focus from the current widget.
 func (f *FocusScope) ClearFocus() {
+	var prev Focusable
 	if f.current >= 0 && f.current < len(f.widgets) {
-		f.widgets[f.current].Blur()
+		prev = f.widgets[f.current]
+		prev.Blur()
 	}
+	f.current = -1
+	if f.onChange != nil {
+		f.onChange(prev, nil)
+	}
+}
+
+// Reset clears focus and forgets all registered widgets.
+func (f *FocusScope) Reset() {
+	if f == nil {
+		return
+	}
+	f.ClearFocus()
+	f.widgets = nil
 	f.current = -1
 }
 
@@ -160,14 +184,21 @@ func (f *FocusScope) focusIndex(i int) bool {
 	}
 
 	// Blur current
+	var prev Focusable
 	if f.current >= 0 && f.current < len(f.widgets) {
-		f.widgets[f.current].Blur()
+		prev = f.widgets[f.current]
+		prev.Blur()
 	}
 
 	// Focus new
 	f.current = i
+	var next Focusable
 	if i >= 0 && i < len(f.widgets) {
-		f.widgets[i].Focus()
+		next = f.widgets[i]
+		next.Focus()
+	}
+	if f.onChange != nil {
+		f.onChange(prev, next)
 	}
 	return true
 }

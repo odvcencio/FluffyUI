@@ -3,9 +3,9 @@ package widgets
 import (
 	"testing"
 
-	"github.com/odvcencio/furry-ui/backend"
-	"github.com/odvcencio/furry-ui/runtime"
-	"github.com/odvcencio/furry-ui/terminal"
+	"github.com/odvcencio/fluffy-ui/backend"
+	"github.com/odvcencio/fluffy-ui/runtime"
+	"github.com/odvcencio/fluffy-ui/terminal"
 )
 
 func TestText_Measure(t *testing.T) {

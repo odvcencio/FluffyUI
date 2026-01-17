@@ -1,9 +1,9 @@
 package widgets
 
 import (
-	"github.com/odvcencio/furry-ui/backend"
-	"github.com/odvcencio/furry-ui/runtime"
-	"github.com/odvcencio/furry-ui/terminal"
+	"github.com/odvcencio/fluffy-ui/backend"
+	"github.com/odvcencio/fluffy-ui/runtime"
+	"github.com/odvcencio/fluffy-ui/terminal"
 )
 
 // SectionItem represents a single item in a collapsible section.

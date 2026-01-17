@@ -3,7 +3,7 @@
 // simulation backends (testing), enabling golden-frame tests.
 package backend
 
-import "github.com/odvcencio/furry-ui/terminal"
+import "github.com/odvcencio/fluffy-ui/terminal"
 
 // Backend is the terminal abstraction layer.
 // Implementations handle terminal I/O, input events, and screen rendering.

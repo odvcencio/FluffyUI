@@ -1,8 +1,8 @@
 package style
 
 import (
-	"github.com/odvcencio/furry-ui/backend"
-	"github.com/odvcencio/furry-ui/compositor"
+	"github.com/odvcencio/fluffy-ui/backend"
+	"github.com/odvcencio/fluffy-ui/compositor"
 )
 
 // ToBackend converts a compositor.Style to backend.Style.
@@ -50,4 +50,41 @@ func ToBackend(cs compositor.Style) backend.Style {
 	}
 
 	return style
+}
+
+// ToCompositor converts a backend.Style to compositor.Style.
+func ToCompositor(bs backend.Style) compositor.Style {
+	fg, bg, attrs := bs.Decompose()
+	style := compositor.DefaultStyle()
+	style.FG = colorToCompositor(fg)
+	style.BG = colorToCompositor(bg)
+	style.Bold = attrs&backend.AttrBold != 0
+	style.Italic = attrs&backend.AttrItalic != 0
+	style.Dim = attrs&backend.AttrDim != 0
+	style.Underline = attrs&backend.AttrUnderline != 0
+	style.Blink = attrs&backend.AttrBlink != 0
+	style.Reverse = attrs&backend.AttrReverse != 0
+	style.Strikethrough = attrs&backend.AttrStrikeThrough != 0
+	return style
+}
+
+func colorToCompositor(c backend.Color) compositor.Color {
+	if c == backend.ColorDefault || int32(c) < 0 {
+		return compositor.ColorDefault
+	}
+	if c.IsRGB() {
+		r, g, b := c.RGB()
+		return compositor.RGB(r, g, b)
+	}
+	value := int(c)
+	if value < 0 {
+		return compositor.ColorDefault
+	}
+	if value <= 15 {
+		return compositor.Color{Mode: compositor.ColorMode16, Value: uint32(value)}
+	}
+	if value <= 255 {
+		return compositor.Color256(uint8(value))
+	}
+	return compositor.ColorDefault
 }

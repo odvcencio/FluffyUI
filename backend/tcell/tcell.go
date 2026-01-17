@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/odvcencio/furry-ui/backend"
-	"github.com/odvcencio/furry-ui/terminal"
+	"github.com/odvcencio/fluffy-ui/backend"
+	"github.com/odvcencio/fluffy-ui/terminal"
 )
 
 // Backend implements backend.Backend using tcell.
@@ -266,6 +266,10 @@ func convertKey(k tcell.Key) terminal.Key {
 		return terminal.KeyCtrlF
 	case tcell.KeyCtrlP:
 		return terminal.KeyCtrlP
+	case tcell.KeyCtrlV:
+		return terminal.KeyCtrlV
+	case tcell.KeyCtrlX:
+		return terminal.KeyCtrlX
 	case tcell.KeyCtrlZ:
 		return terminal.KeyCtrlZ
 	case tcell.KeyF1:

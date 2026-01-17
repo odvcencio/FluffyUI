@@ -9,7 +9,7 @@ package runtime
 // compositor.Screen exists as an alternative for pure-ANSI output but
 // is not used in the tcell backend path.
 
-import "github.com/odvcencio/furry-ui/backend"
+import "github.com/odvcencio/fluffy-ui/backend"
 
 // Cell represents a single character cell in the buffer.
 type Cell struct {
@@ -26,18 +26,26 @@ type Buffer struct {
 	height int
 
 	// Dirty tracking - tracks which cells have changed
-	dirty      []bool // Parallel to cells, true if cell changed
-	dirtyCount int    // Number of dirty cells (fast check)
-	dirtyRect  Rect   // Bounding box of dirty region
+	dirty            []bool // Parallel to cells, true if cell changed
+	dirtyCount       int    // Number of dirty cells (fast check)
+	dirtyRect        Rect   // Bounding box of dirty region
+	dirtyIndices     []int  // Sparse dirty list for fast iteration
+	dirtyListCap     int    // Max indices to collect before disabling list
+	dirtyListEnabled bool
 }
 
 // NewBuffer creates a buffer with the given dimensions.
 func NewBuffer(w, h int) *Buffer {
+	total := w * h
+	dirtyListCap := calcDirtyListCap(total)
 	return &Buffer{
-		cells:  make([]Cell, w*h),
-		dirty:  make([]bool, w*h),
-		width:  w,
-		height: h,
+		cells:            make([]Cell, total),
+		dirty:            make([]bool, total),
+		width:            w,
+		height:           h,
+		dirtyIndices:     make([]int, 0, min(total, dirtyListCap)),
+		dirtyListCap:     dirtyListCap,
+		dirtyListEnabled: true,
 	}
 }
 
@@ -54,15 +62,21 @@ func (b *Buffer) Resize(w, h int) {
 	newCells := make([]Cell, w*h)
 	newDirty := make([]bool, w*h)
 	// Copy existing content
-	for y := 0; y < min(h, b.height); y++ {
-		for x := 0; x < min(w, b.width); x++ {
-			newCells[y*w+x] = b.cells[y*b.width+x]
-		}
+	minW := min(w, b.width)
+	minH := min(h, b.height)
+	for y := 0; y < minH; y++ {
+		copy(newCells[y*w:y*w+minW], b.cells[y*b.width:y*b.width+minW])
 	}
 	b.cells = newCells
 	b.dirty = newDirty
 	b.width = w
 	b.height = h
+	b.dirtyListCap = calcDirtyListCap(w * h)
+	b.dirtyListEnabled = true
+	b.dirtyIndices = b.dirtyIndices[:0]
+	if cap(b.dirtyIndices) < min(w*h, b.dirtyListCap) {
+		b.dirtyIndices = make([]int, 0, min(w*h, b.dirtyListCap))
+	}
 	// Mark entire buffer dirty on resize
 	b.MarkAllDirty()
 }
@@ -107,6 +121,48 @@ func (b *Buffer) SetString(x, y int, s string, style backend.Style) {
 	if y < 0 || y >= b.height {
 		return
 	}
+	if x >= b.width {
+		return
+	}
+	if x >= 0 {
+		px := x
+		i := 0
+		for i < len(s) && px < b.width {
+			ch := s[i]
+			if ch >= 0x80 {
+				break
+			}
+			idx := y*b.width + px
+			old := b.cells[idx]
+			r := rune(ch)
+			if old.Rune != r || old.Style != style {
+				b.cells[idx] = Cell{Rune: r, Style: style}
+				b.markCellDirty(px, y, idx)
+			}
+			i++
+			px++
+		}
+		if i >= len(s) {
+			return
+		}
+		offset := x + i
+		for j, r := range s[i:] {
+			px := offset + j
+			if px < 0 {
+				continue
+			}
+			if px >= b.width {
+				break
+			}
+			idx := y*b.width + px
+			old := b.cells[idx]
+			if old.Rune != r || old.Style != style {
+				b.cells[idx] = Cell{Rune: r, Style: style}
+				b.markCellDirty(px, y, idx)
+			}
+		}
+		return
+	}
 	for i, r := range s {
 		px := x + i
 		if px < 0 {
@@ -135,12 +191,13 @@ func (b *Buffer) Fill(r Rect, ch rune, s backend.Style) {
 
 	cell := Cell{Rune: ch, Style: s}
 	for y := y0; y < y1; y++ {
+		idx := y*b.width + x0
 		for x := x0; x < x1; x++ {
-			idx := y*b.width + x
 			if b.cells[idx] != cell {
 				b.cells[idx] = cell
 				b.markCellDirty(x, y, idx)
 			}
+			idx++
 		}
 	}
 }
@@ -284,6 +341,14 @@ func (b *Buffer) markCellDirty(x, y, idx int) {
 				b.dirtyRect.Height = y - b.dirtyRect.Y + 1
 			}
 		}
+		if b.dirtyListEnabled {
+			if b.dirtyCount <= b.dirtyListCap {
+				b.dirtyIndices = append(b.dirtyIndices, idx)
+			} else {
+				b.dirtyListEnabled = false
+				b.dirtyIndices = b.dirtyIndices[:0]
+			}
+		}
 	}
 }
 
@@ -295,6 +360,8 @@ func (b *Buffer) MarkAllDirty() {
 	}
 	b.dirtyCount = len(b.dirty)
 	b.dirtyRect = Rect{X: 0, Y: 0, Width: b.width, Height: b.height}
+	b.dirtyListEnabled = false
+	b.dirtyIndices = b.dirtyIndices[:0]
 }
 
 // ClearDirty resets all dirty flags.
@@ -303,6 +370,8 @@ func (b *Buffer) ClearDirty() {
 	clear(b.dirty)
 	b.dirtyCount = 0
 	b.dirtyRect = Rect{}
+	b.dirtyListEnabled = true
+	b.dirtyIndices = b.dirtyIndices[:0]
 }
 
 // IsDirty returns true if any cells have changed.
@@ -347,13 +416,43 @@ func (b *Buffer) ForEachDirtyCell(fn func(x, y int, cell Cell)) {
 		}
 		return
 	}
+	if b.dirtyListEnabled && len(b.dirtyIndices) == b.dirtyCount {
+		rectArea := b.dirtyRect.Width * b.dirtyRect.Height
+		if rectArea > b.dirtyCount*2 {
+			for _, idx := range b.dirtyIndices {
+				y := idx / b.width
+				x := idx - y*b.width
+				fn(x, y, b.cells[idx])
+			}
+			return
+		}
+	}
 	// Otherwise, iterate only within dirty rect
 	for y := b.dirtyRect.Y; y < b.dirtyRect.Y+b.dirtyRect.Height && y < b.height; y++ {
-		for x := b.dirtyRect.X; x < b.dirtyRect.X+b.dirtyRect.Width && x < b.width; x++ {
-			idx := y*b.width + x
+		start := y*b.width + b.dirtyRect.X
+		end := y*b.width + min(b.width, b.dirtyRect.X+b.dirtyRect.Width)
+		for idx := start; idx < end; idx++ {
 			if b.dirty[idx] {
+				x := idx - y*b.width
 				fn(x, y, b.cells[idx])
 			}
 		}
 	}
+}
+
+func calcDirtyListCap(total int) int {
+	if total <= 0 {
+		return 0
+	}
+	capacity := total / 4
+	if capacity < 256 {
+		capacity = 256
+	}
+	if capacity > 8192 {
+		capacity = 8192
+	}
+	if capacity > total {
+		capacity = total
+	}
+	return capacity
 }

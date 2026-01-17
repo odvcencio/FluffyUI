@@ -5,9 +5,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/odvcencio/furry-ui/backend"
-	"github.com/odvcencio/furry-ui/runtime"
-	"github.com/odvcencio/furry-ui/toast"
+	"github.com/odvcencio/fluffy-ui/backend"
+	"github.com/odvcencio/fluffy-ui/runtime"
+	"github.com/odvcencio/fluffy-ui/toast"
 )
 
 const (
@@ -327,11 +327,4 @@ func maxLineLen(lines []string) int {
 		}
 	}
 	return max
-}
-
-func minInt(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }

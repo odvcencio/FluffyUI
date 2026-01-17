@@ -2,8 +2,8 @@
 package widgets
 
 import (
-	"github.com/odvcencio/furry-ui/backend"
-	"github.com/odvcencio/furry-ui/runtime"
+	"github.com/odvcencio/fluffy-ui/backend"
+	"github.com/odvcencio/fluffy-ui/runtime"
 )
 
 // Base provides common functionality for widgets.
@@ -135,6 +135,23 @@ func padRight(s string, width int) string {
 		result[i] = ' '
 	}
 	return string(result)
+}
+
+func writePadded(buf *runtime.Buffer, x, y, width int, text string, style backend.Style) {
+	if buf == nil || width <= 0 {
+		return
+	}
+	if x < 0 {
+		buf.SetString(x, y, padRight(text, width), style)
+		return
+	}
+	if len(text) > width {
+		text = text[:width]
+	}
+	buf.SetString(x, y, text, style)
+	if pad := width - len(text); pad > 0 {
+		buf.Fill(runtime.Rect{X: x + len(text), Y: y, Width: pad, Height: 1}, ' ', style)
+	}
 }
 
 // centerString centers a string within the given width.

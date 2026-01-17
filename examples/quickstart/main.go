@@ -7,11 +7,15 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/odvcencio/furry-ui/backend"
-	backendtcell "github.com/odvcencio/furry-ui/backend/tcell"
-	"github.com/odvcencio/furry-ui/runtime"
-	"github.com/odvcencio/furry-ui/state"
-	"github.com/odvcencio/furry-ui/widgets"
+	"github.com/odvcencio/fluffy-ui/accessibility"
+	"github.com/odvcencio/fluffy-ui/backend"
+	backendtcell "github.com/odvcencio/fluffy-ui/backend/tcell"
+	"github.com/odvcencio/fluffy-ui/clipboard"
+	"github.com/odvcencio/fluffy-ui/keybind"
+	"github.com/odvcencio/fluffy-ui/recording"
+	"github.com/odvcencio/fluffy-ui/runtime"
+	"github.com/odvcencio/fluffy-ui/state"
+	"github.com/odvcencio/fluffy-ui/widgets"
 )
 
 func main() {
@@ -21,9 +25,42 @@ func main() {
 		os.Exit(1)
 	}
 
+	registry := keybind.NewRegistry()
+	keybind.RegisterStandardCommands(registry)
+	keybind.RegisterScrollCommands(registry)
+	keybind.RegisterClipboardCommands(registry)
+
+	keymap := keybind.DefaultKeymap()
+	stack := &keybind.KeymapStack{}
+	stack.Push(keymap)
+	router := keybind.NewKeyRouter(registry, nil, stack)
+	keyHandler := &keybind.RuntimeHandler{Router: router}
+
+	recordPath := os.Getenv("FLUFFYUI_RECORD")
+	exportPath := os.Getenv("FLUFFYUI_RECORD_EXPORT")
+	var recorder runtime.Recorder
+	if recordPath != "" {
+		rec, err := recording.NewAsciicastRecorder(recordPath, recording.AsciicastOptions{
+			Title: "FluffyUI Quickstart",
+		})
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "recording init failed: %v\n", err)
+			os.Exit(1)
+		}
+		recorder = rec
+	}
+
 	app := runtime.NewApp(runtime.AppConfig{
-		Backend:  be,
-		TickRate: time.Second / 30,
+		Backend:    be,
+		TickRate:   time.Second / 30,
+		KeyHandler: keyHandler,
+		Announcer:  &accessibility.SimpleAnnouncer{},
+		Clipboard:  &clipboard.MemoryClipboard{},
+		FocusStyle: &accessibility.FocusStyle{
+			Indicator: "▶ ",
+			Style:     backend.DefaultStyle().Bold(true),
+		},
+		Recorder: recorder,
 	})
 
 	count := state.NewSignal(0)
@@ -32,7 +69,7 @@ func main() {
 	mode := state.NewSignal("manual")
 	mode.SetEqualFunc(state.EqualComparable[string])
 
-	root := NewCounterView(count, mode)
+	root := NewCounterView(count, mode, recordPath, exportPath)
 	app.SetRoot(root)
 
 	app.Every(400*time.Millisecond, func(now time.Time) runtime.Message {
@@ -46,6 +83,17 @@ func main() {
 		fmt.Fprintf(os.Stderr, "app run failed: %v\n", err)
 		os.Exit(1)
 	}
+	if recordPath != "" && exportPath != "" {
+		if err := recording.ExportVideo(recordPath, exportPath, recording.VideoOptions{
+			Agg: recording.AggOptions{
+				Theme:    "monokai",
+				FontSize: 16,
+				FPS:      30,
+			},
+		}); err != nil {
+			fmt.Fprintf(os.Stderr, "recording export failed: %v\n", err)
+		}
+	}
 }
 
 type CounterView struct {
@@ -54,15 +102,19 @@ type CounterView struct {
 	mode         *state.Signal[string]
 	countValue   int
 	modeValue    string
+	recordPath   string
+	exportPath   string
 	spinnerIndex int
 	spinner      []rune
 }
 
-func NewCounterView(count *state.Signal[int], mode *state.Signal[string]) *CounterView {
+func NewCounterView(count *state.Signal[int], mode *state.Signal[string], recordPath string, exportPath string) *CounterView {
 	view := &CounterView{
-		count:   count,
-		mode:    mode,
-		spinner: []rune{'|', '/', '-', '\\'},
+		count:      count,
+		mode:       mode,
+		recordPath: recordPath,
+		exportPath: exportPath,
+		spinner:    []rune{'|', '/', '-', '\\'},
 	}
 	view.refresh()
 	return view
@@ -98,12 +150,18 @@ func (c *CounterView) Render(ctx runtime.RenderContext) {
 
 	frame := c.spinner[c.spinnerIndex%len(c.spinner)]
 	lines := []string{
-		"[" + string(frame) + "] FurryUI Quickstart",
+		"[" + string(frame) + "] FluffyUI Quickstart",
 		"",
 		"Count: " + strconv.Itoa(c.countValue),
 		"Mode: " + c.modeValue,
 		"",
-		"Keys: +/- to change, m to toggle auto, q to quit",
+		"Keys: +/- to change, m to toggle auto, q or Ctrl+C to quit",
+	}
+	if c.recordPath != "" {
+		lines = append(lines, "Recording: "+c.recordPath)
+	}
+	if c.exportPath != "" {
+		lines = append(lines, "Export: "+c.exportPath)
 	}
 
 	for i, line := range lines {

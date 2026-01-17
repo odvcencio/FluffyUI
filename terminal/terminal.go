@@ -102,5 +102,7 @@ const (
 	KeyCtrlD
 	KeyCtrlF
 	KeyCtrlP
+	KeyCtrlV
+	KeyCtrlX
 	KeyCtrlZ
 )

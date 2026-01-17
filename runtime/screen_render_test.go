@@ -3,7 +3,7 @@ package runtime
 import (
 	"testing"
 
-	"github.com/odvcencio/furry-ui/backend"
+	"github.com/odvcencio/fluffy-ui/backend"
 )
 
 type renderTestWidget struct {

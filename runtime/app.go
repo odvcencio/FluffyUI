@@ -5,11 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
-	"github.com/odvcencio/furry-ui/backend"
-	"github.com/odvcencio/furry-ui/state"
-	"github.com/odvcencio/furry-ui/terminal"
+	"github.com/odvcencio/fluffy-ui/accessibility"
+	"github.com/odvcencio/fluffy-ui/backend"
+	"github.com/odvcencio/fluffy-ui/clipboard"
+	"github.com/odvcencio/fluffy-ui/state"
+	"github.com/odvcencio/fluffy-ui/terminal"
 )
 
 // UpdateFunc handles a message and returns true if a render is needed.
@@ -21,37 +24,52 @@ type CommandHandler func(cmd Command) bool
 
 // AppConfig configures a runtime App.
 type AppConfig struct {
-	Backend        backend.Backend
-	Root           Widget
-	Update         UpdateFunc
-	CommandHandler CommandHandler
-	MessageBuffer  int
-	TickRate       time.Duration
-	StateQueue     *state.Queue
-	FlushPolicy    QueueFlushPolicy
+	Backend           backend.Backend
+	Root              Widget
+	Update            UpdateFunc
+	CommandHandler    CommandHandler
+	MessageBuffer     int
+	TickRate          time.Duration
+	StateQueue        *state.Queue
+	FlushPolicy       QueueFlushPolicy
+	KeyHandler        KeyHandler
+	Announcer         accessibility.Announcer
+	Clipboard         clipboard.Clipboard
+	FocusStyle        *accessibility.FocusStyle
+	Recorder          Recorder
+	RenderObserver    RenderObserver
+	FocusRegistration FocusRegistrationMode
 }
 
 // App runs a widget tree against a terminal backend.
 type App struct {
-	backend        backend.Backend
-	screen         *Screen
-	root           Widget
-	update         UpdateFunc
-	commandHandler CommandHandler
-	messages       chan Message
-	tickRate       time.Duration
-	stateQueue     *state.Queue
-	queueScheduler *QueueScheduler
-	flushPolicy    QueueFlushPolicy
-	invalidator    *Invalidator
-	taskCtx        context.Context
-	taskCancel     context.CancelFunc
-	pendingMu      sync.Mutex
-	pendingEffects []Effect
+	backend           backend.Backend
+	screen            *Screen
+	root              Widget
+	update            UpdateFunc
+	commandHandler    CommandHandler
+	keyHandler        KeyHandler
+	messages          chan Message
+	tickRate          time.Duration
+	stateQueue        *state.Queue
+	queueScheduler    *QueueScheduler
+	flushPolicy       QueueFlushPolicy
+	invalidator       *Invalidator
+	announcer         accessibility.Announcer
+	clipboard         clipboard.Clipboard
+	focusStyle        *accessibility.FocusStyle
+	recorder          Recorder
+	renderObserver    RenderObserver
+	focusRegistration FocusRegistrationMode
+	taskCtx           context.Context
+	taskCancel        context.CancelFunc
+	pendingMu         sync.Mutex
+	pendingEffects    []Effect
 
-	running  bool
-	dirty    bool
-	renderMu sync.Mutex
+	running     bool
+	dirty       bool
+	renderMu    sync.Mutex
+	renderFrame int64
 }
 
 // NewApp creates a new App from config.
@@ -66,14 +84,21 @@ func NewApp(cfg AppConfig) *App {
 	}
 	policy := cfg.FlushPolicy
 	app := &App{
-		backend:        cfg.Backend,
-		root:           cfg.Root,
-		update:         cfg.Update,
-		commandHandler: cfg.CommandHandler,
-		messages:       make(chan Message, bufferSize),
-		tickRate:       cfg.TickRate,
-		stateQueue:     queue,
-		flushPolicy:    policy,
+		backend:           cfg.Backend,
+		root:              cfg.Root,
+		update:            cfg.Update,
+		commandHandler:    cfg.CommandHandler,
+		keyHandler:        cfg.KeyHandler,
+		messages:          make(chan Message, bufferSize),
+		tickRate:          cfg.TickRate,
+		stateQueue:        queue,
+		flushPolicy:       policy,
+		announcer:         cfg.Announcer,
+		clipboard:         cfg.Clipboard,
+		focusStyle:        cfg.FocusStyle,
+		recorder:          cfg.Recorder,
+		renderObserver:    cfg.RenderObserver,
+		focusRegistration: cfg.FocusRegistration,
 	}
 	if app.flushPolicy == 0 {
 		app.flushPolicy = FlushOnMessageAndTick
@@ -206,8 +231,17 @@ func (a *App) Run(ctx context.Context) error {
 	w, h := a.backend.Size()
 	a.screen = NewScreen(w, h)
 	a.screen.SetServices(a.Services())
+	a.screen.SetAutoRegisterFocus(a.focusRegistration == FocusRegistrationAuto)
 	if a.root != nil {
 		a.screen.SetRoot(a.root)
+	}
+	if a.recorder != nil {
+		if err := a.recorder.Start(w, h, time.Now()); err != nil {
+			return fmt.Errorf("start recorder: %w", err)
+		}
+		defer func() {
+			_ = a.recorder.Close()
+		}()
 	}
 
 	if a.update == nil {
@@ -277,21 +311,42 @@ func DefaultUpdate(app *App, msg Message) bool {
 	switch m := msg.(type) {
 	case ResizeMsg:
 		app.screen.Resize(m.Width, m.Height)
+		if app.recorder != nil {
+			_ = app.recorder.Resize(m.Width, m.Height)
+		}
 		return true
+	case KeyMsg:
+		if app.keyHandler != nil {
+			var focused Widget
+			if scope := app.screen.FocusScope(); scope != nil {
+				focused = scope.Current()
+			}
+			if app.keyHandler.HandleKey(app, m, focused) {
+				return true
+			}
+		}
+		return app.dispatchMessage(msg)
 	case QueueFlushMsg:
 		return false
 	case InvalidateMsg:
 		return true
 	default:
-		result := app.screen.HandleMessage(msg)
-		dirty := result.Handled
-		for _, cmd := range result.Commands {
-			if app.handleCommand(cmd) {
-				dirty = true
-			}
-		}
-		return dirty
+		return app.dispatchMessage(msg)
 	}
+}
+
+func (a *App) dispatchMessage(msg Message) bool {
+	if a == nil || a.screen == nil {
+		return false
+	}
+	result := a.screen.HandleMessage(msg)
+	dirty := result.Handled
+	for _, cmd := range result.Commands {
+		if a.handleCommand(cmd) {
+			dirty = true
+		}
+	}
+	return dirty
 }
 
 func (a *App) handleCommand(cmd Command) bool {
@@ -319,6 +374,14 @@ func (a *App) handleCommand(cmd Command) bool {
 		}
 		return false
 	}
+}
+
+// ExecuteCommand runs a command through the app handler.
+func (a *App) ExecuteCommand(cmd Command) bool {
+	if a == nil {
+		return false
+	}
+	return a.handleCommand(cmd)
 }
 
 func (a *App) pollEvents() {
@@ -363,15 +426,45 @@ func (a *App) render() {
 		return
 	}
 
+	observer := a.renderObserver
+	var stats RenderStats
+	if observer != nil {
+		stats.Frame = atomic.AddInt64(&a.renderFrame, 1)
+		stats.Started = time.Now()
+		stats.LayerCount = a.screen.LayerCount()
+	}
+
+	renderStart := time.Time{}
+	if observer != nil {
+		renderStart = time.Now()
+	}
 	a.screen.Render()
+	if observer != nil {
+		stats.RenderDuration = time.Since(renderStart)
+	}
 	buf := a.screen.Buffer()
+	if observer != nil && buf != nil {
+		w, h := buf.Size()
+		stats.TotalCells = w * h
+	}
 
 	if buf.IsDirty() {
 		dirtyCount := buf.DirtyCount()
 		w, h := buf.Size()
 		totalCells := w * h
+		fullRedraw := dirtyCount > totalCells/2
+		if observer != nil {
+			stats.DirtyCells = dirtyCount
+			stats.TotalCells = totalCells
+			stats.DirtyRect = buf.DirtyRect()
+			stats.FullRedraw = fullRedraw
+		}
 
-		if dirtyCount > totalCells/2 {
+		flushStart := time.Time{}
+		if observer != nil {
+			flushStart = time.Now()
+		}
+		if fullRedraw {
 			for y := 0; y < h; y++ {
 				for x := 0; x < w; x++ {
 					cell := buf.Get(x, y)
@@ -383,10 +476,28 @@ func (a *App) render() {
 				a.backend.SetContent(x, y, cell.Rune, nil, cell.Style)
 			})
 		}
+		if observer != nil {
+			stats.FlushDuration = time.Since(flushStart)
+			if fullRedraw {
+				stats.FlushedCells = totalCells
+			} else {
+				stats.FlushedCells = dirtyCount
+			}
+		}
+		if a.recorder != nil {
+			if err := a.recorder.Frame(buf, time.Now()); err != nil {
+				a.recorder = nil
+			}
+		}
 		buf.ClearDirty()
 	}
 
 	a.backend.Show()
+	if observer != nil {
+		stats.Ended = time.Now()
+		stats.TotalDuration = stats.Ended.Sub(stats.Started)
+		observer.ObserveRender(stats)
+	}
 }
 
 func (a *App) taskContext() context.Context {

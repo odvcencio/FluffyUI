@@ -3,8 +3,8 @@ package style
 import (
 	"testing"
 
-	"github.com/odvcencio/furry-ui/backend"
-	"github.com/odvcencio/furry-ui/compositor"
+	"github.com/odvcencio/fluffy-ui/backend"
+	"github.com/odvcencio/fluffy-ui/compositor"
 )
 
 func TestToBackend_DefaultColors(t *testing.T) {

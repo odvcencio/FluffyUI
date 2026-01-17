@@ -19,16 +19,16 @@ func newNonFocusable(id string) *focusableWidget {
 	return &focusableWidget{canFocus: false, id: id}
 }
 
-func (f *focusableWidget) Measure(c Constraints) Size   { return Size{10, 5} }
-func (f *focusableWidget) Layout(bounds Rect)           {}
-func (f *focusableWidget) Render(ctx RenderContext)     {}
+func (f *focusableWidget) Measure(c Constraints) Size { return Size{10, 5} }
+func (f *focusableWidget) Layout(bounds Rect)         {}
+func (f *focusableWidget) Render(ctx RenderContext)   {}
 func (f *focusableWidget) HandleMessage(msg Message) HandleResult {
 	return Unhandled()
 }
-func (f *focusableWidget) CanFocus() bool   { return f.canFocus }
-func (f *focusableWidget) Focus()           { f.focused = true }
-func (f *focusableWidget) Blur()            { f.focused = false }
-func (f *focusableWidget) IsFocused() bool  { return f.focused }
+func (f *focusableWidget) CanFocus() bool  { return f.canFocus }
+func (f *focusableWidget) Focus()          { f.focused = true }
+func (f *focusableWidget) Blur()           { f.focused = false }
+func (f *focusableWidget) IsFocused() bool { return f.focused }
 
 func TestFocusScope_New(t *testing.T) {
 	fs := NewFocusScope()

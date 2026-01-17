@@ -1,8 +1,8 @@
 package widgets
 
 import (
-	"github.com/odvcencio/furry-ui/runtime"
-	"github.com/odvcencio/furry-ui/state"
+	"github.com/odvcencio/fluffy-ui/runtime"
+	"github.com/odvcencio/fluffy-ui/state"
 )
 
 // Component is a base widget with bound services and subscriptions.

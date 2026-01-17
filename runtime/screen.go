@@ -1,6 +1,9 @@
 package runtime
 
-import "github.com/odvcencio/furry-ui/backend"
+import (
+	"github.com/odvcencio/fluffy-ui/accessibility"
+	"github.com/odvcencio/fluffy-ui/backend"
+)
 
 // Layer represents a layer in the modal stack.
 // Each layer has its own widget tree and focus scope.
@@ -12,27 +15,56 @@ type Layer struct {
 
 // Screen manages the widget tree, modal stack, and rendering.
 type Screen struct {
-	width, height int
-	layers        []*Layer
-	buffer        *Buffer
-	hitGrid       *HitGrid
-	hitGridModal  bool
-	services      Services
+	width, height     int
+	layers            []*Layer
+	buffer            *Buffer
+	hitGrid           *HitGrid
+	hitGridModal      bool
+	services          Services
+	autoRegisterFocus bool
+	hitGridDirty      bool
 }
 
 // NewScreen creates a new screen with the given dimensions.
 func NewScreen(w, h int) *Screen {
 	return &Screen{
-		width:   w,
-		height:  h,
-		buffer:  NewBuffer(w, h),
-		hitGrid: NewHitGrid(w, h),
+		width:        w,
+		height:       h,
+		buffer:       NewBuffer(w, h),
+		hitGrid:      NewHitGrid(w, h),
+		hitGridDirty: true,
 	}
 }
 
 // SetServices configures app services for bindable widgets.
 func (s *Screen) SetServices(services Services) {
 	s.services = services
+	for _, layer := range s.layers {
+		if layer != nil && layer.FocusScope != nil {
+			s.configureFocusScope(layer.FocusScope)
+		}
+	}
+}
+
+// SetAutoRegisterFocus enables or disables automatic focus registration.
+func (s *Screen) SetAutoRegisterFocus(enabled bool) {
+	if s == nil {
+		return
+	}
+	s.autoRegisterFocus = enabled
+	if enabled {
+		s.RefreshFocusables()
+	}
+}
+
+// RefreshFocusables rescans all layers for focusable widgets.
+func (s *Screen) RefreshFocusables() {
+	if s == nil {
+		return
+	}
+	for _, layer := range s.layers {
+		s.refreshLayerFocusables(layer)
+	}
 }
 
 // Size returns the screen dimensions.
@@ -48,6 +80,7 @@ func (s *Screen) Resize(w, h int) {
 	if s.hitGrid != nil {
 		s.hitGrid.Resize(w, h)
 	}
+	s.hitGridDirty = true
 
 	// Re-layout all layers
 	bounds := Rect{0, 0, w, h}
@@ -73,6 +106,7 @@ func (s *Screen) SetRoot(root Widget) {
 			FocusScope: NewFocusScope(),
 			Modal:      false,
 		})
+		s.configureFocusScope(s.layers[0].FocusScope)
 	} else {
 		oldRoot = s.layers[0].Root
 		s.layers[0].Root = root
@@ -82,12 +116,16 @@ func (s *Screen) SetRoot(root Widget) {
 		UnmountTree(oldRoot)
 		UnbindTree(oldRoot)
 	}
+	s.hitGridDirty = true
 
 	// Layout the root widget
 	if root != nil {
 		BindTree(root, s.services)
 		root.Layout(Rect{0, 0, s.width, s.height})
 		MountTree(root)
+	}
+	if s.autoRegisterFocus {
+		s.refreshLayerFocusables(s.layers[0])
 	}
 }
 
@@ -107,13 +145,18 @@ func (s *Screen) PushLayer(root Widget, modal bool) {
 		FocusScope: NewFocusScope(),
 		Modal:      modal,
 	}
+	s.configureFocusScope(layer.FocusScope)
 	s.layers = append(s.layers, layer)
+	s.hitGridDirty = true
 
 	// Layout the new layer
 	if root != nil {
 		BindTree(root, s.services)
 		root.Layout(Rect{0, 0, s.width, s.height})
 		MountTree(root)
+	}
+	if s.autoRegisterFocus {
+		s.refreshLayerFocusables(layer)
 	}
 }
 
@@ -133,6 +176,7 @@ func (s *Screen) PopLayer() bool {
 	}
 
 	s.layers = s.layers[:len(s.layers)-1]
+	s.hitGridDirty = true
 	return true
 }
 
@@ -178,7 +222,76 @@ func (s *Screen) Render() {
 		layer.Root.Render(ctx)
 	}
 
-	s.buildHitGrid()
+	s.drawFocusIndicator()
+	if s.hitGridDirty {
+		s.buildHitGrid()
+	}
+}
+
+func (s *Screen) configureFocusScope(scope *FocusScope) {
+	if scope == nil {
+		return
+	}
+	scope.SetOnChange(func(prev Focusable, next Focusable) {
+		s.announceFocus(next)
+	})
+}
+
+func (s *Screen) refreshLayerFocusables(layer *Layer) {
+	if s == nil || layer == nil || layer.FocusScope == nil {
+		return
+	}
+	layer.FocusScope.Reset()
+	if layer.Root != nil {
+		RegisterFocusables(layer.FocusScope, layer.Root)
+	}
+}
+
+func (s *Screen) announceFocus(next Focusable) {
+	if s == nil {
+		return
+	}
+	announcer := s.services.Announcer()
+	if announcer == nil {
+		return
+	}
+	accessible, ok := next.(accessibility.Accessible)
+	if !ok || accessible == nil {
+		return
+	}
+	announcer.AnnounceChange(accessible)
+}
+
+func (s *Screen) drawFocusIndicator() {
+	if s == nil || s.buffer == nil {
+		return
+	}
+	style := s.services.FocusStyle()
+	if style == nil || style.Indicator == "" {
+		return
+	}
+	scope := s.FocusScope()
+	if scope == nil {
+		return
+	}
+	focused := scope.Current()
+	if focused == nil {
+		return
+	}
+	boundsProvider, ok := focused.(BoundsProvider)
+	if !ok {
+		return
+	}
+	bounds := boundsProvider.Bounds()
+	if bounds.Width <= 0 || bounds.Height <= 0 {
+		return
+	}
+	indicator := style.Indicator
+	x := bounds.X - len(indicator)
+	if x < 0 {
+		x = bounds.X
+	}
+	s.buffer.SetString(x, bounds.Y, indicator, style.Style)
 }
 
 // HandleMessage dispatches a message to the appropriate layer.
@@ -252,6 +365,7 @@ func (s *Screen) buildHitGrid() {
 		s.hitGrid.Resize(s.width, s.height)
 		s.hitGrid.Clear()
 	}
+	s.hitGridDirty = false
 	s.hitGridModal = false
 	if len(s.layers) == 0 {
 		return

@@ -3,7 +3,9 @@ package runtime
 import (
 	"time"
 
-	"github.com/odvcencio/furry-ui/state"
+	"github.com/odvcencio/fluffy-ui/accessibility"
+	"github.com/odvcencio/fluffy-ui/clipboard"
+	"github.com/odvcencio/fluffy-ui/state"
 )
 
 // Services exposes app-level scheduling and messaging helpers.
@@ -18,6 +20,30 @@ func (a *App) Services() Services {
 
 func (s Services) isZero() bool {
 	return s.app == nil
+}
+
+// Announcer returns the accessibility announcer.
+func (s Services) Announcer() accessibility.Announcer {
+	if s.app == nil {
+		return nil
+	}
+	return s.app.announcer
+}
+
+// FocusStyle returns the global focus style.
+func (s Services) FocusStyle() *accessibility.FocusStyle {
+	if s.app == nil {
+		return nil
+	}
+	return s.app.focusStyle
+}
+
+// Clipboard returns the app clipboard.
+func (s Services) Clipboard() clipboard.Clipboard {
+	if s.app == nil {
+		return nil
+	}
+	return s.app.clipboard
 }
 
 // Scheduler returns the app state scheduler.

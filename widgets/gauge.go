@@ -1,8 +1,8 @@
 package widgets
 
 import (
-	"github.com/odvcencio/furry-ui/backend"
-	"github.com/odvcencio/furry-ui/runtime"
+	"github.com/odvcencio/fluffy-ui/backend"
+	"github.com/odvcencio/fluffy-ui/runtime"
 )
 
 // GaugeStyle defines the visual appearance of a gauge.

@@ -5,8 +5,8 @@ import (
 
 	"github.com/alecthomas/chroma/v2"
 	"github.com/alecthomas/chroma/v2/lexers"
-	"github.com/odvcencio/furry-ui/compositor"
-	"github.com/odvcencio/furry-ui/theme"
+	"github.com/odvcencio/fluffy-ui/compositor"
+	"github.com/odvcencio/fluffy-ui/theme"
 )
 
 // Highlighter applies syntax highlighting to fenced code blocks.

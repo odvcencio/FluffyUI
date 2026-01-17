@@ -3,20 +3,22 @@ package widgets
 import (
 	"strings"
 
-	"github.com/odvcencio/furry-ui/backend"
-	"github.com/odvcencio/furry-ui/runtime"
-	"github.com/odvcencio/furry-ui/terminal"
+	"github.com/odvcencio/fluffy-ui/backend"
+	"github.com/odvcencio/fluffy-ui/clipboard"
+	"github.com/odvcencio/fluffy-ui/runtime"
+	"github.com/odvcencio/fluffy-ui/terminal"
 )
 
 // Input is a text input widget with cursor support.
 type Input struct {
 	FocusableBase
 
-	text       strings.Builder
-	cursorPos  int
-	style      backend.Style
-	focusStyle backend.Style
+	text        strings.Builder
+	cursorPos   int
+	style       backend.Style
+	focusStyle  backend.Style
 	placeholder string
+	services    runtime.Services
 
 	// Callbacks
 	onSubmit func(text string)
@@ -29,6 +31,16 @@ func NewInput() *Input {
 		style:      backend.DefaultStyle(),
 		focusStyle: backend.DefaultStyle().Bold(true),
 	}
+}
+
+// Bind attaches app services.
+func (i *Input) Bind(services runtime.Services) {
+	i.services = services
+}
+
+// Unbind releases app services.
+func (i *Input) Unbind() {
+	i.services = runtime.Services{}
 }
 
 // SetPlaceholder sets the placeholder text shown when empty.
@@ -162,6 +174,18 @@ func (i *Input) HandleMessage(msg runtime.Message) runtime.HandleResult {
 	}
 
 	switch key.Key {
+	case terminal.KeyCtrlC:
+		if i.copyToClipboard() {
+			return runtime.Handled()
+		}
+	case terminal.KeyCtrlX:
+		if i.cutToClipboard() {
+			return runtime.Handled()
+		}
+	case terminal.KeyCtrlV:
+		if i.pasteFromClipboard() {
+			return runtime.Handled()
+		}
 	case terminal.KeyEnter:
 		if i.onSubmit != nil {
 			text := i.text.String()
@@ -247,6 +271,87 @@ func (i *Input) notifyChange() {
 	}
 }
 
+// ClipboardCopy returns the current text.
+func (i *Input) ClipboardCopy() (string, bool) {
+	if i == nil {
+		return "", false
+	}
+	return i.text.String(), true
+}
+
+// ClipboardCut returns the current text and clears the input.
+func (i *Input) ClipboardCut() (string, bool) {
+	if i == nil {
+		return "", false
+	}
+	text := i.text.String()
+	i.Clear()
+	i.notifyChange()
+	return text, true
+}
+
+// ClipboardPaste inserts text at the cursor.
+func (i *Input) ClipboardPaste(text string) bool {
+	if i == nil || text == "" {
+		return false
+	}
+	i.insertText(text)
+	return true
+}
+
+func (i *Input) copyToClipboard() bool {
+	cb := i.services.Clipboard()
+	if cb == nil || !cb.Available() {
+		return false
+	}
+	text, ok := i.ClipboardCopy()
+	if !ok {
+		return false
+	}
+	_ = cb.Write(text)
+	return true
+}
+
+func (i *Input) cutToClipboard() bool {
+	cb := i.services.Clipboard()
+	if cb == nil || !cb.Available() {
+		return false
+	}
+	text, ok := i.ClipboardCut()
+	if !ok {
+		return false
+	}
+	_ = cb.Write(text)
+	return true
+}
+
+func (i *Input) pasteFromClipboard() bool {
+	cb := i.services.Clipboard()
+	if cb == nil || !cb.Available() {
+		return false
+	}
+	text, err := cb.Read()
+	if err != nil || text == "" {
+		return false
+	}
+	return i.ClipboardPaste(text)
+}
+
+func (i *Input) insertText(text string) {
+	if text == "" {
+		return
+	}
+	current := i.text.String()
+	i.text.Reset()
+	i.text.WriteString(current[:i.cursorPos])
+	i.text.WriteString(text)
+	i.text.WriteString(current[i.cursorPos:])
+	i.cursorPos += len(text)
+	i.notifyChange()
+}
+
+var _ clipboard.Target = (*Input)(nil)
+
 func (i *Input) wordBoundaryLeft() int {
 	text := i.text.String()
 	pos := i.cursorPos - 1
@@ -281,11 +386,11 @@ func (i *Input) wordBoundaryRight() int {
 type MultilineInput struct {
 	FocusableBase
 
-	lines     []string
-	cursorX   int
-	cursorY   int
-	scrollY   int // First visible line
-	style     backend.Style
+	lines      []string
+	cursorX    int
+	cursorY    int
+	scrollY    int // First visible line
+	style      backend.Style
 	focusStyle backend.Style
 
 	onSubmit func(text string)

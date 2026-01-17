@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/odvcencio/furry-ui/compositor"
-	"github.com/odvcencio/furry-ui/theme"
+	"github.com/odvcencio/fluffy-ui/compositor"
+	"github.com/odvcencio/fluffy-ui/theme"
 	"github.com/yuin/goldmark/ast"
 	extast "github.com/yuin/goldmark/extension/ast"
 )

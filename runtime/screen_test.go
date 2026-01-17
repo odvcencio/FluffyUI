@@ -3,8 +3,8 @@ package runtime
 import (
 	"testing"
 
-	"github.com/odvcencio/furry-ui/backend"
-	"github.com/odvcencio/furry-ui/terminal"
+	"github.com/odvcencio/fluffy-ui/backend"
+	"github.com/odvcencio/fluffy-ui/terminal"
 )
 
 // mockWidget is a test widget.
@@ -42,9 +42,9 @@ func (m *mockWidget) HandleMessage(msg Message) HandleResult {
 	return Handled()
 }
 
-func (m *mockWidget) CanFocus() bool { return true }
-func (m *mockWidget) Focus()         { m.focused = true }
-func (m *mockWidget) Blur()          { m.focused = false }
+func (m *mockWidget) CanFocus() bool  { return true }
+func (m *mockWidget) Focus()          { m.focused = true }
+func (m *mockWidget) Blur()           { m.focused = false }
 func (m *mockWidget) IsFocused() bool { return m.focused }
 
 func TestScreen_PushPopLayer(t *testing.T) {
