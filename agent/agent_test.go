@@ -73,8 +73,8 @@ func (t *testInput) IsFocused() bool {
 }
 
 func (t *testInput) AccessibleRole() accessibility.Role { return accessibility.RoleTextbox }
-func (t *testInput) AccessibleLabel() string           { return t.label }
-func (t *testInput) AccessibleDescription() string     { return "" }
+func (t *testInput) AccessibleLabel() string            { return t.label }
+func (t *testInput) AccessibleDescription() string      { return "" }
 func (t *testInput) AccessibleState() accessibility.StateSet {
 	return accessibility.StateSet{Disabled: t.disabled}
 }
@@ -131,8 +131,8 @@ func (t *testButton) IsFocused() bool {
 }
 
 func (t *testButton) AccessibleRole() accessibility.Role { return accessibility.RoleButton }
-func (t *testButton) AccessibleLabel() string           { return t.label }
-func (t *testButton) AccessibleDescription() string     { return "" }
+func (t *testButton) AccessibleLabel() string            { return t.label }
+func (t *testButton) AccessibleDescription() string      { return "" }
 func (t *testButton) AccessibleState() accessibility.StateSet {
 	return accessibility.StateSet{Disabled: t.disabled}
 }
@@ -152,7 +152,7 @@ func TestAgentSnapshotAndActions(t *testing.T) {
 		TickRate:          time.Second / 60,
 	})
 
-	agt := New(Config{App: app, Sim: simBackend, Width: 40, Height: 10})
+	agt := New(Config{App: app})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -165,15 +165,6 @@ func TestAgentSnapshotAndActions(t *testing.T) {
 		app.Post(runtime.Quit{})
 		<-done
 	}()
-
-	deadline := time.Now().Add(2 * time.Second)
-	for app.Screen() == nil && time.Now().Before(deadline) {
-		time.Sleep(10 * time.Millisecond)
-	}
-	if app.Screen() == nil {
-		t.Fatal("screen not initialized")
-	}
-	agt.SetScreen(app.Screen())
 
 	if err := agt.WaitForWidget("Name", time.Second); err != nil {
 		t.Fatalf("wait for widget: %v", err)

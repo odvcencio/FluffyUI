@@ -41,6 +41,7 @@ type Agent struct {
 // Config configures an Agent.
 type Config struct {
 	// App is the FluffyUI application to control.
+	// When provided, the agent auto-attaches to the app's screen once available.
 	App *runtime.App
 
 	// Sim is the simulation backend. If nil, one will be created.
@@ -74,9 +75,15 @@ func New(cfg Config) *Agent {
 		tickRate = 50 * time.Millisecond
 	}
 
+	var screen *runtime.Screen
+	if cfg.App != nil {
+		screen = cfg.App.Screen()
+	}
+
 	return &Agent{
 		app:      cfg.App,
 		sim:      s,
+		screen:   screen,
 		tickRate: tickRate,
 	}
 }
@@ -89,8 +96,8 @@ func (a *Agent) Backend() *sim.Backend {
 	return a.sim
 }
 
-// SetScreen sets the screen reference for widget tree access.
-// This is typically called after App.Run() starts.
+// SetScreen overrides the screen reference for widget tree access.
+// Most callers can rely on the agent auto-attaching to app.Screen().
 func (a *Agent) SetScreen(screen *runtime.Screen) {
 	if a == nil {
 		return
@@ -107,6 +114,15 @@ func (a *Agent) Screen() *runtime.Screen {
 	}
 	a.mu.Lock()
 	defer a.mu.Unlock()
+	return a.ensureScreenLocked()
+}
+
+func (a *Agent) ensureScreenLocked() *runtime.Screen {
+	if a.screen == nil && a.app != nil {
+		if screen := a.app.Screen(); screen != nil {
+			a.screen = screen
+		}
+	}
 	return a.screen
 }
 
@@ -130,8 +146,10 @@ func (a *Agent) Snapshot() Snapshot {
 		Timestamp: time.Now(),
 	}
 
+	a.ensureScreenLocked()
+	snap.Text = a.captureTextLocked()
+
 	if a.sim != nil {
-		snap.Text = a.sim.Capture()
 		snap.Width, _ = a.sim.Size()
 		_, snap.Height = a.sim.Size()
 	}
@@ -541,26 +559,36 @@ func (a *Agent) ListWidgets(role accessibility.Role) []WidgetInfo {
 
 // ContainsText checks if the given text appears on screen.
 func (a *Agent) ContainsText(text string) bool {
-	if a == nil || a.sim == nil {
+	if a == nil {
 		return false
 	}
-	return a.sim.ContainsText(text)
+	return strings.Contains(a.captureText(), text)
 }
 
 // FindText returns the position of text on screen, or (-1, -1) if not found.
 func (a *Agent) FindText(text string) (x, y int) {
-	if a == nil || a.sim == nil {
+	if a == nil {
 		return -1, -1
 	}
-	return a.sim.FindText(text)
+	return findTextIn(a.captureText(), text)
+}
+
+func findTextIn(content, text string) (x, y int) {
+	lines := strings.Split(content, "\n")
+	for row, line := range lines {
+		if col := strings.Index(line, text); col >= 0 {
+			return col, row
+		}
+	}
+	return -1, -1
 }
 
 // CaptureText returns the raw text content of the screen.
 func (a *Agent) CaptureText() string {
-	if a == nil || a.sim == nil {
+	if a == nil {
 		return ""
 	}
-	return a.sim.Capture()
+	return a.captureText()
 }
 
 func (a *Agent) sendKey(key terminal.Key, r rune) error {
@@ -606,6 +634,31 @@ func (a *Agent) sendText(text string) error {
 	return nil
 }
 
+func (a *Agent) captureText() string {
+	if a == nil {
+		return ""
+	}
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.captureTextLocked()
+}
+
+func (a *Agent) captureTextLocked() string {
+	a.ensureScreenLocked()
+	if a.sim != nil {
+		return a.sim.Capture()
+	}
+	if a.app != nil {
+		return a.app.SnapshotText()
+	}
+	if a.screen != nil {
+		if buf := a.screen.Buffer(); buf != nil {
+			return buf.SnapshotText()
+		}
+	}
+	return ""
+}
+
 func (a *Agent) focusByID(id string) error {
 	_, _, err := a.focusWidgetByID(id)
 	return err
@@ -613,7 +666,7 @@ func (a *Agent) focusByID(id string) error {
 
 func (a *Agent) focusWidgetByID(id string) (runtime.Widget, accessibility.Accessible, error) {
 	a.mu.Lock()
-	screen := a.screen
+	screen := a.ensureScreenLocked()
 	a.mu.Unlock()
 	if screen == nil {
 		return nil, nil, ErrNoApp
