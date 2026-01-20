@@ -45,6 +45,16 @@ Widgets implement:
 
 Containers implement `ChildWidgets()` to expose their children for traversal.
 
+## Go philosophy alignment
+
+FluffyUI keeps its patterns Go-friendly:
+
+- Explicit configuration via structs or functional options; defaults are documented and overrideable.
+- Small, behavior-based interfaces; composition over inheritance.
+- Errors returned instead of exceptions; panics reserved for programmer errors.
+- No hidden global state; app services are passed via `runtime.App` and `Services`.
+- Concurrency is explicit and contained in the app loop or effects.
+
 ## Accessibility
 
 The screen uses an announcer and focus styles from the app configuration.

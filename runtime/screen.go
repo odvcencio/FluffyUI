@@ -201,6 +201,24 @@ func (s *Screen) FocusScope() *FocusScope {
 	return nil
 }
 
+// BaseLayer returns the base (bottom) layer.
+func (s *Screen) BaseLayer() *Layer {
+	if len(s.layers) == 0 {
+		return nil
+	}
+	return s.layers[0]
+}
+
+// BaseFocusScope returns the focus scope of the base layer.
+// Use this when you need the focus scope that contains the main widgets,
+// as overlay layers (like toast stacks) may be on top.
+func (s *Screen) BaseFocusScope() *FocusScope {
+	if base := s.BaseLayer(); base != nil {
+		return base.FocusScope
+	}
+	return nil
+}
+
 // Render draws all layers to the buffer.
 func (s *Screen) Render() {
 	ctx := RenderContext{

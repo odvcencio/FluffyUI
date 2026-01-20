@@ -31,11 +31,12 @@ var (
 // It wraps a simulation backend and exposes semantic operations over
 // the widget tree.
 type Agent struct {
-	mu       sync.Mutex
-	app      *runtime.App
-	sim      *sim.Backend
-	screen   *runtime.Screen
-	tickRate time.Duration
+	mu         sync.Mutex
+	app        *runtime.App
+	sim        *sim.Backend
+	screen     *runtime.Screen
+	tickRate   time.Duration
+	autoAttach bool
 }
 
 // Config configures an Agent.
@@ -44,8 +45,12 @@ type Config struct {
 	// When provided, the agent auto-attaches to the app's screen once available.
 	App *runtime.App
 
-	// Sim is the simulation backend. If nil, one will be created.
+	// Sim is the simulation backend. If nil and App is not set, one will be created.
 	Sim *sim.Backend
+
+	// DisableAutoAttach skips automatic App.Screen() attachment.
+	// Useful when the caller wants to manage SetScreen explicitly.
+	DisableAutoAttach bool
 
 	// Width and Height set the terminal dimensions (default 80x24).
 	Width, Height int
@@ -66,7 +71,7 @@ func New(cfg Config) *Agent {
 	}
 
 	s := cfg.Sim
-	if s == nil {
+	if s == nil && cfg.App == nil {
 		s = sim.New(width, height)
 	}
 
@@ -75,16 +80,19 @@ func New(cfg Config) *Agent {
 		tickRate = 50 * time.Millisecond
 	}
 
+	autoAttach := !cfg.DisableAutoAttach
+
 	var screen *runtime.Screen
-	if cfg.App != nil {
+	if cfg.App != nil && autoAttach {
 		screen = cfg.App.Screen()
 	}
 
 	return &Agent{
-		app:      cfg.App,
-		sim:      s,
-		screen:   screen,
-		tickRate: tickRate,
+		app:        cfg.App,
+		sim:        s,
+		screen:     screen,
+		tickRate:   tickRate,
+		autoAttach: autoAttach,
 	}
 }
 
@@ -118,6 +126,9 @@ func (a *Agent) Screen() *runtime.Screen {
 }
 
 func (a *Agent) ensureScreenLocked() *runtime.Screen {
+	if !a.autoAttach {
+		return a.screen
+	}
 	if a.screen == nil && a.app != nil {
 		if screen := a.app.Screen(); screen != nil {
 			a.screen = screen
