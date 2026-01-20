@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/odvcencio/fluffy-ui/accessibility"
+	"github.com/odvcencio/fluffy-ui/audio"
 	"github.com/odvcencio/fluffy-ui/clipboard"
 	"github.com/odvcencio/fluffy-ui/state"
 )
@@ -44,6 +45,14 @@ func (s Services) Clipboard() clipboard.Clipboard {
 		return nil
 	}
 	return s.app.clipboard
+}
+
+// Audio returns the app audio service.
+func (s Services) Audio() audio.Service {
+	if s.app == nil {
+		return nil
+	}
+	return s.app.audio
 }
 
 // Scheduler returns the app state scheduler.

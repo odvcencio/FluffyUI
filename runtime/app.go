@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/odvcencio/fluffy-ui/accessibility"
+	"github.com/odvcencio/fluffy-ui/audio"
 	"github.com/odvcencio/fluffy-ui/backend"
 	"github.com/odvcencio/fluffy-ui/clipboard"
 	"github.com/odvcencio/fluffy-ui/state"
@@ -39,6 +40,7 @@ type AppConfig struct {
 	Recorder          Recorder
 	RenderObserver    RenderObserver
 	FocusRegistration FocusRegistrationMode
+	Audio             audio.Service
 }
 
 // App runs a widget tree against a terminal backend.
@@ -61,6 +63,7 @@ type App struct {
 	recorder          Recorder
 	renderObserver    RenderObserver
 	focusRegistration FocusRegistrationMode
+	audio             audio.Service
 	taskCtx           context.Context
 	taskCancel        context.CancelFunc
 	pendingMu         sync.Mutex
@@ -99,6 +102,7 @@ func NewApp(cfg AppConfig) *App {
 		recorder:          cfg.Recorder,
 		renderObserver:    cfg.RenderObserver,
 		focusRegistration: cfg.FocusRegistration,
+		audio:             cfg.Audio,
 	}
 	if app.flushPolicy == 0 {
 		app.flushPolicy = FlushOnMessageAndTick

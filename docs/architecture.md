@@ -10,6 +10,7 @@ UIs.
 - Widget tree: a hierarchy of widgets that Measure, Layout, and Render.
 - State signals: `state.Signal` and `state.Computed` drive reactive updates.
 - Commands: widgets emit commands to request app-level actions.
+- App services: shared helpers like announcer, clipboard, scheduler, and audio.
 
 ## Render pipeline
 
@@ -34,16 +35,87 @@ The runtime loop processes messages:
 Widgets can return commands like `runtime.Quit`, `runtime.FocusNext`, or
 `runtime.PushOverlay`. Commands bubble to the app and screen for handling.
 
-## Widgets
+## Widget Interface Hierarchy
 
-Widgets implement:
+FluffyUI uses small, composable interfaces. Widgets implement some or all of
+these depending on their capabilities.
 
-- `Measure(constraints)`
-- `Layout(bounds)`
-- `Render(ctx)`
-- `HandleMessage(msg)`
+### Core Interface
 
-Containers implement `ChildWidgets()` to expose their children for traversal.
+```go
+// Widget is the fundamental interface all UI components implement.
+type Widget interface {
+    Measure(constraints Constraints) Size  // Report preferred size
+    Layout(bounds Rect)                     // Accept assigned bounds
+    Render(ctx RenderContext)               // Draw to buffer
+    HandleMessage(msg Message) HandleResult // Process input
+}
+```
+
+### Optional Interfaces
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        Widget (required)                        │
+│  Measure, Layout, Render, HandleMessage                        │
+└─────────────────────────────────────────────────────────────────┘
+        │
+        ├── Focusable (keyboard input)
+        │     CanFocus, Focus, Blur, IsFocused
+        │
+        ├── BoundsProvider (position query)
+        │     Bounds() Rect
+        │
+        ├── ChildProvider (containers)
+        │     ChildWidgets() []Widget
+        │
+        ├── Invalidatable (render scheduling)
+        │     Invalidate, NeedsRender, ClearInvalidation
+        │
+        ├── Bindable (app services)
+        │     Bind(services Services)
+        │
+        ├── Unbindable (cleanup)
+        │     Unbind()
+        │
+        ├── Lifecycle (mount/unmount)
+        │     Mount, Unmount
+        │
+        └── Accessible (screen readers)
+              AccessibleRole, AccessibleLabel, AccessibleState, etc.
+```
+
+### Base Types
+
+The `widgets` package provides base types to embed:
+
+| Type | Use Case | Implements |
+|------|----------|------------|
+| `Base` | Non-focusable widgets | BoundsProvider, Invalidatable, focus stubs |
+| `FocusableBase` | Focusable widgets | Base + CanFocus() → true |
+| `Component` | Reactive widgets | Base + Services + Subscriptions |
+
+### Interface Summary
+
+| Interface | Purpose | Methods |
+|-----------|---------|---------|
+| `Widget` | Core rendering | Measure, Layout, Render, HandleMessage |
+| `Focusable` | Keyboard focus | CanFocus, Focus, Blur, IsFocused |
+| `BoundsProvider` | Position queries | Bounds |
+| `ChildProvider` | Tree traversal | ChildWidgets |
+| `Invalidatable` | Render scheduling | Invalidate, NeedsRender, ClearInvalidation |
+| `Bindable` | Service injection | Bind |
+| `Unbindable` | Service cleanup | Unbind |
+| `Lifecycle` | Mount/unmount hooks | Mount, Unmount |
+| `Accessible` | Screen readers | Role, Label, Description, State, Value |
+
+### Implementation Guidelines
+
+1. **Always embed Base or FocusableBase** - get default implementations
+2. **Implement only what you need** - interfaces are optional
+3. **Use Component for reactive state** - handles subscriptions automatically
+4. **Implement ChildWidgets for containers** - enables tree traversal
+5. **Use Bindable for service access** - clipboard, scheduler, announcer
 
 ## Go philosophy alignment
 

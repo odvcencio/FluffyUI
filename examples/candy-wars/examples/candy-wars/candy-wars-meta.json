@@ -1,0 +1,31 @@
+{
+  "unlocks": {
+    "bank": false,
+    "crafting": false,
+    "standard_loans": false,
+    "black_market": false
+  },
+  "achievements": {},
+  "total_runs": 8,
+  "wins": 0,
+  "losses": 0,
+  "best_worth": 0,
+  "total_trade_value": 0,
+  "total_trade_count": 0,
+  "total_crafted": 0,
+  "total_enemies_defeated": 0,
+  "total_loan_paid": 0,
+  "total_playtime_seconds": 0,
+  "total_win_seconds": 0,
+  "total_loss_seconds": 0,
+  "fastest_win_seconds": 0,
+  "slowest_win_seconds": 0,
+  "fastest_loss_seconds": 0,
+  "slowest_loss_seconds": 0,
+  "longest_run_seconds": 0,
+  "shortest_run_seconds": 0,
+  "last_run_duration_seconds": 0,
+  "last_run_ended_at_unix_secs": 0,
+  "run_history": [],
+  "trade_history": []
+}

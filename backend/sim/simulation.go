@@ -179,5 +179,40 @@ func convertTcellColor(tc tcellv2.Color) backend.Color {
 	return backend.Color(tc & 0xFF)
 }
 
+// Clear clears the screen to spaces with default style.
+func (s *Backend) Clear() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	w, h := s.screen.Size()
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			s.screen.SetContent(x, y, ' ', nil, tcellv2.StyleDefault)
+		}
+	}
+}
+
+// ShowText is a convenience method to display the screen contents for debugging.
+// Returns the captured screen content as a string.
+func (s *Backend) ShowText() string {
+	s.Show()
+	return s.Capture()
+}
+
+// InjectKeyWithMod injects a key event with modifiers.
+func (s *Backend) InjectKeyWithMod(key terminal.Key, r rune, ctrl, alt, shift bool) {
+	s.PostEvent(terminal.KeyEvent{Key: key, Rune: r, Ctrl: ctrl, Alt: alt, Shift: shift})
+}
+
+// InjectCtrlKey injects a ctrl+key combination.
+func (s *Backend) InjectCtrlKey(r rune) {
+	s.InjectKeyWithMod(terminal.KeyRune, r, true, false, false)
+}
+
+// InjectAltKey injects an alt+key combination.
+func (s *Backend) InjectAltKey(r rune) {
+	s.InjectKeyWithMod(terminal.KeyRune, r, false, true, false)
+}
+
 // Ensure Backend implements backend.Backend
 var _ backend.Backend = (*Backend)(nil)

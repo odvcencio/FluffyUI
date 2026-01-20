@@ -4,10 +4,14 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/odvcencio/fluffy-ui/accessibility"
+	"github.com/odvcencio/fluffy-ui/audio"
+	"github.com/odvcencio/fluffy-ui/audio/execdriver"
 	"github.com/odvcencio/fluffy-ui/backend"
 	backendtcell "github.com/odvcencio/fluffy-ui/backend/tcell"
 	"github.com/odvcencio/fluffy-ui/clipboard"
@@ -50,6 +54,7 @@ func main() {
 		recorder = rec
 	}
 
+	audioService, audioStatus := setupAudio()
 	app := runtime.NewApp(runtime.AppConfig{
 		Backend:    be,
 		TickRate:   time.Second / 30,
@@ -61,6 +66,7 @@ func main() {
 			Style:     backend.DefaultStyle().Bold(true),
 		},
 		Recorder: recorder,
+		Audio:    audioService,
 	})
 
 	count := state.NewSignal(0)
@@ -69,7 +75,7 @@ func main() {
 	mode := state.NewSignal("manual")
 	mode.SetEqualFunc(state.EqualComparable[string])
 
-	root := NewCounterView(count, mode, recordPath, exportPath)
+	root := NewCounterView(count, mode, recordPath, exportPath, audioStatus)
 	app.SetRoot(root)
 
 	app.Every(400*time.Millisecond, func(now time.Time) runtime.Message {
@@ -106,18 +112,30 @@ type CounterView struct {
 	exportPath   string
 	spinnerIndex int
 	spinner      []rune
+	audio        audio.Service
+	audioStatus  string
+	audioMuted   bool
 }
 
-func NewCounterView(count *state.Signal[int], mode *state.Signal[string], recordPath string, exportPath string) *CounterView {
+func NewCounterView(count *state.Signal[int], mode *state.Signal[string], recordPath string, exportPath string, audioStatus string) *CounterView {
 	view := &CounterView{
-		count:      count,
-		mode:       mode,
-		recordPath: recordPath,
-		exportPath: exportPath,
-		spinner:    []rune{'|', '/', '-', '\\'},
+		count:       count,
+		mode:        mode,
+		recordPath:  recordPath,
+		exportPath:  exportPath,
+		spinner:     []rune{'|', '/', '-', '\\'},
+		audioStatus: audioStatus,
 	}
 	view.refresh()
 	return view
+}
+
+func (c *CounterView) Bind(services runtime.Services) {
+	c.Component.Bind(services)
+	c.audio = services.Audio()
+	if c.audio != nil {
+		c.audioMuted = c.audio.Muted()
+	}
 }
 
 func (c *CounterView) Mount() {
@@ -155,7 +173,8 @@ func (c *CounterView) Render(ctx runtime.RenderContext) {
 		"Count: " + strconv.Itoa(c.countValue),
 		"Mode: " + c.modeValue,
 		"",
-		"Keys: +/- to change, m to toggle auto, q or Ctrl+C to quit",
+		c.audioLine(),
+		"Keys: +/- to change, m to toggle auto, s to mute, q or Ctrl+C to quit",
 	}
 	if c.recordPath != "" {
 		lines = append(lines, "Recording: "+c.recordPath)
@@ -190,6 +209,9 @@ func (c *CounterView) HandleMessage(msg runtime.Message) runtime.HandleResult {
 		case 'm':
 			c.toggleMode()
 			return runtime.Handled()
+		case 's':
+			c.toggleMute()
+			return runtime.Handled()
 		}
 	case runtime.TickMsg:
 		if len(c.spinner) > 0 {
@@ -215,6 +237,11 @@ func (c *CounterView) updateCount(delta int) {
 		return
 	}
 	c.count.Update(func(v int) int { return v + delta })
+	if delta > 0 {
+		c.playSFX("ui.up")
+	} else if delta < 0 {
+		c.playSFX("ui.down")
+	}
 }
 
 func (c *CounterView) toggleMode() {
@@ -223,7 +250,157 @@ func (c *CounterView) toggleMode() {
 	}
 	if c.mode.Get() == "auto" {
 		c.mode.Set("manual")
+		c.playSFX("ui.toggle")
+		c.stopMusic()
 		return
 	}
 	c.mode.Set("auto")
+	c.playSFX("ui.toggle")
+	c.playMusic("music.loop")
+}
+
+func (c *CounterView) toggleMute() {
+	if c.audio == nil {
+		return
+	}
+	muted := c.audio.Muted()
+	c.audio.SetMuted(!muted)
+	c.audioMuted = !muted
+	c.Invalidate()
+}
+
+func (c *CounterView) playSFX(id string) {
+	if c.audio == nil {
+		return
+	}
+	c.audio.PlaySFX(id)
+}
+
+func (c *CounterView) playMusic(id string) {
+	if c.audio == nil {
+		return
+	}
+	c.audio.PlayMusic(id)
+}
+
+func (c *CounterView) stopMusic() {
+	if c.audio == nil {
+		return
+	}
+	c.audio.StopMusic()
+}
+
+func (c *CounterView) audioLine() string {
+	line := "Audio: " + c.audioStatus
+	if c.audio == nil || !strings.HasPrefix(c.audioStatus, "enabled") {
+		return line
+	}
+	if c.audioMuted {
+		return line + " [muted]"
+	}
+	return line + " [on]"
+}
+
+func setupAudio() (audio.Service, string) {
+	assetsEnv := strings.TrimSpace(os.Getenv("FLUFFYUI_AUDIO_ASSETS"))
+	if audioDisabled(assetsEnv) {
+		return audio.Disabled{}, "disabled (env off)"
+	}
+	assetsDir := assetsEnv
+	sourceLabel := "custom"
+	if assetsDir == "" {
+		assetsDir = defaultAudioAssetsDir()
+		sourceLabel = "sample"
+	}
+	if assetsDir == "" {
+		return audio.Disabled{}, "disabled (set FLUFFYUI_AUDIO_ASSETS)"
+	}
+	command, ok := execdriver.DetectCommand()
+	if !ok {
+		return audio.Disabled{}, "disabled (no audio command found)"
+	}
+	addSource := func(sources map[string]execdriver.Source, cues *[]audio.Cue, id string, filename string, cue audio.Cue) {
+		path := filepath.Join(assetsDir, filename)
+		if !fileExists(path) {
+			return
+		}
+		sources[id] = execdriver.Source{Path: path}
+		*cues = append(*cues, cue)
+	}
+	sources := make(map[string]execdriver.Source)
+	cues := make([]audio.Cue, 0, 4)
+	addSource(sources, &cues, "ui.up", "count-up.wav", audio.Cue{
+		ID:       "ui.up",
+		Kind:     audio.KindSFX,
+		Volume:   80,
+		Cooldown: 60 * time.Millisecond,
+	})
+	addSource(sources, &cues, "ui.down", "count-down.wav", audio.Cue{
+		ID:       "ui.down",
+		Kind:     audio.KindSFX,
+		Volume:   80,
+		Cooldown: 60 * time.Millisecond,
+	})
+	addSource(sources, &cues, "ui.toggle", "toggle.wav", audio.Cue{
+		ID:       "ui.toggle",
+		Kind:     audio.KindSFX,
+		Volume:   70,
+		Cooldown: 120 * time.Millisecond,
+	})
+	addSource(sources, &cues, "music.loop", "music.wav", audio.Cue{
+		ID:     "music.loop",
+		Kind:   audio.KindMusic,
+		Volume: 50,
+		Loop:   true,
+	})
+	if len(cues) == 0 {
+		return audio.Disabled{}, "disabled (no assets found)"
+	}
+	driver := execdriver.NewDriver(execdriver.Config{
+		Command: command,
+		Sources: sources,
+	})
+	return audio.NewManager(driver, cues...), fmt.Sprintf("enabled (%s, %s)", command.Path, sourceLabel)
+}
+
+func fileExists(path string) bool {
+	if path == "" {
+		return false
+	}
+	info, err := os.Stat(path)
+	return err == nil && !info.IsDir()
+}
+
+func dirExists(path string) bool {
+	if path == "" {
+		return false
+	}
+	info, err := os.Stat(path)
+	return err == nil && info.IsDir()
+}
+
+func defaultAudioAssetsDir() string {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return ""
+	}
+	candidates := []string{
+		filepath.Join(cwd, "examples", "quickstart", "assets", "audio"),
+		filepath.Join(cwd, "assets", "audio"),
+	}
+	for _, candidate := range candidates {
+		if dirExists(candidate) {
+			return candidate
+		}
+	}
+	return ""
+}
+
+func audioDisabled(value string) bool {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "0", "off", "false", "no", "disable", "disabled":
+		return true
+	default:
+		return false
+	}
 }
