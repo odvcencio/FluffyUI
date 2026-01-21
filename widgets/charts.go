@@ -2,6 +2,7 @@ package widgets
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/odvcencio/fluffy-ui/backend"
 	"github.com/odvcencio/fluffy-ui/runtime"
@@ -49,7 +50,7 @@ func (s *Sparkline) Render(ctx runtime.RenderContext) {
 	if len(values) == 0 {
 		return
 	}
-	chars := []rune{' ', '.', ':', '-', '=', '+', '*', '#', '@'}
+	chars := []rune{' ', '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'}
 	min, max := values[0], values[0]
 	for _, v := range values {
 		if v < min {
@@ -160,15 +161,16 @@ func (b *BarChart) Render(ctx runtime.RenderContext) {
 		if fill > barWidth {
 			fill = barWidth
 		}
-		bar := ""
+		bar := strings.Builder{}
+		bar.Grow(barWidth)
 		for j := 0; j < barWidth; j++ {
 			if j < fill {
-				bar += "#"
+				bar.WriteRune('█')
 			} else {
-				bar += "-"
+				bar.WriteRune('░')
 			}
 		}
-		line := label + bar
+		line := label + bar.String()
 		if b.ShowValues {
 			line += " " + formatFloat(entry.Value)
 		}

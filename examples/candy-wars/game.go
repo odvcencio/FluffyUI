@@ -72,8 +72,9 @@ type Game struct {
 	Losses    int
 	BestWorth int
 
-	meta     *MetaProgress
-	runStart time.Time
+	meta       *MetaProgress
+	runStart   time.Time
+	difficulty Difficulty
 }
 
 func NewGame() *Game {
@@ -121,11 +122,17 @@ func NewGame() *Game {
 
 	g.meta = LoadMeta()
 	g.applyMeta()
-	g.StartNewRun()
+	g.difficulty = DifficultyNormal
 	return g
 }
 
 func (g *Game) StartNewRun() {
+	mods := g.difficultySettings()
+	startingDebtValue := mods.StartingDebt
+	if startingDebtValue <= 0 {
+		startingDebtValue = startingDebt
+	}
+
 	g.Runs++
 	if g.meta != nil {
 		g.meta.TotalRuns = g.Runs
@@ -138,7 +145,7 @@ func (g *Game) StartNewRun() {
 	g.EventTitle.Set("")
 	g.EventMessage.Set("")
 	g.Cash.Set(startingCash)
-	g.Debt.Set(startingDebt)
+	g.Debt.Set(startingDebtValue)
 	g.Bank.Set(0)
 	g.BankLimit = bankLimitInitial
 	g.Day.Set(1)
@@ -180,6 +187,35 @@ func (g *Game) StartNewRun() {
 	g.ResetDailyBonuses()
 	g.RefreshPrices()
 	g.PriceHistory.Set([]float64{float64(startingCash)})
+	if mods.HellBonusesApply {
+		g.ApplyHellBonuses()
+	}
+}
+
+func (g *Game) StartNewRunWithDifficulty(diff Difficulty) {
+	g.SetDifficulty(diff)
+	g.StartNewRun()
+}
+
+func (g *Game) SetDifficulty(diff Difficulty) {
+	if diff == "" {
+		diff = DifficultyNormal
+	}
+	g.difficulty = diff
+}
+
+func (g *Game) Difficulty() Difficulty {
+	if g.difficulty == "" {
+		return DifficultyNormal
+	}
+	return g.difficulty
+}
+
+func (g *Game) difficultySettings() DifficultyModifiers {
+	if mods, ok := DifficultySettings[g.Difficulty()]; ok {
+		return mods
+	}
+	return DifficultySettings[DifficultyNormal]
 }
 
 func (g *Game) rollBasePrices() MarketPrices {
@@ -502,6 +538,14 @@ func (g *Game) addHeat(amount int, applySchedule bool, ignoreImmunity bool) {
 	if g.heatImmunityDays > 0 && !ignoreImmunity {
 		return
 	}
+	mods := g.difficultySettings()
+	if mods.HeatGain <= 0 {
+		mods.HeatGain = 1
+	}
+	amount = int(math.Round(float64(amount) * mods.HeatGain))
+	if amount <= 0 {
+		return
+	}
 	if applySchedule {
 		amount = amount * g.scheduleHeatMultiplier() / 100
 		if amount <= 0 {
@@ -518,6 +562,21 @@ func (g *Game) addHeat(amount int, applySchedule bool, ignoreImmunity bool) {
 }
 
 func (g *Game) reduceHeat(amount int) {
+	if amount <= 0 {
+		return
+	}
+	mods := g.difficultySettings()
+	decay := mods.HeatDecay
+	if decay <= 0 {
+		decay = 1
+	}
+	if g.Difficulty() == DifficultyHell && mods.HellBonusesApply {
+		rank := g.GetHellRank()
+		if rank.Rank == HellRankGold || rank.Rank == HellRankPlatinum || rank.Rank == HellRankDiamond {
+			decay *= 1.1
+		}
+	}
+	amount = int(math.Round(float64(amount) * decay))
 	if amount <= 0 {
 		return
 	}
@@ -551,7 +610,12 @@ func (g *Game) applyDebtInterest() {
 	if debt <= 0 {
 		return
 	}
-	interest := debt * debtInterestRatePercent / 100
+	mods := g.difficultySettings()
+	rate := mods.DebtInterest
+	if rate <= 0 {
+		rate = debtInterestRatePercent
+	}
+	interest := debt * rate / 100
 	if interest <= 0 {
 		return
 	}
@@ -620,6 +684,15 @@ func (g *Game) Tick() {
 		case locationCafeteria:
 			deltaRange = 3
 		case locationMusicHall:
+			deltaRange = 1
+		}
+		mods := g.difficultySettings()
+		vol := mods.PriceVolatility
+		if vol <= 0 {
+			vol = 1
+		}
+		deltaRange = int(math.Round(float64(deltaRange) * vol))
+		if deltaRange < 1 {
 			deltaRange = 1
 		}
 		delta := rand.Intn(deltaRange*2+1) - deltaRange

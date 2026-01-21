@@ -1,0 +1,15 @@
+# Candy Wars demo sequence (agent driver JSONL)
+{"type":"sleep","ms":300}
+{"type":"key","key":"enter","delay_ms":300}
+{"type":"key","key":"b","delay_ms":200}
+{"type":"text","text":"5","delay_ms":100}
+{"type":"key","key":"enter","delay_ms":300}
+{"type":"key","key":"right","delay_ms":200}
+{"type":"key","key":"right","delay_ms":200}
+{"type":"key","key":"left","delay_ms":150}
+{"type":"key","key":"left","delay_ms":150}
+{"type":"key","key":"s","delay_ms":150}
+{"type":"text","text":"2","delay_ms":100}
+{"type":"key","key":"enter","delay_ms":250}
+{"type":"key","key":"e","delay_ms":250}
+{"type":"key","key":"q","delay_ms":200}

@@ -17,30 +17,31 @@ type MetaUnlocks struct {
 }
 
 type MetaProgress struct {
-	Unlocks                MetaUnlocks     `json:"unlocks"`
-	Achievements           map[string]bool `json:"achievements"`
-	TotalRuns              int             `json:"total_runs"`
-	Wins                   int             `json:"wins"`
-	Losses                 int             `json:"losses"`
-	BestWorth              int             `json:"best_worth"`
-	TotalTradeValue        int             `json:"total_trade_value"`
-	TotalTradeCount        int             `json:"total_trade_count"`
-	TotalCrafted           int             `json:"total_crafted"`
-	TotalEnemiesDefeated   int             `json:"total_enemies_defeated"`
-	TotalLoanPaid          int             `json:"total_loan_paid"`
-	TotalPlaytimeSeconds   int64           `json:"total_playtime_seconds"`
-	TotalWinSeconds        int64           `json:"total_win_seconds"`
-	TotalLossSeconds       int64           `json:"total_loss_seconds"`
-	FastestWinSeconds      int64           `json:"fastest_win_seconds"`
-	SlowestWinSeconds      int64           `json:"slowest_win_seconds"`
-	FastestLossSeconds     int64           `json:"fastest_loss_seconds"`
-	SlowestLossSeconds     int64           `json:"slowest_loss_seconds"`
-	LongestRunSeconds      int64           `json:"longest_run_seconds"`
-	ShortestRunSeconds     int64           `json:"shortest_run_seconds"`
-	LastRunDurationSeconds int64           `json:"last_run_duration_seconds"`
-	LastRunEndedAtUnixSecs int64           `json:"last_run_ended_at_unix_secs"`
-	RunHistory             []RunRecord     `json:"run_history"`
-	TradeHistory           []TradeRecord   `json:"trade_history"`
+	Unlocks                MetaUnlocks           `json:"unlocks"`
+	Achievements           []AchievementProgress `json:"achievements"`
+	TotalRuns              int                   `json:"total_runs"`
+	Wins                   int                   `json:"wins"`
+	Losses                 int                   `json:"losses"`
+	BestWorth              int                   `json:"best_worth"`
+	HellWins               int                   `json:"hell_wins"`
+	TotalTradeValue        int                   `json:"total_trade_value"`
+	TotalTradeCount        int                   `json:"total_trade_count"`
+	TotalCrafted           int                   `json:"total_crafted"`
+	TotalEnemiesDefeated   int                   `json:"total_enemies_defeated"`
+	TotalLoanPaid          int                   `json:"total_loan_paid"`
+	TotalPlaytimeSeconds   int64                 `json:"total_playtime_seconds"`
+	TotalWinSeconds        int64                 `json:"total_win_seconds"`
+	TotalLossSeconds       int64                 `json:"total_loss_seconds"`
+	FastestWinSeconds      int64                 `json:"fastest_win_seconds"`
+	SlowestWinSeconds      int64                 `json:"slowest_win_seconds"`
+	FastestLossSeconds     int64                 `json:"fastest_loss_seconds"`
+	SlowestLossSeconds     int64                 `json:"slowest_loss_seconds"`
+	LongestRunSeconds      int64                 `json:"longest_run_seconds"`
+	ShortestRunSeconds     int64                 `json:"shortest_run_seconds"`
+	LastRunDurationSeconds int64                 `json:"last_run_duration_seconds"`
+	LastRunEndedAtUnixSecs int64                 `json:"last_run_ended_at_unix_secs"`
+	RunHistory             []RunRecord           `json:"run_history"`
+	TradeHistory           []TradeRecord         `json:"trade_history"`
 }
 
 type RunRecord struct {
@@ -62,53 +63,9 @@ type TradeRecord struct {
 	Location  string `json:"location"`
 }
 
-type achievementDef struct {
-	ID        string
-	Name      string
-	Condition func(meta *MetaProgress) bool
-}
-
-var achievementDefs = []achievementDef{
-	{
-		ID:   "first_score",
-		Name: "First Score",
-		Condition: func(meta *MetaProgress) bool {
-			return meta.Wins >= 1
-		},
-	},
-	{
-		ID:   "brawler",
-		Name: "Brawler",
-		Condition: func(meta *MetaProgress) bool {
-			return meta.TotalEnemiesDefeated >= 50
-		},
-	},
-	{
-		ID:   "chef",
-		Name: "Chef",
-		Condition: func(meta *MetaProgress) bool {
-			return meta.TotalCrafted >= 100
-		},
-	},
-	{
-		ID:   "candy_baron",
-		Name: "Candy Baron",
-		Condition: func(meta *MetaProgress) bool {
-			return meta.TotalTradeValue >= 10000
-		},
-	},
-	{
-		ID:   "loan_shark_nightmare",
-		Name: "Loan Shark's Nightmare",
-		Condition: func(meta *MetaProgress) bool {
-			return meta.TotalLoanPaid >= 5000
-		},
-	},
-}
-
 func defaultMeta() *MetaProgress {
 	return &MetaProgress{
-		Achievements: make(map[string]bool),
+		Achievements: make([]AchievementProgress, 0),
 		RunHistory:   make([]RunRecord, 0),
 		TradeHistory: make([]TradeRecord, 0),
 	}
@@ -124,7 +81,7 @@ func LoadMeta() *MetaProgress {
 		return defaultMeta()
 	}
 	if meta.Achievements == nil {
-		meta.Achievements = make(map[string]bool)
+		meta.Achievements = make([]AchievementProgress, 0)
 	}
 	if meta.RunHistory == nil {
 		meta.RunHistory = make([]RunRecord, 0)
@@ -287,26 +244,16 @@ func (g *Game) recordRunHistory(win bool, totalWorth int, debt int, day int) {
 }
 
 func (g *Game) checkAchievements() []string {
-	if g.meta == nil {
+	unlocked := g.CheckAndUnlockAchievements()
+	if len(unlocked) == 0 {
 		return nil
 	}
-	if g.meta.Achievements == nil {
-		g.meta.Achievements = make(map[string]bool)
+	names := make([]string, len(unlocked))
+	for i, ach := range unlocked {
+		names[i] = ach.Name
 	}
-	var unlocked []string
-	for _, def := range achievementDefs {
-		if g.meta.Achievements[def.ID] {
-			continue
-		}
-		if def.Condition(g.meta) {
-			g.meta.Achievements[def.ID] = true
-			unlocked = append(unlocked, def.Name)
-		}
-	}
-	if len(unlocked) > 0 {
-		g.saveMeta()
-	}
-	return unlocked
+	g.saveMeta()
+	return names
 }
 
 func (g *Game) updateUnlocks() []string {
@@ -394,13 +341,13 @@ func (g *Game) loanTierUnlocked(tier int) bool {
 }
 
 func (g *Game) AchievementCount() (int, int) {
-	total := len(achievementDefs)
+	total := len(Achievements)
 	if g.meta == nil || g.meta.Achievements == nil {
 		return 0, total
 	}
 	unlocked := 0
 	for _, got := range g.meta.Achievements {
-		if got {
+		if got.Unlocked {
 			unlocked++
 		}
 	}

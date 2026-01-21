@@ -1,13 +1,19 @@
 package demo
 
 import (
+	"fmt"
+	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/odvcencio/fluffy-ui/accessibility"
 	"github.com/odvcencio/fluffy-ui/backend"
+	"github.com/odvcencio/fluffy-ui/backend/sim"
 	backendtcell "github.com/odvcencio/fluffy-ui/backend/tcell"
 	"github.com/odvcencio/fluffy-ui/clipboard"
 	"github.com/odvcencio/fluffy-ui/keybind"
+	"github.com/odvcencio/fluffy-ui/recording"
 	"github.com/odvcencio/fluffy-ui/runtime"
 )
 
@@ -31,7 +37,7 @@ type Bundle struct {
 
 // NewApp builds a demo app with keybindings and focus registration.
 func NewApp(root runtime.Widget, opts Options) (*Bundle, error) {
-	be, err := backendtcell.New()
+	be, err := buildBackendFromEnv()
 	if err != nil {
 		return nil, err
 	}
@@ -75,6 +81,11 @@ func NewApp(root runtime.Widget, opts Options) (*Bundle, error) {
 		update = withFocusRegistration(root, update)
 	}
 
+	recorder, err := buildRecorderFromEnv()
+	if err != nil {
+		return nil, err
+	}
+
 	app := runtime.NewApp(runtime.AppConfig{
 		Backend:        be,
 		Root:           root,
@@ -88,6 +99,7 @@ func NewApp(root runtime.Widget, opts Options) (*Bundle, error) {
 			Indicator: indicator,
 			Style:     focusStyle,
 		},
+		Recorder: recorder,
 	})
 
 	return &Bundle{
@@ -96,6 +108,67 @@ func NewApp(root runtime.Widget, opts Options) (*Bundle, error) {
 		Keymaps:  stack,
 		Router:   router,
 	}, nil
+}
+
+func buildBackendFromEnv() (backend.Backend, error) {
+	backendName := strings.ToLower(strings.TrimSpace(os.Getenv("FLUFFYUI_BACKEND")))
+	if backendName == "sim" || backendName == "simulation" {
+		width := envInt("FLUFFYUI_WIDTH", 80)
+		height := envInt("FLUFFYUI_HEIGHT", 24)
+		return sim.New(width, height), nil
+	}
+	return backendtcell.New()
+}
+
+func buildRecorderFromEnv() (runtime.Recorder, error) {
+	recordPath := strings.TrimSpace(os.Getenv("FLUFFYUI_RECORD"))
+	exportPath := strings.TrimSpace(os.Getenv("FLUFFYUI_RECORD_EXPORT"))
+	if recordPath == "" && exportPath == "" {
+		return nil, nil
+	}
+
+	title := strings.TrimSpace(os.Getenv("FLUFFYUI_RECORD_TITLE"))
+	if title == "" {
+		title = "FluffyUI Demo"
+	}
+
+	opts := recording.AsciicastOptions{Title: title}
+	if exportPath != "" {
+		return recording.NewVideoRecorder(exportPath, recording.VideoRecorderOptions{
+			Cast:     opts,
+			CastPath: recordPath,
+			KeepCast: recordPath != "",
+			Video: recording.VideoOptions{
+				Agg: recording.AggOptions{
+					Theme:    "monokai",
+					FontSize: 16,
+					FPS:      30,
+				},
+				FFmpeg: recording.FFmpegOptions{
+					VideoCodec: "libx264",
+					Preset:     "medium",
+					CRF:        22,
+				},
+			},
+		})
+	}
+
+	if recordPath == "" {
+		return nil, fmt.Errorf("FLUFFYUI_RECORD is required when FLUFFYUI_RECORD_EXPORT is unset")
+	}
+	return recording.NewAsciicastRecorder(recordPath, opts)
+}
+
+func envInt(key string, fallback int) int {
+	raw := strings.TrimSpace(os.Getenv(key))
+	if raw == "" {
+		return fallback
+	}
+	value, err := strconv.Atoi(raw)
+	if err != nil || value <= 0 {
+		return fallback
+	}
+	return value
 }
 
 func withFocusRegistration(root runtime.Widget, next runtime.UpdateFunc) runtime.UpdateFunc {

@@ -10,6 +10,7 @@ func (g *Game) StartCombat(enemy Combatant) {
 	if g.InCombat() || g.GameOver.Get() {
 		return
 	}
+	enemy = g.applyDifficultyToEnemy(enemy)
 	if g.hasIntimidation && !enemy.IsGoon && rand.Intn(100) < 20 {
 		g.Message.Set(fmt.Sprintf("%s backs off from your glare.", enemy.Name))
 		return
@@ -383,4 +384,21 @@ func (g *Game) rewardRivalLoot(enemy Combatant) {
 		g.appendCombatLog("Rival stash: +$%d, but no room for candies.", bonusCash)
 	}
 	g.appendCombatLog("Local buzz boosts sells here today.")
+}
+
+func (g *Game) applyDifficultyToEnemy(enemy Combatant) Combatant {
+	mods := g.difficultySettings()
+	if mods.EnemyHP > 0 {
+		enemy.HP = int(math.Round(float64(enemy.HP) * mods.EnemyHP))
+		if enemy.HP < 1 {
+			enemy.HP = 1
+		}
+	}
+	if mods.EnemyDamage > 0 {
+		enemy.ATK = int(math.Round(float64(enemy.ATK) * mods.EnemyDamage))
+		if enemy.ATK < 1 {
+			enemy.ATK = 1
+		}
+	}
+	return enemy
 }

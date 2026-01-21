@@ -274,6 +274,14 @@ func (a *App) Run(ctx context.Context) error {
 			a.running = false
 			a.cancelTasks()
 		case msg = <-a.messages:
+			if call, ok := msg.(callMsg); ok {
+				if call.fn != nil {
+					call.done <- call.fn(a)
+				} else {
+					call.done <- nil
+				}
+				continue
+			}
 			if a.update(a, msg) {
 				a.dirty = true
 			}

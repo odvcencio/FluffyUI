@@ -339,6 +339,9 @@ func (g *Game) endGame(msg string, win bool, totalWorth int) {
 		g.meta.Wins = g.Wins
 		g.meta.Losses = g.Losses
 		g.meta.BestWorth = g.BestWorth
+		if win && g.Difficulty() == DifficultyHell {
+			g.meta.HellWins++
+		}
 		g.recordPlaytime(win)
 		g.recordRunHistory(win, totalWorth, g.TotalDebt(), g.Day.Get())
 		unlocked := g.checkAchievements()
@@ -416,6 +419,12 @@ func (g *Game) sellPrice(candyName string) int {
 	if g.tradeBuffUses > 0 {
 		price = applyPercent(price, g.tradeBuffSellMult)
 	}
+	if g.Difficulty() == DifficultyHell && g.difficultySettings().HellBonusesApply {
+		rank := g.GetHellRank()
+		if rank.Rank == HellRankBronze || rank.Rank == HellRankSilver || rank.Rank == HellRankGold || rank.Rank == HellRankPlatinum || rank.Rank == HellRankDiamond {
+			price = applyPercent(price, 105)
+		}
+	}
 	return price
 }
 
@@ -461,6 +470,12 @@ func (g *Game) sellPriceAtLocation(loc int, candyName string) int {
 	price = applyPercent(price, bonus)
 	_, sellMult := g.schedulePriceMultipliersAt(loc)
 	price = applyPercent(price, sellMult)
+	if g.Difficulty() == DifficultyHell && g.difficultySettings().HellBonusesApply {
+		rank := g.GetHellRank()
+		if rank.Rank == HellRankBronze || rank.Rank == HellRankSilver || rank.Rank == HellRankGold || rank.Rank == HellRankPlatinum || rank.Rank == HellRankDiamond {
+			price = applyPercent(price, 105)
+		}
+	}
 	return price
 }
 

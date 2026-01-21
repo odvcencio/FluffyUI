@@ -4,6 +4,7 @@
 package agent
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -31,12 +32,13 @@ var (
 // It wraps a simulation backend and exposes semantic operations over
 // the widget tree.
 type Agent struct {
-	mu         sync.Mutex
-	app        *runtime.App
-	sim        *sim.Backend
-	screen     *runtime.Screen
-	tickRate   time.Duration
-	autoAttach bool
+	mu          sync.Mutex
+	app         *runtime.App
+	sim         *sim.Backend
+	screen      *runtime.Screen
+	tickRate    time.Duration
+	autoAttach  bool
+	includeText bool
 }
 
 // Config configures an Agent.
@@ -58,6 +60,10 @@ type Config struct {
 	// TickRate is how long to wait between operations for UI to settle.
 	// Default is 50ms.
 	TickRate time.Duration
+
+	// IncludeText controls whether snapshots include raw screen text.
+	// Default is false.
+	IncludeText bool
 }
 
 // New creates a new Agent with the given configuration.
@@ -81,6 +87,7 @@ func New(cfg Config) *Agent {
 	}
 
 	autoAttach := !cfg.DisableAutoAttach
+	includeText := cfg.IncludeText
 
 	var screen *runtime.Screen
 	if cfg.App != nil && autoAttach {
@@ -88,11 +95,12 @@ func New(cfg Config) *Agent {
 	}
 
 	return &Agent{
-		app:        cfg.App,
-		sim:        s,
-		screen:     screen,
-		tickRate:   tickRate,
-		autoAttach: autoAttach,
+		app:         cfg.App,
+		sim:         s,
+		screen:      screen,
+		tickRate:    tickRate,
+		autoAttach:  autoAttach,
+		includeText: includeText,
 	}
 }
 
@@ -147,18 +155,52 @@ func (a *Agent) Tick() {
 
 // Snapshot returns a structured representation of the current UI state.
 func (a *Agent) Snapshot() Snapshot {
+	snap, _ := a.SnapshotWithContext(context.Background(), SnapshotOptions{
+		IncludeText: a.includeText,
+	})
+	return snap
+}
+
+// SnapshotWithContext captures a snapshot on the app's event loop when available.
+func (a *Agent) SnapshotWithContext(ctx context.Context, opts SnapshotOptions) (Snapshot, error) {
 	if a == nil {
-		return Snapshot{}
+		return Snapshot{}, ErrNoApp
 	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	if a.app != nil {
+		var snap Snapshot
+		err := a.app.Call(ctx, func(app *runtime.App) error {
+			a.mu.Lock()
+			defer a.mu.Unlock()
+			if a.autoAttach && a.screen == nil {
+				a.screen = app.Screen()
+			}
+			snap = a.snapshotLocked(opts.IncludeText)
+			return nil
+		})
+		if err != nil {
+			return Snapshot{}, err
+		}
+		return snap, nil
+	}
+
 	a.mu.Lock()
 	defer a.mu.Unlock()
+	return a.snapshotLocked(opts.IncludeText), nil
+}
 
+func (a *Agent) snapshotLocked(includeText bool) Snapshot {
 	snap := Snapshot{
 		Timestamp: time.Now(),
 	}
 
 	a.ensureScreenLocked()
-	snap.Text = a.captureTextLocked()
+	if includeText {
+		snap.Text = a.captureTextLocked()
+	}
 
 	if a.sim != nil {
 		snap.Width, _ = a.sim.Size()
@@ -395,7 +437,12 @@ func (a *Agent) GetValue(label string) (string, error) {
 
 // SnapshotJSON returns the current snapshot serialized to JSON.
 func (a *Agent) SnapshotJSON() ([]byte, error) {
-	snap := a.Snapshot()
+	snap, err := a.SnapshotWithContext(context.Background(), SnapshotOptions{
+		IncludeText: a.includeText,
+	})
+	if err != nil {
+		return nil, err
+	}
 	return json.MarshalIndent(snap, "", "  ")
 }
 
@@ -506,9 +553,35 @@ func (a *Agent) Select(label, option string) error {
 	return ErrWidgetNotFound
 }
 
+// SendKeyMsg injects a raw key message into the app.
+func (a *Agent) SendKeyMsg(msg runtime.KeyMsg) error {
+	if a == nil {
+		return ErrNoApp
+	}
+	a.mu.Lock()
+	simBackend := a.sim
+	app := a.app
+	a.mu.Unlock()
+
+	if simBackend != nil {
+		return simBackend.PostEvent(terminal.KeyEvent{
+			Key:   msg.Key,
+			Rune:  msg.Rune,
+			Alt:   msg.Alt,
+			Ctrl:  msg.Ctrl,
+			Shift: msg.Shift,
+		})
+	}
+	if app != nil {
+		app.Post(msg)
+		return nil
+	}
+	return ErrNoApp
+}
+
 // SendKey injects a key into the app.
 func (a *Agent) SendKey(key terminal.Key) error {
-	if err := a.sendKey(key, 0); err != nil {
+	if err := a.SendKeyMsg(runtime.KeyMsg{Key: key}); err != nil {
 		return err
 	}
 	a.Tick()
@@ -517,7 +590,7 @@ func (a *Agent) SendKey(key terminal.Key) error {
 
 // SendKeyRune injects a key with rune payload.
 func (a *Agent) SendKeyRune(key terminal.Key, r rune) error {
-	if err := a.sendKey(key, r); err != nil {
+	if err := a.SendKeyMsg(runtime.KeyMsg{Key: key, Rune: r}); err != nil {
 		return err
 	}
 	a.Tick()
@@ -531,6 +604,75 @@ func (a *Agent) SendKeyString(text string) error {
 	}
 	a.Tick()
 	return nil
+}
+
+// SendMouse injects a mouse event into the app.
+func (a *Agent) SendMouse(msg runtime.MouseMsg) error {
+	if a == nil {
+		return ErrNoApp
+	}
+	a.mu.Lock()
+	simBackend := a.sim
+	app := a.app
+	a.mu.Unlock()
+
+	if simBackend != nil {
+		return simBackend.PostEvent(terminal.MouseEvent{
+			X:      msg.X,
+			Y:      msg.Y,
+			Button: terminal.MouseButton(msg.Button),
+			Action: terminal.MouseAction(msg.Action),
+			Alt:    msg.Alt,
+			Ctrl:   msg.Ctrl,
+			Shift:  msg.Shift,
+		})
+	}
+	if app != nil {
+		app.Post(msg)
+		return nil
+	}
+	return ErrNoApp
+}
+
+// SendPaste injects a paste event into the app.
+func (a *Agent) SendPaste(text string) error {
+	if a == nil {
+		return ErrNoApp
+	}
+	a.mu.Lock()
+	simBackend := a.sim
+	app := a.app
+	a.mu.Unlock()
+
+	if simBackend != nil {
+		return simBackend.PostEvent(terminal.PasteEvent{Text: text})
+	}
+	if app != nil {
+		app.Post(runtime.PasteMsg{Text: text})
+		return nil
+	}
+	return ErrNoApp
+}
+
+// SendResize injects a resize event into the app.
+func (a *Agent) SendResize(width, height int) error {
+	if a == nil {
+		return ErrNoApp
+	}
+	a.mu.Lock()
+	simBackend := a.sim
+	app := a.app
+	a.mu.Unlock()
+
+	if simBackend != nil {
+		simBackend.InjectResize(width, height)
+		return nil
+	}
+	if app != nil {
+		app.Post(runtime.ResizeMsg{Width: width, Height: height})
+		return nil
+	}
+	return ErrNoApp
 }
 
 // WaitForText waits until text appears on screen or timeout occurs.
@@ -603,23 +745,7 @@ func (a *Agent) CaptureText() string {
 }
 
 func (a *Agent) sendKey(key terminal.Key, r rune) error {
-	if a == nil {
-		return ErrNoApp
-	}
-	a.mu.Lock()
-	simBackend := a.sim
-	app := a.app
-	a.mu.Unlock()
-
-	if simBackend != nil {
-		simBackend.InjectKey(key, r)
-		return nil
-	}
-	if app != nil {
-		app.Post(runtime.KeyMsg{Key: key, Rune: r})
-		return nil
-	}
-	return ErrNoApp
+	return a.SendKeyMsg(runtime.KeyMsg{Key: key, Rune: r})
 }
 
 func (a *Agent) sendText(text string) error {
@@ -676,9 +802,37 @@ func (a *Agent) focusByID(id string) error {
 }
 
 func (a *Agent) focusWidgetByID(id string) (runtime.Widget, accessibility.Accessible, error) {
+	if a == nil {
+		return nil, nil, ErrNoApp
+	}
+	if a.app != nil {
+		var (
+			w   runtime.Widget
+			acc accessibility.Accessible
+		)
+		err := a.app.Call(context.Background(), func(app *runtime.App) error {
+			a.mu.Lock()
+			defer a.mu.Unlock()
+			if a.autoAttach && a.screen == nil {
+				a.screen = app.Screen()
+			}
+			var err error
+			w, acc, err = a.focusWidgetByIDLocked(id)
+			return err
+		})
+		if err != nil {
+			return nil, nil, err
+		}
+		return w, acc, nil
+	}
+
 	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.focusWidgetByIDLocked(id)
+}
+
+func (a *Agent) focusWidgetByIDLocked(id string) (runtime.Widget, accessibility.Accessible, error) {
 	screen := a.ensureScreenLocked()
-	a.mu.Unlock()
 	if screen == nil {
 		return nil, nil, ErrNoApp
 	}
@@ -701,15 +855,16 @@ func (a *Agent) focusWidgetByID(id string) (runtime.Widget, accessibility.Access
 		return w, accessibleFromWidget(w), ErrNotFocusable
 	}
 
-	if !scope.SetFocus(focusable) {
-		scope.Reset()
-		runtime.RegisterFocusables(scope, layer.Root)
-		if !scope.SetFocus(focusable) {
-			return w, accessibleFromWidget(w), ErrNotFocusable
-		}
+	if scope.SetFocus(focusable) || scope.Current() == focusable {
+		return w, accessibleFromWidget(w), nil
 	}
 
-	return w, accessibleFromWidget(w), nil
+	scope.Reset()
+	runtime.RegisterFocusables(scope, layer.Root)
+	if scope.SetFocus(focusable) || scope.Current() == focusable {
+		return w, accessibleFromWidget(w), nil
+	}
+	return w, accessibleFromWidget(w), ErrNotFocusable
 }
 
 func accessibleFromWidget(w runtime.Widget) accessibility.Accessible {

@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -64,7 +65,7 @@ func TestApp_RunQuit(t *testing.T) {
 		Root:    w,
 	})
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	done := make(chan error, 1)
@@ -161,6 +162,57 @@ func TestApp_Resize(t *testing.T) {
 	app.Post(KeyMsg{Key: terminal.KeyRune, Rune: 'q'})
 	if err := <-done; err != nil {
 		t.Fatalf("Run returned error: %v", err)
+	}
+}
+
+func TestApp_Call(t *testing.T) {
+	be := sim.New(5, 3)
+	w := &appTestWidget{
+		keyCommands: map[rune]Command{'q': Quit{}},
+		renderChar:  'X',
+	}
+
+	app := NewApp(AppConfig{
+		Backend: be,
+		Root:    w,
+	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	done := make(chan error, 1)
+	go func() {
+		done <- app.Run(ctx)
+	}()
+
+	waitForScreen(t, app)
+
+	expectedW, expectedH := be.Size()
+	callCtx, callCancel := context.WithTimeout(context.Background(), time.Second)
+	defer callCancel()
+
+	if err := app.Call(callCtx, func(app *App) error {
+		screen := app.Screen()
+		if screen == nil {
+			return fmt.Errorf("screen not initialized")
+		}
+		w, h := screen.Size()
+		if w != expectedW || h != expectedH {
+			return fmt.Errorf("screen size = %dx%d, want %dx%d", w, h, expectedW, expectedH)
+		}
+		return nil
+	}); err != nil {
+		t.Fatalf("Call failed: %v", err)
+	}
+
+	app.Post(KeyMsg{Key: terminal.KeyRune, Rune: 'q'})
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("Run returned error: %v", err)
+		}
+	case <-time.After(500 * time.Millisecond):
+		t.Fatal("Run did not exit after Quit")
 	}
 }
 

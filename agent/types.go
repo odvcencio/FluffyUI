@@ -19,6 +19,11 @@ type Snapshot struct {
 	Focused    *WidgetInfo  `json:"focused,omitempty"`
 }
 
+// SnapshotOptions configures snapshot output.
+type SnapshotOptions struct {
+	IncludeText bool
+}
+
 // WidgetInfo describes a widget in the UI tree.
 type WidgetInfo struct {
 	ID          string                   `json:"id"`

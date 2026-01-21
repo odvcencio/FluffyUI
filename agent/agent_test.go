@@ -162,7 +162,7 @@ func TestAgentSnapshotAndActions(t *testing.T) {
 		done <- app.Run(ctx)
 	}()
 	defer func() {
-		app.Post(runtime.Quit{})
+		app.ExecuteCommand(runtime.Quit{})
 		<-done
 	}()
 

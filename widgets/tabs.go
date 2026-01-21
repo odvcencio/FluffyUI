@@ -113,6 +113,25 @@ func (t *Tabs) HandleMessage(msg runtime.Message) runtime.HandleResult {
 	return runtime.Unhandled()
 }
 
+// SelectedIndex returns the current tab index.
+func (t *Tabs) SelectedIndex() int {
+	if t == nil || len(t.Tabs) == 0 {
+		return 0
+	}
+	if t.selected < 0 {
+		t.selected = 0
+	}
+	if t.selected >= len(t.Tabs) {
+		t.selected = len(t.Tabs) - 1
+	}
+	return t.selected
+}
+
+// SetSelected updates the active tab index.
+func (t *Tabs) SetSelected(index int) {
+	t.setSelected(index)
+}
+
 // ChildWidgets returns the selected tab content.
 func (t *Tabs) ChildWidgets() []runtime.Widget {
 	selected := t.selectedTab()

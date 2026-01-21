@@ -33,6 +33,7 @@ func renderViewToString(view *GameView, width, height int) string {
 
 func TestTradeDialogRendersQuantityInput(t *testing.T) {
 	game := NewGame()
+	game.StartNewRun()
 	view := NewGameView(game)
 	view.Layout(runtime.Rect{X: 0, Y: 0, Width: 80, Height: 24})
 

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"strings"
+	"time"
 	"unicode"
 
 	"github.com/odvcencio/fluffy-ui/backend"
@@ -18,15 +19,27 @@ type GameView struct {
 	// UI elements
 	header       *widgets.Label
 	statusPanel  *widgets.Panel
-	marketTable  *widgets.Table
-	locationList *widgets.List[Location]
+	tabs         *widgets.Tabs
+	tradeTab     *TradeTabContent
+	inventoryTab *InventoryTabContent
+	statsTabView *StatsTabContent
+	mapTab       *MapTabContent
 	messageLabel *widgets.Label
 	statsLabel   *widgets.Label
 	inventoryLbl *widgets.Label
 	scheduleLbl  *widgets.Label
 	statusLbl    *widgets.Label
 	heatGauge    *widgets.Progress
-	sparkline    *widgets.Sparkline
+
+	toasts     *GameToasts
+	toastStack *widgets.ToastStack
+
+	saveDialog *SaveLoadDialog
+	loadDialog *SaveLoadDialog
+	showSave   bool
+	showLoad   bool
+
+	eventModal *EventModal
 
 	// Trade dialog state
 	showTrade  bool
@@ -86,6 +99,14 @@ type GameView struct {
 	successStyle backend.Style
 	dangerStyle  backend.Style
 	warningStyle backend.Style
+
+	lastPrices MarketPrices
+	lastHour   int
+	lastHeat   int
+	lastDay    int
+	lastLoc    int
+
+	onRequestNewGame func()
 }
 
 type bankAction int
@@ -104,38 +125,21 @@ func NewGameView(game *Game) *GameView {
 		successStyle: backend.DefaultStyle().Foreground(backend.ColorGreen).Bold(true),
 		dangerStyle:  backend.DefaultStyle().Foreground(backend.ColorRed).Bold(true),
 		warningStyle: backend.DefaultStyle().Foreground(backend.ColorYellow),
+		lastLoc:      -1,
 	}
 
 	v.header = widgets.NewLabel("CANDY WARS - Jefferson Middle School").WithStyle(backend.DefaultStyle().Bold(true).Foreground(backend.ColorYellow))
 
-	// Market table
-	v.marketTable = widgets.NewTable(
-		widgets.TableColumn{Title: "Candy", Width: 15},
-		widgets.TableColumn{Title: "Price", Width: 8},
-		widgets.TableColumn{Title: "Stock", Width: 6},
-		widgets.TableColumn{Title: "Owned", Width: 6},
+	v.tradeTab = NewTradeTabContent(game, v)
+	v.inventoryTab = NewInventoryTabContent(game, v)
+	v.statsTabView = NewStatsTabContent(game, v)
+	v.mapTab = NewMapTabContent(game, v)
+	v.tabs = widgets.NewTabs(
+		widgets.Tab{Title: "Trade", Content: v.tradeTab},
+		widgets.Tab{Title: "Inventory", Content: v.inventoryTab},
+		widgets.Tab{Title: "Stats", Content: v.statsTabView},
+		widgets.Tab{Title: "Map", Content: v.mapTab},
 	)
-	v.updateMarketTable()
-
-	// Location list
-	adapter := widgets.NewSliceAdapter(Locations, func(loc Location, index int, selected bool, ctx runtime.RenderContext) {
-		style := v.style
-		if selected {
-			style = style.Reverse(true)
-		}
-		riskStars := ""
-		for i := 0; i < loc.RiskLevel; i++ {
-			riskStars += "*"
-		}
-		line := fmt.Sprintf("%-12s [%s]", loc.Name, riskStars)
-		line = truncPad(line, ctx.Bounds.Width)
-		ctx.Buffer.SetString(ctx.Bounds.X, ctx.Bounds.Y, line, style)
-	})
-	v.locationList = widgets.NewList(adapter)
-	v.locationList.OnSelect(func(index int, loc Location) {
-		v.game.Travel(index)
-		v.refresh()
-	})
 
 	v.messageLabel = widgets.NewLabel("")
 	v.statsLabel = widgets.NewLabel("").WithStyle(v.dimStyle)
@@ -147,7 +151,12 @@ func NewGameView(game *Game) *GameView {
 	v.heatGauge.Max = 100
 	v.heatGauge.Label = "Heat"
 
-	v.sparkline = widgets.NewSparkline(game.PriceHistory)
+	v.toasts = NewGameToasts(v)
+	v.toastStack = widgets.NewToastStack()
+	v.toastStack.SetOnDismiss(func(id string) {
+		v.toasts.Manager().Dismiss(id)
+	})
+	v.toasts.SetOnChange(v.toastStack.SetToasts)
 
 	v.tradeInput = widgets.NewInput()
 	v.tradeInput.SetPlaceholder("Quantity")
@@ -191,6 +200,21 @@ func NewGameView(game *Game) *GameView {
 	v.blackMarketIndex = 0
 	v.statsTab = statsCareer
 
+	v.saveDialog = NewSaveLoadDialog(saveMode, func(slot int) {
+		v.handleSaveSlot(slot)
+	})
+	v.saveDialog.OnDismiss(func() {
+		v.showSave = false
+		v.Invalidate()
+	})
+	v.loadDialog = NewSaveLoadDialog(loadMode, func(slot int) {
+		v.handleLoadSlot(slot)
+	})
+	v.loadDialog.OnDismiss(func() {
+		v.showLoad = false
+		v.Invalidate()
+	})
+
 	v.refresh()
 	return v
 }
@@ -217,7 +241,9 @@ func (v *GameView) Unmount() {
 }
 
 func (v *GameView) refresh() {
-	v.updateMarketTable()
+	if v.tradeTab != nil {
+		v.tradeTab.UpdateMarketTable()
+	}
 	v.messageLabel.SetText(v.game.Message.Get())
 	statsLine := fmt.Sprintf(
 		"Life %d  |  Record %d-%d  |  Best $%d",
@@ -266,6 +292,12 @@ func (v *GameView) refresh() {
 		v.showStash = false
 		v.stashInput.Blur()
 	}
+	if v.game.GameOver.Get() && v.showSave {
+		v.showSave = false
+	}
+	if v.game.GameOver.Get() && v.showLoad {
+		v.showLoad = false
+	}
 
 	inv := v.game.Inventory.Get()
 	invText := fmt.Sprintf("Backpack: %d/%d", v.game.InventoryCount(), v.game.Capacity)
@@ -293,26 +325,16 @@ func (v *GameView) refresh() {
 	heat := v.game.Heat.Get()
 	v.heatGauge.Value = float64(heat)
 
+	v.syncToasts()
+	v.syncEventModal()
+
 	v.Invalidate()
 }
 
 func (v *GameView) updateMarketTable() {
-	prices := v.game.Prices.Get()
-	inv := v.game.Inventory.Get()
-
-	rows := make([][]string, len(CandyTypes))
-	for i, candy := range CandyTypes {
-		price := prices[candy.Name]
-		stock := v.game.availableStock(candy.Name)
-		owned := inv[candy.Name]
-		rows[i] = []string{
-			candy.Emoji + " " + candy.Name,
-			fmt.Sprintf("$%d", price),
-			fmt.Sprintf("%d", stock),
-			fmt.Sprintf("%d", owned),
-		}
+	if v.tradeTab != nil {
+		v.tradeTab.UpdateMarketTable()
 	}
-	v.marketTable.SetRows(rows)
 }
 
 func (v *GameView) Measure(constraints runtime.Constraints) runtime.Size {
@@ -325,42 +347,43 @@ func (v *GameView) Layout(bounds runtime.Rect) {
 	// Header row
 	v.header.Layout(runtime.Rect{X: bounds.X, Y: bounds.Y, Width: bounds.Width, Height: 1})
 
-	// Status bar (Day, Cash, Debt, Heat)
-	y := bounds.Y + 2
+	contentTop := bounds.Y + 2
+	helpY := bounds.Y + bounds.Height - 2
+	statsY := helpY - 1
+	messageY := helpY - 2
+	heatY := helpY - 3
+	statusY := helpY - 4
+	scheduleY := helpY - 5
+	inventoryY := helpY - 6
 
-	// Left side: Market (55% width)
-	leftWidth := bounds.Width * 55 / 100
-	rightWidth := bounds.Width - leftWidth - 1
+	tabsHeight := inventoryY - contentTop - 1
+	if tabsHeight < 1 {
+		tabsHeight = 1
+	}
 
-	// Market table
-	marketHeight := len(CandyTypes) + 2
-	v.marketTable.Layout(runtime.Rect{X: bounds.X, Y: y, Width: leftWidth, Height: marketHeight})
+	v.tabs.Layout(runtime.Rect{X: bounds.X, Y: contentTop, Width: bounds.Width, Height: tabsHeight})
 
-	// Location list (right side)
-	v.locationList.Layout(runtime.Rect{X: bounds.X + leftWidth + 1, Y: y, Width: rightWidth, Height: len(Locations) + 1})
+	v.inventoryLbl.Layout(runtime.Rect{X: bounds.X, Y: inventoryY, Width: bounds.Width, Height: 1})
+	v.scheduleLbl.Layout(runtime.Rect{X: bounds.X, Y: scheduleY, Width: bounds.Width, Height: 1})
+	v.statusLbl.Layout(runtime.Rect{X: bounds.X, Y: statusY, Width: bounds.Width, Height: 1})
+	v.heatGauge.Layout(runtime.Rect{X: bounds.X, Y: heatY, Width: bounds.Width, Height: 1})
+	v.messageLabel.Layout(runtime.Rect{X: bounds.X, Y: messageY, Width: bounds.Width, Height: 1})
+	v.statsLabel.Layout(runtime.Rect{X: bounds.X, Y: statsY, Width: bounds.Width, Height: 1})
 
-	y += marketHeight + 1
+	if v.toastStack != nil {
+		v.toastStack.Layout(bounds)
+	}
 
-	// Sparkline
-	v.sparkline.Layout(runtime.Rect{X: bounds.X, Y: y, Width: leftWidth, Height: 1})
+	if v.eventModal != nil {
+		v.eventModal.Layout(v.eventModal.CenteredBounds(bounds))
+	}
 
-	// Heat gauge
-	v.heatGauge.Layout(runtime.Rect{X: bounds.X + leftWidth + 1, Y: y, Width: rightWidth, Height: 1})
-
-	y += 2
-
-	// Inventory
-	v.inventoryLbl.Layout(runtime.Rect{X: bounds.X, Y: y, Width: bounds.Width, Height: 1})
-
-	// Schedule + status
-	v.scheduleLbl.Layout(runtime.Rect{X: bounds.X, Y: y + 1, Width: bounds.Width, Height: 1})
-	v.statusLbl.Layout(runtime.Rect{X: bounds.X, Y: y + 2, Width: bounds.Width, Height: 1})
-
-	y += 4
-
-	// Message
-	v.messageLabel.Layout(runtime.Rect{X: bounds.X, Y: y, Width: bounds.Width, Height: 1})
-	v.statsLabel.Layout(runtime.Rect{X: bounds.X, Y: y + 1, Width: bounds.Width, Height: 1})
+	if v.showSave && v.saveDialog != nil {
+		v.saveDialog.Layout(bounds)
+	}
+	if v.showLoad && v.loadDialog != nil {
+		v.loadDialog.Layout(bounds)
+	}
 
 	// Trade input (hidden unless trading)
 	if v.showTrade {
@@ -458,26 +481,14 @@ func (v *GameView) Render(ctx runtime.RenderContext) {
 	locText := fmt.Sprintf("Location: %s", loc.Name)
 	ctx.Buffer.SetString(x, y, locText, v.accentStyle)
 
-	// Market table
-	v.marketTable.Render(ctx)
-
-	// Location list with header
-	listBounds := v.locationList.Bounds()
-	ctx.Buffer.SetString(listBounds.X, listBounds.Y-1, "Travel To:", v.accentStyle)
-	v.locationList.Render(ctx)
-
-	// Sparkline with label
-	sparkBounds := v.sparkline.Bounds()
-	ctx.Buffer.SetString(sparkBounds.X, sparkBounds.Y, "Net Worth: ", v.dimStyle)
-	v.sparkline.Render(ctx)
-
-	// Heat gauge
-	v.heatGauge.Render(ctx)
+	// Tabs
+	v.tabs.Render(ctx)
 
 	// Inventory
 	v.inventoryLbl.Render(ctx)
 	v.scheduleLbl.Render(ctx)
 	v.statusLbl.Render(ctx)
+	v.heatGauge.Render(ctx)
 
 	// Message
 	v.messageLabel.Render(ctx)
@@ -495,7 +506,7 @@ func (v *GameView) Render(ctx runtime.RenderContext) {
 	if v.game.blackMarketUnlocked() {
 		help += "  [M]Black Market"
 	}
-	help += "  [T]Stats  [P]ay Debt  [K]Bank  [L]Loan  [1-6]Travel  [E]nd Day  [Q]uit"
+	help += "  [T]Stats  [P]ay Debt  [K]Bank  [L]Loan  [1-6]Travel  [E]nd Day  [F5]Save  [F9]Load  [[]/[]] Tabs  [Q]uit"
 	if v.game.GameOver.Get() {
 		help = "[R]estart  [Q]uit"
 	}
@@ -552,8 +563,8 @@ func (v *GameView) Render(ctx runtime.RenderContext) {
 	}
 
 	// Event dialog
-	if v.game.ShowEvent.Get() && !v.game.InCombat() {
-		v.renderEventDialog(ctx)
+	if v.eventModal != nil && !v.game.InCombat() {
+		v.eventModal.Render(ctx)
 	}
 
 	// Combat dialog
@@ -569,6 +580,20 @@ func (v *GameView) Render(ctx runtime.RenderContext) {
 	// Game over dialog
 	if v.game.GameOver.Get() {
 		v.renderGameOverDialog(ctx)
+	}
+
+	// Save/load dialogs
+	if v.showSave && v.saveDialog != nil {
+		v.saveDialog.Render(ctx)
+	}
+	if v.showLoad && v.loadDialog != nil {
+		v.loadDialog.Render(ctx)
+	}
+
+	// Toasts
+	if v.toastStack != nil {
+		v.toastStack.SetNow(time.Now())
+		v.toastStack.Render(ctx)
 	}
 }
 
@@ -832,6 +857,19 @@ func (v *GameView) renderCombatDialog(ctx runtime.RenderContext) {
 }
 
 func (v *GameView) HandleMessage(msg runtime.Message) runtime.HandleResult {
+	if v.toastStack != nil {
+		if result := v.toastStack.HandleMessage(msg); result.Handled {
+			return result
+		}
+	}
+
+	if v.showSave && v.saveDialog != nil {
+		return v.saveDialog.HandleMessage(msg)
+	}
+	if v.showLoad && v.loadDialog != nil {
+		return v.loadDialog.HandleMessage(msg)
+	}
+
 	// Handle game over state
 	if v.game.GameOver.Get() {
 		if key, ok := msg.(runtime.KeyMsg); ok {
@@ -839,11 +877,19 @@ func (v *GameView) HandleMessage(msg runtime.Message) runtime.HandleResult {
 				return runtime.WithCommand(runtime.Quit{})
 			}
 			if key.Rune == 'r' || key.Rune == 'R' {
+				if v.onRequestNewGame != nil {
+					v.onRequestNewGame()
+					return runtime.Handled()
+				}
 				v.restartGame()
 				return runtime.Handled()
 			}
 		}
 		return runtime.Handled()
+	}
+
+	if v.eventModal != nil && !v.game.InCombat() {
+		return v.eventModal.HandleMessage(msg)
 	}
 
 	if v.showItems {
@@ -882,26 +928,6 @@ func (v *GameView) HandleMessage(msg runtime.Message) runtime.HandleResult {
 		return v.handleCombatInput(msg)
 	}
 
-	// Handle event dialog
-	if v.game.ShowEvent.Get() {
-		if key, ok := msg.(runtime.KeyMsg); ok {
-			if len(v.game.eventOptions) == 0 {
-				v.game.DismissEvent()
-				v.Invalidate()
-				return runtime.Handled()
-			}
-			for _, option := range v.game.eventOptions {
-				if key.Rune == option.Key || key.Rune == unicode.ToUpper(option.Key) {
-					option.Action()
-					v.game.DismissEvent()
-					v.refresh()
-					return runtime.Handled()
-				}
-			}
-		}
-		return runtime.Handled()
-	}
-
 	if v.showBank {
 		return v.handleBankInput(msg)
 	}
@@ -915,17 +941,31 @@ func (v *GameView) HandleMessage(msg runtime.Message) runtime.HandleResult {
 		return v.handleTradeInput(msg)
 	}
 
+	if result := v.handleActiveTabInput(msg); result.Handled {
+		return result
+	}
+
 	// Normal gameplay
 	key, ok := msg.(runtime.KeyMsg)
 	if !ok {
-		// Try child widgets
-		if result := v.marketTable.HandleMessage(msg); result.Handled {
-			return result
-		}
-		if result := v.locationList.HandleMessage(msg); result.Handled {
-			return result
-		}
 		return runtime.Unhandled()
+	}
+
+	switch key.Key {
+	case terminal.KeyF5:
+		v.openSaveDialog()
+		return runtime.Handled()
+	case terminal.KeyF9:
+		v.openLoadDialog()
+		return runtime.Handled()
+	case terminal.KeyLeft:
+		v.tabs.SetSelected(v.tabs.SelectedIndex() - 1)
+		v.Invalidate()
+		return runtime.Handled()
+	case terminal.KeyRight:
+		v.tabs.SetSelected(v.tabs.SelectedIndex() + 1)
+		v.Invalidate()
+		return runtime.Handled()
 	}
 
 	switch key.Rune {
@@ -995,6 +1035,15 @@ func (v *GameView) HandleMessage(msg runtime.Message) runtime.HandleResult {
 		v.refresh()
 		return runtime.Handled()
 
+	case '[':
+		v.tabs.SetSelected(v.tabs.SelectedIndex() - 1)
+		v.Invalidate()
+		return runtime.Handled()
+	case ']':
+		v.tabs.SetSelected(v.tabs.SelectedIndex() + 1)
+		v.Invalidate()
+		return runtime.Handled()
+
 	case '1', '2', '3', '4', '5', '6':
 		idx := int(key.Rune - '1')
 		if idx >= 0 && idx < len(Locations) {
@@ -1004,17 +1053,15 @@ func (v *GameView) HandleMessage(msg runtime.Message) runtime.HandleResult {
 		return runtime.Handled()
 	}
 
-	// Pass to market table for navigation
-	if result := v.marketTable.HandleMessage(msg); result.Handled {
-		return result
-	}
-
 	return runtime.Unhandled()
 }
 
 func (v *GameView) startTrade(isBuy bool) {
 	// Use the currently selected candy from the market table.
-	selected := v.marketTable.SelectedIndex()
+	selected := 0
+	if v.tradeTab != nil && v.tradeTab.marketTable != nil {
+		selected = v.tradeTab.marketTable.SelectedIndex()
+	}
 	if selected < 0 || selected >= len(CandyTypes) {
 		selected = 0
 	}
@@ -1043,6 +1090,216 @@ func (v *GameView) startTrade(isBuy bool) {
 	v.tradeInput.SetPlaceholder("1")
 	v.tradeInput.Focus()
 	v.Invalidate()
+}
+
+func (v *GameView) handleActiveTabInput(msg runtime.Message) runtime.HandleResult {
+	if v.tabs == nil {
+		return runtime.Unhandled()
+	}
+	switch v.tabs.SelectedIndex() {
+	case 0:
+		if v.tradeTab != nil {
+			return v.tradeTab.HandleMessage(msg)
+		}
+	case 1:
+		if v.inventoryTab != nil {
+			return v.inventoryTab.HandleMessage(msg)
+		}
+	case 2:
+		if v.statsTabView != nil {
+			return v.statsTabView.HandleMessage(msg)
+		}
+	case 3:
+		if v.mapTab != nil {
+			return v.mapTab.HandleMessage(msg)
+		}
+	}
+	return runtime.Unhandled()
+}
+
+func (v *GameView) openSaveDialog() {
+	if v.game.GameOver.Get() || v.game.InCombat() {
+		return
+	}
+	slots, err := ListSaveSlots()
+	if err != nil {
+		v.game.Message.Set("Unable to list save slots.")
+		v.refresh()
+		return
+	}
+	v.closeOverlays()
+	v.saveDialog.UpdateSlots(slots)
+	v.showSave = true
+	v.showLoad = false
+	v.Invalidate()
+}
+
+func (v *GameView) openLoadDialog() {
+	if v.game.InCombat() {
+		return
+	}
+	slots, err := ListSaveSlots()
+	if err != nil {
+		v.game.Message.Set("Unable to list save slots.")
+		v.refresh()
+		return
+	}
+	v.closeOverlays()
+	v.loadDialog.UpdateSlots(slots)
+	v.showLoad = true
+	v.showSave = false
+	v.Invalidate()
+}
+
+func (v *GameView) handleSaveSlot(slot int) {
+	if v.saveDialog == nil {
+		return
+	}
+	name := fmt.Sprintf("Slot %d", slot)
+	for _, info := range v.saveDialog.slots {
+		if info.Slot == slot && info.Name != "" {
+			name = info.Name
+			break
+		}
+	}
+	if err := v.game.SaveToSlot(slot, name); err != nil {
+		v.game.Message.Set("Save failed: " + err.Error())
+	} else if v.toasts != nil {
+		v.toasts.ShowSuccess("Game Saved", fmt.Sprintf("Slot %d", slot))
+	}
+	v.showSave = false
+	v.refresh()
+}
+
+func (v *GameView) handleLoadSlot(slot int) {
+	if err := v.game.LoadFromSlot(slot); err != nil {
+		v.game.Message.Set("Load failed: " + err.Error())
+	} else if v.toasts != nil {
+		v.toasts.ShowSuccess("Game Loaded", fmt.Sprintf("Slot %d", slot))
+	}
+	v.lastPrices = nil
+	v.lastHour = 0
+	v.lastHeat = 0
+	v.lastDay = 0
+	v.lastLoc = -1
+	v.showLoad = false
+	v.refresh()
+}
+
+func (v *GameView) closeOverlays() {
+	v.showTrade = false
+	v.showBank = false
+	v.showLoan = false
+	v.showCraft = false
+	v.showItems = false
+	v.showUpgrades = false
+	v.showIntel = false
+	v.showGear = false
+	v.showBlackMarket = false
+	v.showStats = false
+	v.showStash = false
+	v.showSave = false
+	v.showLoad = false
+	v.tradeInput.Blur()
+	v.bankInput.Blur()
+	v.loanInput.Blur()
+	v.craftInput.Blur()
+	v.stashInput.Blur()
+	v.blackMarketInput.Blur()
+}
+
+func (v *GameView) syncToasts() {
+	if v.toasts == nil {
+		return
+	}
+	prices := v.game.Prices.Get()
+	locIdx := v.game.Location.Get()
+	if v.lastLoc == -1 {
+		v.lastLoc = locIdx
+	}
+	if locIdx != v.lastLoc {
+		v.lastPrices = copyMarketPrices(prices)
+		v.lastLoc = locIdx
+		return
+	}
+	if v.lastPrices == nil {
+		v.lastPrices = copyMarketPrices(prices)
+	} else {
+		locName := Locations[locIdx].Name
+		for _, candy := range CandyTypes {
+			oldPrice := v.lastPrices[candy.Name]
+			newPrice := prices[candy.Name]
+			if oldPrice != 0 && newPrice != oldPrice {
+				v.toasts.ShowPriceAlert(candy.Name, oldPrice, newPrice, locName)
+			}
+		}
+		v.lastPrices = copyMarketPrices(prices)
+	}
+
+	hour := v.game.Hour.Get()
+	if v.lastHour == 0 {
+		v.lastHour = hour
+	} else if hour != v.lastHour {
+		hoursLeft := hoursPerDay - hour + 1
+		v.toasts.ShowTimeWarning(hoursLeft)
+		v.lastHour = hour
+	}
+
+	heat := v.game.Heat.Get()
+	if (v.lastHeat < 50 && heat >= 50) || (v.lastHeat < 75 && heat >= 75) {
+		v.toasts.ShowHeatWarning(heat)
+	}
+	v.lastHeat = heat
+
+	day := v.game.Day.Get()
+	if v.lastDay == 0 {
+		v.lastDay = day
+	} else if day != v.lastDay {
+		daysLeft := v.game.MaxDays - day
+		v.toasts.ShowDebtReminder(v.game.TotalDebt(), daysLeft)
+		v.lastDay = day
+	}
+}
+
+func (v *GameView) syncEventModal() {
+	if v.game.ShowEvent.Get() && !v.game.InCombat() {
+		if v.eventModal == nil || v.eventModal.title != v.game.EventTitle.Get() || v.eventModal.message != v.game.EventMessage.Get() {
+			v.eventModal = v.buildEventModal()
+		}
+		return
+	}
+	v.eventModal = nil
+}
+
+func (v *GameView) buildEventModal() *EventModal {
+	choices := make([]EventChoice, 0, len(v.game.eventOptions))
+	for _, option := range v.game.eventOptions {
+		opt := option
+		choices = append(choices, EventChoice{
+			Key:   opt.Key,
+			Label: opt.Label,
+			OnSelect: func() {
+				opt.Action()
+			},
+		})
+	}
+	modal := NewEventModal(v.game.EventTitle.Get(), v.game.EventMessage.Get(), choices...)
+	modal.OnDismiss(func() {
+		v.game.DismissEvent()
+		v.Invalidate()
+	})
+	return modal
+}
+
+func copyMarketPrices(src MarketPrices) MarketPrices {
+	if src == nil {
+		return nil
+	}
+	dst := make(MarketPrices, len(src))
+	for key, value := range src {
+		dst[key] = value
+	}
+	return dst
 }
 
 func (v *GameView) handleTradeInput(msg runtime.Message) runtime.HandleResult {
@@ -1280,20 +1537,33 @@ func (v *GameView) restartGame() {
 	v.blackMarketInput.Blur()
 	v.blackMarketInput.Clear()
 	v.game.StartNewRun()
+	v.lastPrices = nil
+	v.lastHour = 0
+	v.lastHeat = 0
+	v.lastDay = 0
+	v.lastLoc = -1
 	v.refresh()
 }
 
 func (v *GameView) ChildWidgets() []runtime.Widget {
-	return []runtime.Widget{
+	widgets := []runtime.Widget{
 		v.header,
-		v.marketTable,
-		v.locationList,
+		v.tabs,
 		v.messageLabel,
 		v.statsLabel,
 		v.inventoryLbl,
 		v.scheduleLbl,
 		v.statusLbl,
 		v.heatGauge,
-		v.sparkline,
 	}
+	if v.toastStack != nil {
+		widgets = append(widgets, v.toastStack)
+	}
+	if v.saveDialog != nil {
+		widgets = append(widgets, v.saveDialog)
+	}
+	if v.loadDialog != nil {
+		widgets = append(widgets, v.loadDialog)
+	}
+	return widgets
 }

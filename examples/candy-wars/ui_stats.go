@@ -158,19 +158,24 @@ func (v *GameView) careerLines() []string {
 }
 
 func (v *GameView) achievementLines() []string {
-	meta := v.game.meta
-	if meta == nil {
-		meta = defaultMeta()
-	}
-	lines := make([]string, 0, len(achievementDefs)+1)
+	progress := v.game.GetAchievementProgress()
+	lines := make([]string, 0, len(Achievements)+1)
 	unlocked, total := v.game.AchievementCount()
 	lines = append(lines, fmt.Sprintf("Unlocked: %d/%d", unlocked, total))
-	for _, def := range achievementDefs {
-		status := "LOCKED"
-		if meta.Achievements[def.ID] {
-			status = "UNLOCKED"
+	for i, def := range Achievements {
+		label := def.Name
+		if def.Hidden {
+			label = "???"
 		}
-		lines = append(lines, fmt.Sprintf("[%s] %s", status, def.Name))
+		status := "LOCKED"
+		if i < len(progress) {
+			if progress[i].Unlocked {
+				status = "UNLOCKED"
+			} else if def.ProgressMax > 0 {
+				status = fmt.Sprintf("%d/%d", progress[i].Progress, def.ProgressMax)
+			}
+		}
+		lines = append(lines, fmt.Sprintf("[%s] %s", status, label))
 	}
 	return lines
 }
