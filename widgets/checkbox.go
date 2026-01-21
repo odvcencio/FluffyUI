@@ -11,7 +11,6 @@ import (
 // Checkbox is a toggle input widget.
 type Checkbox struct {
 	FocusableBase
-	accessibility.Base
 
 	label    *state.Signal[string]
 	checked  *state.Signal[*bool]
@@ -65,6 +64,15 @@ func (c *Checkbox) SetOnChange(fn func(value *bool)) {
 	c.onChange = fn
 }
 
+// SetLabel updates the checkbox label.
+func (c *Checkbox) SetLabel(label string) {
+	if c == nil || c.label == nil {
+		return
+	}
+	c.label.Set(label)
+	c.Base.Label = label
+}
+
 // Measure returns the size needed.
 func (c *Checkbox) Measure(constraints runtime.Constraints) runtime.Size {
 	label := ""
@@ -87,6 +95,7 @@ func (c *Checkbox) Render(ctx runtime.RenderContext) {
 	if bounds.Width <= 0 || bounds.Height <= 0 {
 		return
 	}
+	c.syncState()
 	value := c.Checked()
 	marker := "[ ]"
 	if value == nil {
@@ -138,4 +147,10 @@ func (c *Checkbox) syncState() {
 		return
 	}
 	c.Base.State.Checked = c.Checked()
+	if c.label != nil {
+		c.Base.Label = c.label.Get()
+	}
+	if c.Base.Role == "" {
+		c.Base.Role = accessibility.RoleCheckbox
+	}
 }

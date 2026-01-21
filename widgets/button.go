@@ -22,7 +22,6 @@ const (
 // Button is a clickable action widget.
 type Button struct {
 	FocusableBase
-	accessibility.Base
 
 	label    *state.Signal[string]
 	variant  Variant
@@ -54,6 +53,7 @@ func NewButton(label string, opts ...ButtonOption) *Button {
 	for _, opt := range opts {
 		opt(btn)
 	}
+	btn.syncA11y()
 	return btn
 }
 
@@ -100,6 +100,7 @@ func (b *Button) SetLabel(label string) {
 	}
 	b.label.Set(label)
 	b.Base.Label = label
+	b.syncA11y()
 }
 
 // SetStyle updates the button style.
@@ -146,6 +147,7 @@ func (b *Button) Render(ctx runtime.RenderContext) {
 	}
 	loading := b.loading != nil && b.loading.Get()
 	disabled := b.disabled != nil && b.disabled.Get()
+	b.syncA11yWith(label, disabled, loading)
 	if loading {
 		label = strings.TrimSpace(label) + "..."
 	}
@@ -166,6 +168,32 @@ func (b *Button) Render(ctx runtime.RenderContext) {
 
 	text := "[" + truncateString(label, bounds.Width-2) + "]"
 	writePadded(ctx.Buffer, bounds.X, bounds.Y, bounds.Width, text, style)
+}
+
+func (b *Button) syncA11y() {
+	label := ""
+	if b != nil && b.label != nil {
+		label = b.label.Get()
+	}
+	disabled := b != nil && b.disabled != nil && b.disabled.Get()
+	loading := b != nil && b.loading != nil && b.loading.Get()
+	b.syncA11yWith(label, disabled, loading)
+}
+
+func (b *Button) syncA11yWith(label string, disabled bool, loading bool) {
+	if b == nil {
+		return
+	}
+	if b.Base.Role == "" {
+		b.Base.Role = accessibility.RoleButton
+	}
+	b.Base.Label = label
+	b.Base.State.Disabled = disabled
+	if loading {
+		b.Base.Description = "loading"
+	} else if b.Base.Description == "loading" {
+		b.Base.Description = ""
+	}
 }
 
 // HandleMessage handles button activation.

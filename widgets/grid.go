@@ -1,6 +1,11 @@
 package widgets
 
-import "github.com/odvcencio/fluffy-ui/runtime"
+import (
+	"strings"
+
+	"github.com/odvcencio/fluffy-ui/accessibility"
+	"github.com/odvcencio/fluffy-ui/runtime"
+)
 
 // GridChild positions a widget in the grid.
 type GridChild struct {
@@ -18,6 +23,7 @@ type Grid struct {
 	Cols     int
 	Gap      int
 	Children []GridChild
+	label    string
 }
 
 // NewGrid creates a grid with the given dimensions.
@@ -28,7 +34,10 @@ func NewGrid(rows, cols int) *Grid {
 	if cols <= 0 {
 		cols = 1
 	}
-	return &Grid{Rows: rows, Cols: cols}
+	grid := &Grid{Rows: rows, Cols: cols, label: "Grid"}
+	grid.Base.Role = accessibility.RoleGroup
+	grid.syncA11y()
+	return grid
 }
 
 // Add adds a child at the given cell.
@@ -49,6 +58,15 @@ func (g *Grid) Add(child runtime.Widget, row, col, rowSpan, colSpan int) {
 		RowSpan: rowSpan,
 		ColSpan: colSpan,
 	})
+}
+
+// SetLabel updates the accessibility label.
+func (g *Grid) SetLabel(label string) {
+	if g == nil {
+		return
+	}
+	g.label = label
+	g.syncA11y()
 }
 
 // Measure estimates the grid size.
@@ -122,6 +140,7 @@ func (g *Grid) Layout(bounds runtime.Rect) {
 
 // Render draws all children.
 func (g *Grid) Render(ctx runtime.RenderContext) {
+	g.syncA11y()
 	for _, child := range g.Children {
 		if child.Widget != nil {
 			child.Widget.Render(ctx)
@@ -154,4 +173,18 @@ func (g *Grid) ChildWidgets() []runtime.Widget {
 		}
 	}
 	return out
+}
+
+func (g *Grid) syncA11y() {
+	if g == nil {
+		return
+	}
+	if g.Base.Role == "" {
+		g.Base.Role = accessibility.RoleGroup
+	}
+	label := strings.TrimSpace(g.label)
+	if label == "" {
+		label = "Grid"
+	}
+	g.Base.Label = label
 }

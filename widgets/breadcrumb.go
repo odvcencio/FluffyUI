@@ -1,6 +1,9 @@
 package widgets
 
 import (
+	"strings"
+
+	"github.com/odvcencio/fluffy-ui/accessibility"
 	"github.com/odvcencio/fluffy-ui/backend"
 	"github.com/odvcencio/fluffy-ui/runtime"
 )
@@ -19,7 +22,10 @@ type Breadcrumb struct {
 
 // NewBreadcrumb creates a breadcrumb.
 func NewBreadcrumb(items ...BreadcrumbItem) *Breadcrumb {
-	return &Breadcrumb{Items: items}
+	crumb := &Breadcrumb{Items: items}
+	crumb.Base.Role = accessibility.RoleList
+	crumb.Base.Label = "Breadcrumbs"
+	return crumb
 }
 
 // Measure returns desired size.
@@ -42,6 +48,7 @@ func (b *Breadcrumb) Render(ctx runtime.RenderContext) {
 	if b == nil {
 		return
 	}
+	b.syncA11y()
 	bounds := b.bounds
 	if bounds.Width <= 0 || bounds.Height <= 0 {
 		return
@@ -60,4 +67,35 @@ func (b *Breadcrumb) Render(ctx runtime.RenderContext) {
 // HandleMessage returns unhandled (click not supported).
 func (b *Breadcrumb) HandleMessage(msg runtime.Message) runtime.HandleResult {
 	return runtime.Unhandled()
+}
+
+func (b *Breadcrumb) syncA11y() {
+	if b == nil {
+		return
+	}
+	if b.Base.Role == "" {
+		b.Base.Role = accessibility.RoleList
+	}
+	b.Base.Label = "Breadcrumbs"
+	path := b.pathString()
+	if path != "" {
+		b.Base.Value = &accessibility.ValueInfo{Text: path}
+		b.Base.Description = ""
+	} else {
+		b.Base.Value = nil
+	}
+}
+
+func (b *Breadcrumb) pathString() string {
+	if b == nil || len(b.Items) == 0 {
+		return ""
+	}
+	parts := make([]string, 0, len(b.Items))
+	for _, item := range b.Items {
+		if strings.TrimSpace(item.Label) == "" {
+			continue
+		}
+		parts = append(parts, item.Label)
+	}
+	return strings.Join(parts, " > ")
 }

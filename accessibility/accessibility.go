@@ -27,11 +27,15 @@ const (
 	RoleMenu        Role = "menu"
 	RoleMenuItem    Role = "menuitem"
 	RoleTab         Role = "tab"
+	RoleTabList     Role = "tablist"
 	RoleTabPanel    Role = "tabpanel"
 	RoleDialog      Role = "dialog"
 	RoleAlert       Role = "alert"
 	RoleStatus      Role = "status"
 	RoleProgressBar Role = "progressbar"
+	RoleGroup       Role = "group"
+	RoleText        Role = "text"
+	RoleChart       Role = "chart"
 )
 
 // Accessible is implemented by widgets that expose accessibility metadata.

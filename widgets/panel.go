@@ -1,6 +1,9 @@
 package widgets
 
 import (
+	"strings"
+
+	"github.com/odvcencio/fluffy-ui/accessibility"
 	"github.com/odvcencio/fluffy-ui/backend"
 	"github.com/odvcencio/fluffy-ui/runtime"
 )
@@ -13,16 +16,21 @@ type Panel struct {
 	borderStyle backend.Style
 	hasBorder   bool
 	title       string
+	label       string
 }
 
 // NewPanel creates a new panel widget.
 func NewPanel(child runtime.Widget) *Panel {
-	return &Panel{
+	panel := &Panel{
 		child:       child,
 		style:       backend.DefaultStyle(),
 		borderStyle: backend.DefaultStyle(),
 		hasBorder:   false,
+		label:       "Panel",
 	}
+	panel.Base.Role = accessibility.RoleGroup
+	panel.syncA11y()
+	return panel
 }
 
 // SetStyle sets the panel background style.
@@ -51,11 +59,13 @@ func (p *Panel) WithBorder(style backend.Style) *Panel {
 // SetTitle sets the panel title (shown in border).
 func (p *Panel) SetTitle(title string) {
 	p.title = title
+	p.syncA11y()
 }
 
 // WithTitle sets title and returns for chaining.
 func (p *Panel) WithTitle(title string) *Panel {
 	p.title = title
+	p.syncA11y()
 	return p
 }
 
@@ -111,6 +121,7 @@ func (p *Panel) Render(ctx runtime.RenderContext) {
 	if bounds.Width == 0 || bounds.Height == 0 {
 		return
 	}
+	p.syncA11y()
 
 	// Fill background
 	ctx.Buffer.Fill(bounds, ' ', p.style)
@@ -152,19 +163,41 @@ func (p *Panel) ChildWidgets() []runtime.Widget {
 	return []runtime.Widget{p.child}
 }
 
+func (p *Panel) syncA11y() {
+	if p == nil {
+		return
+	}
+	if p.Base.Role == "" {
+		p.Base.Role = accessibility.RoleGroup
+	}
+	label := strings.TrimSpace(p.title)
+	if label == "" {
+		label = strings.TrimSpace(p.label)
+	}
+	if label == "" {
+		label = "Panel"
+	}
+	p.Base.Label = label
+}
+
 // Box is a simple container that fills its background.
 type Box struct {
 	Base
 	child runtime.Widget
 	style backend.Style
+	label string
 }
 
 // NewBox creates a new box widget.
 func NewBox(child runtime.Widget) *Box {
-	return &Box{
+	box := &Box{
 		child: child,
 		style: backend.DefaultStyle(),
+		label: "Box",
 	}
+	box.Base.Role = accessibility.RoleGroup
+	box.syncA11y()
+	return box
 }
 
 // SetStyle sets the background style.
@@ -219,4 +252,18 @@ func (b *Box) ChildWidgets() []runtime.Widget {
 		return nil
 	}
 	return []runtime.Widget{b.child}
+}
+
+func (b *Box) syncA11y() {
+	if b == nil {
+		return
+	}
+	if b.Base.Role == "" {
+		b.Base.Role = accessibility.RoleGroup
+	}
+	label := strings.TrimSpace(b.label)
+	if label == "" {
+		label = "Box"
+	}
+	b.Base.Label = label
 }

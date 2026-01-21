@@ -1,6 +1,11 @@
 package widgets
 
-import "github.com/odvcencio/fluffy-ui/runtime"
+import (
+	"strings"
+
+	"github.com/odvcencio/fluffy-ui/accessibility"
+	"github.com/odvcencio/fluffy-ui/runtime"
+)
 
 // SplitterOrientation describes the split direction.
 type SplitterOrientation int
@@ -18,17 +23,31 @@ type Splitter struct {
 	Orientation SplitterOrientation
 	Ratio       float64
 	DividerSize int
+	label       string
 }
 
 // NewSplitter creates a splitter with two panes.
 func NewSplitter(first, second runtime.Widget) *Splitter {
-	return &Splitter{
+	s := &Splitter{
 		First:       first,
 		Second:      second,
 		Orientation: SplitHorizontal,
 		Ratio:       0.5,
 		DividerSize: 1,
+		label:       "Splitter",
 	}
+	s.Base.Role = accessibility.RoleGroup
+	s.syncA11y()
+	return s
+}
+
+// SetLabel updates the accessibility label.
+func (s *Splitter) SetLabel(label string) {
+	if s == nil {
+		return
+	}
+	s.label = label
+	s.syncA11y()
 }
 
 // Measure returns the max child size.
@@ -109,6 +128,7 @@ func (s *Splitter) Layout(bounds runtime.Rect) {
 
 // Render draws both panes.
 func (s *Splitter) Render(ctx runtime.RenderContext) {
+	s.syncA11y()
 	if s.First != nil {
 		s.First.Render(ctx)
 	}
@@ -145,4 +165,23 @@ func (s *Splitter) ChildWidgets() []runtime.Widget {
 		children = append(children, s.Second)
 	}
 	return children
+}
+
+func (s *Splitter) syncA11y() {
+	if s == nil {
+		return
+	}
+	if s.Base.Role == "" {
+		s.Base.Role = accessibility.RoleGroup
+	}
+	label := strings.TrimSpace(s.label)
+	if label == "" {
+		label = "Splitter"
+	}
+	s.Base.Label = label
+	if s.Orientation == SplitVertical {
+		s.Base.Description = "vertical split"
+	} else {
+		s.Base.Description = "horizontal split"
+	}
 }

@@ -3,7 +3,9 @@ package widgets
 import (
 	"fmt"
 	"image"
+	"strings"
 
+	"github.com/odvcencio/fluffy-ui/accessibility"
 	"github.com/odvcencio/fluffy-ui/backend"
 	"github.com/odvcencio/fluffy-ui/runtime"
 	"github.com/odvcencio/fluffy-ui/scroll"
@@ -19,6 +21,7 @@ type ScrollView struct {
 	behavior   scroll.ScrollBehavior
 	style      backend.Style
 	services   runtime.Services
+	label      string
 	vScrollbar scroll.Scrollbar
 	hScrollbar scroll.Scrollbar
 	childBuf   *runtime.Buffer
@@ -33,6 +36,7 @@ func NewScrollView(content runtime.Widget) *ScrollView {
 		viewport: vp,
 		behavior: scroll.ScrollBehavior{Vertical: scroll.ScrollAuto, Horizontal: scroll.ScrollAuto, MouseWheel: 3, PageSize: 1},
 		style:    backend.DefaultStyle(),
+		label:    "Scroll View",
 		vScrollbar: scroll.Scrollbar{
 			Orientation:  scroll.Vertical,
 			Track:        backend.DefaultStyle(),
@@ -48,6 +52,8 @@ func NewScrollView(content runtime.Widget) *ScrollView {
 			Chars:        scroll.DefaultScrollbarChars(),
 		},
 	}
+	view.Base.Role = accessibility.RoleGroup
+	view.syncA11y()
 	view.setViewportCallbacks()
 	return view
 }
@@ -63,6 +69,7 @@ func (s *ScrollView) SetContent(content runtime.Widget) {
 		s.viewport.SetContent(content)
 	}
 	s.setViewportCallbacks()
+	s.syncA11y()
 }
 
 // SetBehavior updates scroll behavior.
@@ -71,6 +78,16 @@ func (s *ScrollView) SetBehavior(behavior scroll.ScrollBehavior) {
 		return
 	}
 	s.behavior = behavior
+	s.syncA11y()
+}
+
+// SetLabel updates the accessibility label.
+func (s *ScrollView) SetLabel(label string) {
+	if s == nil {
+		return
+	}
+	s.label = label
+	s.syncA11y()
 }
 
 // Bind attaches app services.
@@ -150,6 +167,7 @@ func (s *ScrollView) Render(ctx runtime.RenderContext) {
 	if s == nil {
 		return
 	}
+	s.syncA11y()
 	bounds := s.bounds
 	if bounds.Width <= 0 || bounds.Height <= 0 {
 		return
@@ -198,6 +216,21 @@ func (s *ScrollView) Render(ctx runtime.RenderContext) {
 		}
 	}
 	s.drawScrollbars(ctx)
+}
+
+func (s *ScrollView) syncA11y() {
+	if s == nil {
+		return
+	}
+	if s.Base.Role == "" {
+		s.Base.Role = accessibility.RoleGroup
+	}
+	label := strings.TrimSpace(s.label)
+	if label == "" {
+		label = "Scroll View"
+	}
+	s.Base.Label = label
+	s.Base.Description = "scrollable content"
 }
 
 // HandleMessage handles scrolling input.

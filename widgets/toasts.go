@@ -1,10 +1,12 @@
 package widgets
 
 import (
+	"fmt"
 	"math"
 	"strings"
 	"time"
 
+	"github.com/odvcencio/fluffy-ui/accessibility"
 	"github.com/odvcencio/fluffy-ui/backend"
 	"github.com/odvcencio/fluffy-ui/runtime"
 	"github.com/odvcencio/fluffy-ui/toast"
@@ -35,6 +37,7 @@ type ToastStack struct {
 	toastRects []toastRect
 	now        time.Time
 	animate    bool
+	label      string
 
 	bgStyle      backend.Style
 	textStyle    backend.Style
@@ -46,7 +49,8 @@ type ToastStack struct {
 
 // NewToastStack creates a new toast stack widget.
 func NewToastStack() *ToastStack {
-	return &ToastStack{
+	stack := &ToastStack{
+		label:        "Toasts",
 		bgStyle:      backend.DefaultStyle(),
 		textStyle:    backend.DefaultStyle(),
 		infoStyle:    backend.DefaultStyle(),
@@ -55,11 +59,21 @@ func NewToastStack() *ToastStack {
 		errorStyle:   backend.DefaultStyle(),
 		animate:      true,
 	}
+	stack.Base.Role = accessibility.RoleStatus
+	stack.syncA11y()
+	return stack
 }
 
 // SetToasts updates the toast list.
 func (t *ToastStack) SetToasts(toasts []*toast.Toast) {
 	t.toasts = toasts
+	t.syncA11y()
+}
+
+// SetLabel updates the accessibility label.
+func (t *ToastStack) SetLabel(label string) {
+	t.label = label
+	t.syncA11y()
 }
 
 // SetOnDismiss registers a handler for dismiss actions.
@@ -98,6 +112,7 @@ func (t *ToastStack) Render(ctx runtime.RenderContext) {
 	if bounds.Width == 0 || bounds.Height == 0 {
 		return
 	}
+	t.syncA11y()
 
 	t.toastRects = t.toastRects[:0]
 	if len(t.toasts) == 0 {
@@ -200,6 +215,31 @@ func (t *ToastStack) Render(ctx runtime.RenderContext) {
 			break
 		}
 	}
+}
+
+func (t *ToastStack) syncA11y() {
+	if t == nil {
+		return
+	}
+	if t.Base.Role == "" {
+		t.Base.Role = accessibility.RoleStatus
+	}
+	label := strings.TrimSpace(t.label)
+	if label == "" {
+		label = "Toasts"
+	}
+	t.Base.Label = label
+	t.Base.Description = fmt.Sprintf("%d toasts", len(t.toasts))
+	if len(t.toasts) == 0 {
+		t.Base.Value = nil
+		return
+	}
+	latest := t.toasts[len(t.toasts)-1]
+	text := strings.TrimSpace(strings.TrimSpace(latest.Title + " " + latest.Message))
+	if text == "" {
+		text = string(latest.Level)
+	}
+	t.Base.Value = &accessibility.ValueInfo{Text: text}
 }
 
 // HandleMessage handles dismiss clicks.

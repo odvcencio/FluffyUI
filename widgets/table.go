@@ -1,6 +1,10 @@
 package widgets
 
 import (
+	"fmt"
+	"strings"
+
+	"github.com/odvcencio/fluffy-ui/accessibility"
 	"github.com/odvcencio/fluffy-ui/backend"
 	"github.com/odvcencio/fluffy-ui/runtime"
 	"github.com/odvcencio/fluffy-ui/scroll"
@@ -20,6 +24,7 @@ type Table struct {
 	Rows          [][]string
 	selected      int
 	offset        int
+	label         string
 	style         backend.Style
 	headerStyle   backend.Style
 	selectedStyle backend.Style
@@ -30,12 +35,16 @@ type Table struct {
 
 // NewTable creates a table with columns.
 func NewTable(columns ...TableColumn) *Table {
-	return &Table{
+	table := &Table{
 		Columns:       columns,
+		label:         "Table",
 		style:         backend.DefaultStyle(),
 		headerStyle:   backend.DefaultStyle().Bold(true),
 		selectedStyle: backend.DefaultStyle().Reverse(true),
 	}
+	table.Base.Role = accessibility.RoleTable
+	table.syncA11y()
+	return table
 }
 
 // SetRows updates table rows.
@@ -44,6 +53,16 @@ func (t *Table) SetRows(rows [][]string) {
 		return
 	}
 	t.Rows = rows
+	t.syncA11y()
+}
+
+// SetLabel updates the accessibility label.
+func (t *Table) SetLabel(label string) {
+	if t == nil {
+		return
+	}
+	t.label = label
+	t.syncA11y()
 }
 
 // SelectedIndex returns the currently selected row index.
@@ -76,6 +95,7 @@ func (t *Table) Render(ctx runtime.RenderContext) {
 	if t == nil {
 		return
 	}
+	t.syncA11y()
 	bounds := t.bounds
 	if bounds.Width <= 0 || bounds.Height <= 0 {
 		return
@@ -186,6 +206,46 @@ func (t *Table) setSelected(index int) {
 		index = len(t.Rows) - 1
 	}
 	t.selected = index
+	t.syncA11y()
+}
+
+func (t *Table) syncA11y() {
+	if t == nil {
+		return
+	}
+	if t.Base.Role == "" {
+		t.Base.Role = accessibility.RoleTable
+	}
+	label := strings.TrimSpace(t.label)
+	if label == "" {
+		label = "Table"
+	}
+	t.Base.Label = label
+	t.Base.Description = fmt.Sprintf("%d rows, %d columns", len(t.Rows), len(t.Columns))
+	if t.selected >= 0 && t.selected < len(t.Rows) {
+		t.Base.Value = &accessibility.ValueInfo{Text: t.selectedRowSummary()}
+	} else {
+		t.Base.Value = nil
+	}
+}
+
+func (t *Table) selectedRowSummary() string {
+	if t == nil || t.selected < 0 || t.selected >= len(t.Rows) {
+		return ""
+	}
+	row := t.Rows[t.selected]
+	if len(row) == 0 {
+		return ""
+	}
+	out := make([]string, 0, len(row))
+	for _, cell := range row {
+		cell = strings.TrimSpace(cell)
+		if cell == "" {
+			continue
+		}
+		out = append(out, cell)
+	}
+	return strings.Join(out, " | ")
 }
 
 func (t *Table) columnWidths(total int) []int {

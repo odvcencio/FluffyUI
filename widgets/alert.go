@@ -1,6 +1,9 @@
 package widgets
 
 import (
+	"strings"
+
+	"github.com/odvcencio/fluffy-ui/accessibility"
 	"github.com/odvcencio/fluffy-ui/backend"
 	"github.com/odvcencio/fluffy-ui/runtime"
 )
@@ -25,11 +28,14 @@ type Alert struct {
 
 // NewAlert creates an alert.
 func NewAlert(text string, variant AlertVariant) *Alert {
-	return &Alert{
+	alert := &Alert{
 		Text:    text,
 		Variant: variant,
 		style:   backend.DefaultStyle(),
 	}
+	alert.Base.Role = accessibility.RoleAlert
+	alert.Base.Label = text
+	return alert
 }
 
 // Measure returns desired size.
@@ -46,6 +52,7 @@ func (a *Alert) Render(ctx runtime.RenderContext) {
 	if a == nil {
 		return
 	}
+	a.syncA11y()
 	bounds := a.bounds
 	if bounds.Width <= 0 || bounds.Height <= 0 {
 		return
@@ -66,4 +73,21 @@ func (a *Alert) Render(ctx runtime.RenderContext) {
 // HandleMessage returns unhandled.
 func (a *Alert) HandleMessage(msg runtime.Message) runtime.HandleResult {
 	return runtime.Unhandled()
+}
+
+func (a *Alert) syncA11y() {
+	if a == nil {
+		return
+	}
+	if a.Base.Role == "" {
+		a.Base.Role = accessibility.RoleAlert
+	}
+	label := strings.TrimSpace(a.Text)
+	if label == "" {
+		label = "Alert"
+	}
+	a.Base.Label = label
+	if a.Variant != "" {
+		a.Base.Description = string(a.Variant)
+	}
 }

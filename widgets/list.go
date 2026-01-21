@@ -1,6 +1,10 @@
 package widgets
 
 import (
+	"fmt"
+	"strings"
+
+	"github.com/odvcencio/fluffy-ui/accessibility"
 	"github.com/odvcencio/fluffy-ui/backend"
 	"github.com/odvcencio/fluffy-ui/runtime"
 	"github.com/odvcencio/fluffy-ui/scroll"
@@ -101,18 +105,23 @@ type List[T any] struct {
 	selected      int
 	offset        int
 	onSelect      func(index int, item T)
+	label         string
 	style         backend.Style
 	selectedStyle backend.Style
 }
 
 // NewList creates a list widget.
 func NewList[T any](adapter ListAdapter[T]) *List[T] {
-	return &List[T]{
+	list := &List[T]{
 		adapter:       adapter,
 		selected:      0,
+		label:         "List",
 		style:         backend.DefaultStyle(),
 		selectedStyle: backend.DefaultStyle().Reverse(true),
 	}
+	list.Base.Role = accessibility.RoleList
+	list.syncA11y()
+	return list
 }
 
 // OnSelect registers a selection handler.
@@ -121,6 +130,15 @@ func (l *List[T]) OnSelect(fn func(index int, item T)) {
 		return
 	}
 	l.onSelect = fn
+}
+
+// SetLabel updates the accessibility label.
+func (l *List[T]) SetLabel(label string) {
+	if l == nil {
+		return
+	}
+	l.label = label
+	l.syncA11y()
 }
 
 // Measure returns the desired size.
@@ -141,6 +159,7 @@ func (l *List[T]) Render(ctx runtime.RenderContext) {
 	if l == nil || l.adapter == nil {
 		return
 	}
+	l.syncA11y()
 	bounds := l.bounds
 	if bounds.Width <= 0 || bounds.Height <= 0 {
 		return
@@ -229,6 +248,7 @@ func (l *List[T]) setSelected(index int) {
 		index = count - 1
 	}
 	l.selected = index
+	l.syncA11y()
 	if l.onSelect != nil {
 		l.onSelect(l.selected, l.adapter.Item(l.selected))
 	}
@@ -313,6 +333,28 @@ func (l *List[T]) ScrollToEnd() {
 	}
 	l.setSelected(l.adapter.Count() - 1)
 	l.Invalidate()
+}
+
+func (l *List[T]) syncA11y() {
+	if l == nil || l.adapter == nil {
+		return
+	}
+	if l.Base.Role == "" {
+		l.Base.Role = accessibility.RoleList
+	}
+	label := strings.TrimSpace(l.label)
+	if label == "" {
+		label = "List"
+	}
+	l.Base.Label = label
+	count := l.adapter.Count()
+	l.Base.Description = fmt.Sprintf("%d items", count)
+	if count > 0 && l.selected >= 0 && l.selected < count {
+		item := l.adapter.Item(l.selected)
+		l.Base.Value = &accessibility.ValueInfo{Text: fmt.Sprint(item)}
+	} else {
+		l.Base.Value = nil
+	}
 }
 
 var _ scroll.Controller = (*List[any])(nil)

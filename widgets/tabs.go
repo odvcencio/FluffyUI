@@ -1,6 +1,9 @@
 package widgets
 
 import (
+	"strings"
+
+	"github.com/odvcencio/fluffy-ui/accessibility"
 	"github.com/odvcencio/fluffy-ui/backend"
 	"github.com/odvcencio/fluffy-ui/runtime"
 	"github.com/odvcencio/fluffy-ui/terminal"
@@ -17,18 +20,23 @@ type Tabs struct {
 	FocusableBase
 	Tabs          []Tab
 	selected      int
+	label         string
 	style         backend.Style
 	selectedStyle backend.Style
 }
 
 // NewTabs creates a tab container.
 func NewTabs(tabs ...Tab) *Tabs {
-	return &Tabs{
+	w := &Tabs{
 		Tabs:          tabs,
 		selected:      0,
+		label:         "Tabs",
 		style:         backend.DefaultStyle(),
 		selectedStyle: backend.DefaultStyle().Reverse(true),
 	}
+	w.Base.Role = accessibility.RoleTabList
+	w.syncA11y()
+	return w
 }
 
 // Measure returns the size of the selected tab.
@@ -69,6 +77,7 @@ func (t *Tabs) Render(ctx runtime.RenderContext) {
 	if t == nil {
 		return
 	}
+	t.syncA11y()
 	bounds := t.bounds
 	if bounds.Width <= 0 || bounds.Height <= 0 {
 		return
@@ -132,6 +141,15 @@ func (t *Tabs) SetSelected(index int) {
 	t.setSelected(index)
 }
 
+// SetLabel updates the accessibility label.
+func (t *Tabs) SetLabel(label string) {
+	if t == nil {
+		return
+	}
+	t.label = label
+	t.syncA11y()
+}
+
 // ChildWidgets returns the selected tab content.
 func (t *Tabs) ChildWidgets() []runtime.Widget {
 	selected := t.selectedTab()
@@ -166,4 +184,35 @@ func (t *Tabs) setSelected(index int) {
 		index = len(t.Tabs) - 1
 	}
 	t.selected = index
+	t.syncA11y()
+}
+
+func (t *Tabs) syncA11y() {
+	if t == nil {
+		return
+	}
+	if t.Base.Role == "" {
+		t.Base.Role = accessibility.RoleTabList
+	}
+	label := strings.TrimSpace(t.label)
+	if label == "" {
+		label = "Tabs"
+	}
+	t.Base.Label = label
+	if tab := t.selectedTab(); tab != nil {
+		t.Base.Value = &accessibility.ValueInfo{Text: tab.Title}
+	} else {
+		t.Base.Value = nil
+	}
+	if len(t.Tabs) > 0 {
+		titles := make([]string, 0, len(t.Tabs))
+		for _, tab := range t.Tabs {
+			if strings.TrimSpace(tab.Title) != "" {
+				titles = append(titles, tab.Title)
+			}
+		}
+		t.Base.Description = strings.Join(titles, ", ")
+	} else {
+		t.Base.Description = ""
+	}
 }

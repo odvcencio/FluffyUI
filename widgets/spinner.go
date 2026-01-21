@@ -1,6 +1,7 @@
 package widgets
 
 import (
+	"github.com/odvcencio/fluffy-ui/accessibility"
 	"github.com/odvcencio/fluffy-ui/backend"
 	"github.com/odvcencio/fluffy-ui/runtime"
 )
@@ -15,10 +16,13 @@ type Spinner struct {
 
 // NewSpinner creates a spinner.
 func NewSpinner() *Spinner {
-	return &Spinner{
+	spinner := &Spinner{
 		Frames: []string{"-", "\\", "|", "/"},
 		style:  backend.DefaultStyle(),
 	}
+	spinner.Base.Role = accessibility.RoleStatus
+	spinner.Base.Label = "Loading"
+	return spinner
 }
 
 // Advance moves to the next frame.
@@ -39,6 +43,7 @@ func (s *Spinner) Render(ctx runtime.RenderContext) {
 	if s == nil || len(s.Frames) == 0 {
 		return
 	}
+	s.syncA11y()
 	bounds := s.bounds
 	if bounds.Width <= 0 || bounds.Height <= 0 {
 		return
@@ -58,4 +63,16 @@ func (s *Spinner) HandleMessage(msg runtime.Message) runtime.HandleResult {
 		return runtime.Handled()
 	}
 	return runtime.Unhandled()
+}
+
+func (s *Spinner) syncA11y() {
+	if s == nil {
+		return
+	}
+	if s.Base.Role == "" {
+		s.Base.Role = accessibility.RoleStatus
+	}
+	if s.Base.Label == "" {
+		s.Base.Label = "Loading"
+	}
 }

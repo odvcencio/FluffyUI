@@ -1,10 +1,12 @@
 package widgets
 
 import (
+	"fmt"
 	"sort"
 	"strconv"
 	"strings"
 
+	"github.com/odvcencio/fluffy-ui/accessibility"
 	"github.com/odvcencio/fluffy-ui/backend"
 	"github.com/odvcencio/fluffy-ui/runtime"
 	"github.com/odvcencio/fluffy-ui/terminal"
@@ -69,6 +71,8 @@ func NewPaletteWidget(title string) *PaletteWidget {
 	}
 	p.filterFn = p.defaultFilter
 	p.scoreFn = p.defaultScore
+	p.Base.Role = accessibility.RoleMenu
+	p.syncA11y()
 	return p
 }
 
@@ -169,6 +173,7 @@ func (p *PaletteWidget) updateFiltered() {
 	if p.selected < 0 && len(p.filtered) > 0 {
 		p.selected = 0
 	}
+	p.syncA11y()
 }
 
 // defaultFilter performs case-insensitive substring matching.
@@ -294,6 +299,7 @@ func (p *PaletteWidget) Render(ctx runtime.RenderContext) {
 	if b.Width < 20 || b.Height < 5 {
 		return
 	}
+	p.syncA11y()
 
 	// Draw background
 	ctx.Buffer.Fill(b, ' ', p.bgStyle)
@@ -385,6 +391,30 @@ func (p *PaletteWidget) Render(ctx runtime.RenderContext) {
 	if len(p.filtered) > maxItems {
 		countStr := strconv.Itoa(len(p.filtered)) + " results"
 		ctx.Buffer.SetString(b.X+b.Width-2-len(countStr), b.Y+b.Height-1, countStr, p.borderStyle)
+	}
+}
+
+func (p *PaletteWidget) syncA11y() {
+	if p == nil {
+		return
+	}
+	if p.Base.Role == "" {
+		p.Base.Role = accessibility.RoleMenu
+	}
+	label := strings.TrimSpace(p.title)
+	if label == "" {
+		label = "Command Palette"
+	}
+	p.Base.Label = label
+	if item := p.SelectedItem(); item != nil {
+		p.Base.Value = &accessibility.ValueInfo{Text: item.Label}
+	} else {
+		p.Base.Value = nil
+	}
+	if p.query != "" {
+		p.Base.Description = fmt.Sprintf("query: %s", p.query)
+	} else {
+		p.Base.Description = fmt.Sprintf("%d items", len(p.filtered))
 	}
 }
 

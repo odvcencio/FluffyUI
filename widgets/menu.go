@@ -1,6 +1,10 @@
 package widgets
 
 import (
+	"fmt"
+	"strings"
+
+	"github.com/odvcencio/fluffy-ui/accessibility"
 	"github.com/odvcencio/fluffy-ui/backend"
 	"github.com/odvcencio/fluffy-ui/runtime"
 	"github.com/odvcencio/fluffy-ui/scroll"
@@ -24,6 +28,7 @@ type Menu struct {
 	Items         []*MenuItem
 	selectedIndex int
 	offset        int
+	label         string
 	style         backend.Style
 	selectedStyle backend.Style
 	indentCache   []string
@@ -35,15 +40,19 @@ type Menu struct {
 
 // NewMenu creates a new menu.
 func NewMenu(items ...*MenuItem) *Menu {
-	return &Menu{
+	menu := &Menu{
 		Items:         items,
 		selectedIndex: 0,
+		label:         "Menu",
 		style:         backend.DefaultStyle(),
 		selectedStyle: backend.DefaultStyle().Reverse(true),
 		flatDirty:     true,
 		itemsLen:      len(items),
 		itemsFirst:    firstItem(items),
 	}
+	menu.Base.Role = accessibility.RoleMenu
+	menu.syncA11y()
+	return menu
 }
 
 // SetItems replaces the menu items and clears cached rows.
@@ -55,6 +64,16 @@ func (m *Menu) SetItems(items ...*MenuItem) {
 	m.itemsLen = len(items)
 	m.itemsFirst = firstItem(items)
 	m.flatDirty = true
+	m.syncA11y()
+}
+
+// SetLabel updates the accessibility label.
+func (m *Menu) SetLabel(label string) {
+	if m == nil {
+		return
+	}
+	m.label = label
+	m.syncA11y()
 }
 
 // Measure returns desired size.
@@ -72,6 +91,7 @@ func (m *Menu) Render(ctx runtime.RenderContext) {
 	if m == nil {
 		return
 	}
+	m.syncA11y()
 	bounds := m.bounds
 	if bounds.Width <= 0 || bounds.Height <= 0 {
 		return
@@ -211,6 +231,7 @@ func (m *Menu) setSelected(index int, count int) {
 		index = count - 1
 	}
 	m.selectedIndex = index
+	m.syncA11y()
 }
 
 func (m *Menu) selectedRow(rows []menuRow) *menuRow {
@@ -292,6 +313,33 @@ func (m *Menu) ScrollToEnd() {
 	rows := m.flatten()
 	m.setSelected(len(rows)-1, len(rows))
 	m.Invalidate()
+}
+
+func (m *Menu) syncA11y() {
+	if m == nil {
+		return
+	}
+	if m.Base.Role == "" {
+		m.Base.Role = accessibility.RoleMenu
+	}
+	label := strings.TrimSpace(m.label)
+	if label == "" {
+		label = "Menu"
+	}
+	m.Base.Label = label
+	rows := m.flatten()
+	m.Base.Description = fmt.Sprintf("%d items", len(rows))
+	if row := m.selectedRow(rows); row != nil && row.item != nil {
+		m.Base.Value = &accessibility.ValueInfo{Text: row.item.Title}
+		if len(row.item.Children) > 0 {
+			m.Base.State.Expanded = accessibility.BoolPtr(row.item.Expanded)
+		} else {
+			m.Base.State.Expanded = nil
+		}
+	} else {
+		m.Base.Value = nil
+		m.Base.State.Expanded = nil
+	}
 }
 
 var _ scroll.Controller = (*Menu)(nil)

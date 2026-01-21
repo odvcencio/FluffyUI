@@ -1,6 +1,10 @@
 package widgets
 
 import (
+	"fmt"
+	"strings"
+
+	"github.com/odvcencio/fluffy-ui/accessibility"
 	"github.com/odvcencio/fluffy-ui/backend"
 	"github.com/odvcencio/fluffy-ui/runtime"
 	"github.com/odvcencio/fluffy-ui/terminal"
@@ -22,6 +26,7 @@ type Section struct {
 	items    []SectionItem
 	expanded bool
 	maxItems int // Max items to show when expanded (0 = all)
+	label    string
 
 	// Styles
 	headerStyle   backend.Style
@@ -35,10 +40,11 @@ type Section struct {
 
 // NewSection creates a new collapsible section.
 func NewSection(title string) *Section {
-	return &Section{
+	section := &Section{
 		title:         title,
 		expanded:      true,
 		maxItems:      0,
+		label:         "Section",
 		headerStyle:   backend.DefaultStyle().Bold(true),
 		itemStyle:     backend.DefaultStyle(),
 		activeStyle:   backend.DefaultStyle().Bold(true),
@@ -47,21 +53,27 @@ func NewSection(title string) *Section {
 		pendingIcon:   backend.DefaultStyle().Foreground(backend.ColorDefault),
 		activeIcon:    backend.DefaultStyle().Foreground(backend.ColorYellow),
 	}
+	section.Base.Role = accessibility.RoleGroup
+	section.syncA11y()
+	return section
 }
 
 // SetTitle updates the section title.
 func (s *Section) SetTitle(title string) {
 	s.title = title
+	s.syncA11y()
 }
 
 // SetItems updates the section items.
 func (s *Section) SetItems(items []SectionItem) {
 	s.items = items
+	s.syncA11y()
 }
 
 // SetExpanded sets the expanded state.
 func (s *Section) SetExpanded(expanded bool) {
 	s.expanded = expanded
+	s.syncA11y()
 }
 
 // IsExpanded returns the expanded state.
@@ -72,6 +84,7 @@ func (s *Section) IsExpanded() bool {
 // Toggle toggles the expanded state.
 func (s *Section) Toggle() {
 	s.expanded = !s.expanded
+	s.syncA11y()
 }
 
 // SetMaxItems sets the maximum items to show when expanded.
@@ -118,6 +131,7 @@ func (s *Section) Render(ctx runtime.RenderContext) {
 	if b.Width < 5 || b.Height < 1 {
 		return
 	}
+	s.syncA11y()
 
 	y := b.Y
 
@@ -196,6 +210,7 @@ func (s *Section) HandleMessage(msg runtime.Message) runtime.HandleResult {
 	// Space or Enter toggles expansion
 	if key.Key == terminal.KeyEnter || (key.Key == terminal.KeyRune && key.Rune == ' ') {
 		s.expanded = !s.expanded
+		s.syncA11y()
 		return runtime.Handled()
 	}
 
@@ -212,4 +227,44 @@ func (s *Section) ContentHeight() int {
 		itemCount = s.maxItems
 	}
 	return itemCount
+}
+
+func (s *Section) syncA11y() {
+	if s == nil {
+		return
+	}
+	if s.Base.Role == "" {
+		s.Base.Role = accessibility.RoleGroup
+	}
+	label := strings.TrimSpace(s.title)
+	if label == "" {
+		label = strings.TrimSpace(s.label)
+	}
+	if label == "" {
+		label = "Section"
+	}
+	s.Base.Label = label
+	state := "collapsed"
+	if s.expanded {
+		state = "expanded"
+	}
+	s.Base.State.Expanded = accessibility.BoolPtr(s.expanded)
+	s.Base.Description = fmt.Sprintf("%s, %d items", state, len(s.items))
+	if active := s.activeItemLabel(); active != "" {
+		s.Base.Value = &accessibility.ValueInfo{Text: active}
+	} else {
+		s.Base.Value = nil
+	}
+}
+
+func (s *Section) activeItemLabel() string {
+	if s == nil {
+		return ""
+	}
+	for _, item := range s.items {
+		if item.Active {
+			return item.Text
+		}
+	}
+	return ""
 }

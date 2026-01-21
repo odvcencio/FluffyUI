@@ -3,6 +3,7 @@ package widgets
 import (
 	"strings"
 
+	"github.com/odvcencio/fluffy-ui/accessibility"
 	"github.com/odvcencio/fluffy-ui/backend"
 	"github.com/odvcencio/fluffy-ui/clipboard"
 	"github.com/odvcencio/fluffy-ui/runtime"
@@ -15,6 +16,7 @@ type Input struct {
 
 	text        strings.Builder
 	cursorPos   int
+	label       string
 	style       backend.Style
 	focusStyle  backend.Style
 	placeholder string
@@ -27,10 +29,13 @@ type Input struct {
 
 // NewInput creates a new input widget.
 func NewInput() *Input {
-	return &Input{
+	input := &Input{
 		style:      backend.DefaultStyle(),
 		focusStyle: backend.DefaultStyle().Bold(true),
 	}
+	input.Base.Role = accessibility.RoleTextbox
+	input.syncA11y()
+	return input
 }
 
 // Bind attaches app services.
@@ -46,6 +51,7 @@ func (i *Input) Unbind() {
 // SetPlaceholder sets the placeholder text shown when empty.
 func (i *Input) SetPlaceholder(text string) {
 	i.placeholder = text
+	i.syncA11y()
 }
 
 // SetStyle sets the normal style.
@@ -68,6 +74,12 @@ func (i *Input) OnChange(fn func(text string)) {
 	i.onChange = fn
 }
 
+// SetLabel sets the accessibility label for the input.
+func (i *Input) SetLabel(label string) {
+	i.label = label
+	i.syncA11y()
+}
+
 // Text returns the current input text.
 func (i *Input) Text() string {
 	return i.text.String()
@@ -78,12 +90,14 @@ func (i *Input) SetText(text string) {
 	i.text.Reset()
 	i.text.WriteString(text)
 	i.cursorPos = i.text.Len()
+	i.syncA11y()
 }
 
 // Clear clears the input text.
 func (i *Input) Clear() {
 	i.text.Reset()
 	i.cursorPos = 0
+	i.syncA11y()
 }
 
 // CursorPos returns the current cursor position.
@@ -266,9 +280,28 @@ func (i *Input) HandleMessage(msg runtime.Message) runtime.HandleResult {
 }
 
 func (i *Input) notifyChange() {
+	i.syncA11y()
 	if i.onChange != nil {
 		i.onChange(i.text.String())
 	}
+}
+
+func (i *Input) syncA11y() {
+	if i == nil {
+		return
+	}
+	label := strings.TrimSpace(i.label)
+	if label == "" {
+		label = strings.TrimSpace(i.placeholder)
+	}
+	if label == "" {
+		label = "Input"
+	}
+	if i.Base.Role == "" {
+		i.Base.Role = accessibility.RoleTextbox
+	}
+	i.Base.Label = label
+	i.Base.Value = &accessibility.ValueInfo{Text: i.Text()}
 }
 
 // ClipboardCopy returns the current text.
@@ -390,6 +423,7 @@ type MultilineInput struct {
 	cursorX    int
 	cursorY    int
 	scrollY    int // First visible line
+	label      string
 	style      backend.Style
 	focusStyle backend.Style
 	services   runtime.Services
@@ -400,11 +434,15 @@ type MultilineInput struct {
 
 // NewMultilineInput creates a new multiline input widget.
 func NewMultilineInput() *MultilineInput {
-	return &MultilineInput{
+	input := &MultilineInput{
 		lines:      []string{""},
+		label:      "Multiline Input",
 		style:      backend.DefaultStyle(),
 		focusStyle: backend.DefaultStyle(),
 	}
+	input.Base.Role = accessibility.RoleTextbox
+	input.syncA11y()
+	return input
 }
 
 // Bind attaches app services.
@@ -430,6 +468,7 @@ func (m *MultilineInput) SetText(text string) {
 	}
 	m.cursorY = len(m.lines) - 1
 	m.cursorX = len(m.lines[m.cursorY])
+	m.syncA11y()
 }
 
 // Clear clears all content.
@@ -438,6 +477,7 @@ func (m *MultilineInput) Clear() {
 	m.cursorX = 0
 	m.cursorY = 0
 	m.scrollY = 0
+	m.syncA11y()
 }
 
 // OnSubmit sets the callback (Ctrl+Enter to submit).
@@ -448,6 +488,12 @@ func (m *MultilineInput) OnSubmit(fn func(text string)) {
 // OnChange sets the callback for when text changes.
 func (m *MultilineInput) OnChange(fn func(text string)) {
 	m.onChange = fn
+}
+
+// SetLabel sets the accessibility label.
+func (m *MultilineInput) SetLabel(label string) {
+	m.label = label
+	m.syncA11y()
 }
 
 // Measure returns the preferred size.
@@ -626,9 +672,25 @@ func (m *MultilineInput) ensureCursorVisible() {
 }
 
 func (m *MultilineInput) notifyChange() {
+	m.syncA11y()
 	if m.onChange != nil {
 		m.onChange(m.Text())
 	}
+}
+
+func (m *MultilineInput) syncA11y() {
+	if m == nil {
+		return
+	}
+	label := strings.TrimSpace(m.label)
+	if label == "" {
+		label = "Multiline Input"
+	}
+	if m.Base.Role == "" {
+		m.Base.Role = accessibility.RoleTextbox
+	}
+	m.Base.Label = label
+	m.Base.Value = &accessibility.ValueInfo{Text: m.Text()}
 }
 
 // ClipboardCopy returns the current text.

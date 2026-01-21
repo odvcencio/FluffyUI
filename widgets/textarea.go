@@ -1,6 +1,8 @@
 package widgets
 
 import (
+	"strings"
+
 	"github.com/odvcencio/fluffy-ui/accessibility"
 	"github.com/odvcencio/fluffy-ui/backend"
 	"github.com/odvcencio/fluffy-ui/clipboard"
@@ -11,11 +13,11 @@ import (
 // TextArea is a multi-line text input widget.
 type TextArea struct {
 	FocusableBase
-	accessibility.Base
 
 	text       []rune
 	cursor     int
 	scrollY    int
+	label      string
 	style      backend.Style
 	focusStyle backend.Style
 	onChange   func(text string)
@@ -25,10 +27,12 @@ type TextArea struct {
 // NewTextArea creates a new text area.
 func NewTextArea() *TextArea {
 	ta := &TextArea{
+		label:      "Text Area",
 		style:      backend.DefaultStyle(),
 		focusStyle: backend.DefaultStyle().Reverse(true),
 	}
 	ta.Base.Role = accessibility.RoleTextbox
+	ta.syncA11y()
 	return ta
 }
 
@@ -66,6 +70,15 @@ func (t *TextArea) OnChange(fn func(text string)) {
 		return
 	}
 	t.onChange = fn
+}
+
+// SetLabel updates the accessibility label.
+func (t *TextArea) SetLabel(label string) {
+	if t == nil {
+		return
+	}
+	t.label = label
+	t.syncA11y()
 }
 
 // Measure returns the desired size.
@@ -299,10 +312,25 @@ func (t *TextArea) cursorLineCol(starts []int, lengths []int) (int, int) {
 }
 
 func (t *TextArea) syncValue() {
-	t.Base.Label = t.Text()
+	t.syncA11y()
 	if t.onChange != nil {
 		t.onChange(t.Text())
 	}
+}
+
+func (t *TextArea) syncA11y() {
+	if t == nil {
+		return
+	}
+	label := strings.TrimSpace(t.label)
+	if label == "" {
+		label = "Text Area"
+	}
+	if t.Base.Role == "" {
+		t.Base.Role = accessibility.RoleTextbox
+	}
+	t.Base.Label = label
+	t.Base.Value = &accessibility.ValueInfo{Text: t.Text()}
 }
 
 // ClipboardCopy returns the current text.

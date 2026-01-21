@@ -1,6 +1,8 @@
 package widgets
 
 import (
+	"strings"
+
 	"github.com/odvcencio/fluffy-ui/accessibility"
 	"github.com/odvcencio/fluffy-ui/backend"
 	"github.com/odvcencio/fluffy-ui/runtime"
@@ -17,11 +19,11 @@ type SelectOption struct {
 // Select is a dropdown-like selector (inline).
 type Select struct {
 	FocusableBase
-	accessibility.Base
 
 	options    []SelectOption
 	selected   int
 	onChange   func(option SelectOption)
+	label      string
 	style      backend.Style
 	focusStyle backend.Style
 }
@@ -31,10 +33,11 @@ func NewSelect(options ...SelectOption) *Select {
 	s := &Select{
 		options:    options,
 		selected:   0,
+		label:      "Select",
 		style:      backend.DefaultStyle(),
 		focusStyle: backend.DefaultStyle().Reverse(true),
 	}
-	s.Base.Role = accessibility.RoleTextbox
+	s.Base.Role = accessibility.RoleList
 	s.syncState()
 	return s
 }
@@ -45,6 +48,15 @@ func (s *Select) SetOnChange(fn func(option SelectOption)) {
 		return
 	}
 	s.onChange = fn
+}
+
+// SetLabel updates the accessibility label.
+func (s *Select) SetLabel(label string) {
+	if s == nil {
+		return
+	}
+	s.label = label
+	s.syncState()
 }
 
 // Selected returns the current selection index.
@@ -165,6 +177,17 @@ func (s *Select) syncState() {
 	if s == nil {
 		return
 	}
-	label := s.currentLabel()
+	label := strings.TrimSpace(s.label)
+	if label == "" {
+		label = "Select"
+	}
+	if s.Base.Role == "" {
+		s.Base.Role = accessibility.RoleList
+	}
 	s.Base.Label = label
+	if opt, ok := s.SelectedOption(); ok {
+		s.Base.Value = &accessibility.ValueInfo{Text: opt.Label}
+	} else {
+		s.Base.Value = nil
+	}
 }

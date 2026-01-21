@@ -1,16 +1,34 @@
 package widgets
 
-import "github.com/odvcencio/fluffy-ui/runtime"
+import (
+	"strings"
+
+	"github.com/odvcencio/fluffy-ui/accessibility"
+	"github.com/odvcencio/fluffy-ui/runtime"
+)
 
 // Stack overlays child widgets.
 type Stack struct {
 	Base
 	Children []runtime.Widget
+	label    string
 }
 
 // NewStack creates a stack container.
 func NewStack(children ...runtime.Widget) *Stack {
-	return &Stack{Children: children}
+	stack := &Stack{Children: children, label: "Stack"}
+	stack.Base.Role = accessibility.RoleGroup
+	stack.syncA11y()
+	return stack
+}
+
+// SetLabel updates the accessibility label.
+func (s *Stack) SetLabel(label string) {
+	if s == nil {
+		return
+	}
+	s.label = label
+	s.syncA11y()
 }
 
 // Measure returns the max size of children.
@@ -43,6 +61,7 @@ func (s *Stack) Layout(bounds runtime.Rect) {
 
 // Render draws children in order.
 func (s *Stack) Render(ctx runtime.RenderContext) {
+	s.syncA11y()
 	for _, child := range s.Children {
 		if child != nil {
 			child.Render(ctx)
@@ -70,4 +89,18 @@ func (s *Stack) ChildWidgets() []runtime.Widget {
 		return nil
 	}
 	return s.Children
+}
+
+func (s *Stack) syncA11y() {
+	if s == nil {
+		return
+	}
+	if s.Base.Role == "" {
+		s.Base.Role = accessibility.RoleGroup
+	}
+	label := strings.TrimSpace(s.label)
+	if label == "" {
+		label = "Stack"
+	}
+	s.Base.Label = label
 }

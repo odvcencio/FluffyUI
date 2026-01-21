@@ -1,6 +1,9 @@
 package widgets
 
 import (
+	"strings"
+
+	"github.com/odvcencio/fluffy-ui/accessibility"
 	"github.com/odvcencio/fluffy-ui/backend"
 	"github.com/odvcencio/fluffy-ui/runtime"
 	"github.com/odvcencio/fluffy-ui/state"
@@ -63,6 +66,7 @@ func (s *SignalLabel) Render(ctx runtime.RenderContext) {
 	if bounds.Width == 0 || bounds.Height == 0 {
 		return
 	}
+	s.syncA11y()
 
 	text := s.text
 	if len(text) > bounds.Width {
@@ -96,9 +100,11 @@ func (s *SignalLabel) subscribe() {
 	s.subs.Clear()
 	if s.source == nil {
 		s.text = ""
+		s.syncA11y()
 		return
 	}
 	s.text = s.source.Get()
+	s.syncA11y()
 	s.subs.Observe(s.source, s.onSignal)
 }
 
@@ -107,4 +113,19 @@ func (s *SignalLabel) onSignal() {
 		return
 	}
 	s.text = s.source.Get()
+	s.syncA11y()
+}
+
+func (s *SignalLabel) syncA11y() {
+	if s == nil {
+		return
+	}
+	if s.Base.Role == "" {
+		s.Base.Role = accessibility.RoleText
+	}
+	label := strings.TrimSpace(s.text)
+	if label == "" {
+		label = "Label"
+	}
+	s.Base.Label = label
 }

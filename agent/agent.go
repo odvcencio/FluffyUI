@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -287,6 +288,25 @@ func (a *Agent) extractWidgetInfo(w runtime.Widget) WidgetInfo {
 		}
 	}
 
+	if info.Role == "" {
+		if textWidget, ok := w.(interface{ Text() string }); ok {
+			if text := strings.TrimSpace(textWidget.Text()); text != "" {
+				info.Role = accessibility.RoleText
+				if info.Label == "" {
+					info.Label = text
+				}
+			}
+		}
+	}
+
+	if info.Role == "" {
+		info.Role = accessibility.RoleGroup
+	}
+
+	if info.Label == "" {
+		info.Label = defaultWidgetLabel(w)
+	}
+
 	if info.Value == "" {
 		if textWidget, ok := w.(interface{ Text() string }); ok {
 			info.Value = textWidget.Text()
@@ -301,8 +321,47 @@ func (a *Agent) extractWidgetInfo(w runtime.Widget) WidgetInfo {
 
 	// Determine available actions based on role
 	info.Actions = actionsForRole(info.Role, info.State)
+	if !info.Focusable {
+		info.Actions = removeAction(info.Actions, "focus")
+	}
 
 	return info
+}
+
+func defaultWidgetLabel(w runtime.Widget) string {
+	if w == nil {
+		return "Widget"
+	}
+	typ := reflect.TypeOf(w)
+	for typ.Kind() == reflect.Pointer {
+		typ = typ.Elem()
+	}
+	name := strings.TrimSpace(typ.Name())
+	if name == "" {
+		return "Widget"
+	}
+	return name
+}
+
+func removeAction(actions []string, action string) []string {
+	if len(actions) == 0 {
+		return actions
+	}
+	trimmed := strings.TrimSpace(action)
+	if trimmed == "" {
+		return actions
+	}
+	out := actions[:0]
+	for _, entry := range actions {
+		if entry == trimmed {
+			continue
+		}
+		out = append(out, entry)
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
 }
 
 // widgetID generates a unique identifier for a widget.

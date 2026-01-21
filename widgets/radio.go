@@ -50,7 +50,6 @@ func (g *RadioGroup) OnChange(fn func(index int)) {
 // Radio is a single radio option.
 type Radio struct {
 	FocusableBase
-	accessibility.Base
 
 	label      *state.Signal[string]
 	group      *RadioGroup
@@ -76,6 +75,15 @@ func NewRadio(label string, group *RadioGroup) *Radio {
 	}
 	r.syncState()
 	return r
+}
+
+// SetLabel updates the radio label.
+func (r *Radio) SetLabel(label string) {
+	if r == nil || r.label == nil {
+		return
+	}
+	r.label.Set(label)
+	r.Base.Label = label
 }
 
 // SetDisabled updates disabled state.
@@ -105,6 +113,7 @@ func (r *Radio) Render(ctx runtime.RenderContext) {
 	if r == nil {
 		return
 	}
+	r.syncState()
 	bounds := r.bounds
 	if bounds.Width <= 0 || bounds.Height <= 0 {
 		return
@@ -161,4 +170,10 @@ func (r *Radio) syncState() {
 	}
 	selected := r.isSelected()
 	r.Base.State.Selected = selected
+	if r.label != nil {
+		r.Base.Label = r.label.Get()
+	}
+	if r.Base.Role == "" {
+		r.Base.Role = accessibility.RoleRadio
+	}
 }

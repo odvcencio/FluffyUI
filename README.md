@@ -20,6 +20,7 @@ go get github.com/odvcencio/fluffy-ui@latest
 - **Accessibility Built-In** - Screen reader support, focus management, ARIA-like roles
 - **Recording & Export** - Capture terminal sessions as asciicast or video
 - **Simulation Backend** - Deterministic testing without a real terminal
+- **Audio Hooks** - Opinionated music and SFX service for apps
 - **Comprehensive Documentation** - Guides, examples, and GoDoc for every component
 
 ## Installation
@@ -83,6 +84,65 @@ Run the quickstart example:
 
 ```bash
 go run ./examples/quickstart
+```
+
+Audio note: the quickstart ships with tiny WAVs in `examples/quickstart/assets/audio` and auto-detects a player. Override with `FLUFFYUI_AUDIO_ASSETS=/path` or disable via `FLUFFYUI_AUDIO_ASSETS=off`.
+
+## Agent Interaction (Out-of-Process)
+
+FluffyUI can expose an explicit JSONL socket for agent-driven input. The default snapshot is the accessibility tree (roles/labels/values/bounds/focus). Raw screen text is opt-in and gated.
+
+```go
+import "github.com/odvcencio/fluffy-ui/agent"
+
+srv, err := agent.NewServer(agent.ServerOptions{
+    Addr:      "unix:/tmp/fluffyui.sock",
+    App:       app,
+    AllowText: false,
+})
+if err != nil {
+    panic(err)
+}
+go srv.Serve(ctx)
+defer srv.Close()
+```
+
+Client (JSONL):
+
+```bash
+printf '{"type":"hello","id":1}\n{"type":"snapshot","id":2}\n{"type":"key","id":3,"key":"enter"}\n' | nc -U /tmp/fluffyui.sock
+```
+
+Notes:
+- `key` uses keybind syntax like `ctrl+c`, `f5`, `up`, or `a`.
+- `snapshot` supports `include_text=true` only when `AllowText` (or `TestMode` in tests) is enabled.
+- If you attach a recorder, agent-driven sessions are captured like normal.
+
+Driver script:
+- `scripts/agent-driver` can launch an app, connect to the agent socket, and run a JSONL script.
+
+```bash
+go run ./scripts/agent-driver \
+  --addr unix:/tmp/fluffyui-candy.sock \
+  --script scripts/agent-driver/scripts/candy-wars.jsonl \
+  --backend sim --width 120 --height 36 \
+  --record docs/demos/candy-wars.cast \
+  --record-title "Candy Wars" \
+  -- go run ./examples/candy-wars
+```
+
+Runner loop:
+- `scripts/agent-runner` connects to the agent socket and runs a policy loop (snapshot -> decide -> act).
+
+```bash
+go run ./scripts/agent-runner \
+  --addr unix:/tmp/fluffyui-candy.sock \
+  --policy candy-wars-demo \
+  --interval 300ms \
+  --backend sim --width 120 --height 36 \
+  --record docs/demos/candy-wars.cast \
+  --record-title "Candy Wars" \
+  -- go run ./examples/candy-wars
 ```
 
 ## Widget Catalog
@@ -375,6 +435,24 @@ A complete trading game set in a middle school, demonstrating FluffyUI's capabil
 go run ./examples/candy-wars
 ```
 
+Recorded demo:
+
+```bash
+asciinema play docs/demos/candy-wars.cast
+```
+
+Re-record with the agent driver:
+
+```bash
+go run ./scripts/agent-driver \
+  --addr unix:/tmp/fluffyui-candy.sock \
+  --script scripts/agent-driver/scripts/candy-wars.jsonl \
+  --backend sim --width 120 --height 36 \
+  --record docs/demos/candy-wars.cast \
+  --record-title "Candy Wars" \
+  -- go run ./examples/candy-wars
+```
+
 ## Demos
 
 Pre-recorded demos are available in `docs/demos/` as asciicast files:
@@ -392,6 +470,8 @@ FluffyUI includes two Go-based recording tools:
 |------|-------------|
 | `examples/generate-demos` | Headless demo generation using simulation backend (CI-friendly) |
 | `scripts/record-demos` | Record real examples with terminal interaction |
+| `scripts/agent-driver` | Scripted agent driver for replayable input (JSONL) |
+| `scripts/agent-runner` | Policy-driven agent loop for realtime interaction |
 
 ```bash
 # Generate widget demos (no terminal required, great for CI)

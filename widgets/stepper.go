@@ -1,6 +1,10 @@
 package widgets
 
 import (
+	"fmt"
+	"strings"
+
+	"github.com/odvcencio/fluffy-ui/accessibility"
 	"github.com/odvcencio/fluffy-ui/backend"
 	"github.com/odvcencio/fluffy-ui/runtime"
 )
@@ -26,11 +30,15 @@ type Stepper struct {
 	Base
 	Steps []Step
 	style backend.Style
+	label string
 }
 
 // NewStepper creates a stepper.
 func NewStepper(steps ...Step) *Stepper {
-	return &Stepper{Steps: steps, style: backend.DefaultStyle()}
+	stepper := &Stepper{Steps: steps, style: backend.DefaultStyle(), label: "Steps"}
+	stepper.Base.Role = accessibility.RoleList
+	stepper.syncA11y()
+	return stepper
 }
 
 // Measure returns desired size.
@@ -53,6 +61,7 @@ func (s *Stepper) Render(ctx runtime.RenderContext) {
 	if s == nil {
 		return
 	}
+	s.syncA11y()
 	bounds := s.bounds
 	if bounds.Width <= 0 || bounds.Height <= 0 {
 		return
@@ -80,4 +89,33 @@ func (s *Stepper) Render(ctx runtime.RenderContext) {
 // HandleMessage returns unhandled.
 func (s *Stepper) HandleMessage(msg runtime.Message) runtime.HandleResult {
 	return runtime.Unhandled()
+}
+
+func (s *Stepper) syncA11y() {
+	if s == nil {
+		return
+	}
+	if s.Base.Role == "" {
+		s.Base.Role = accessibility.RoleList
+	}
+	label := strings.TrimSpace(s.label)
+	if label == "" {
+		label = "Steps"
+	}
+	s.Base.Label = label
+	s.Base.Description = fmt.Sprintf("%d steps", len(s.Steps))
+	if active := s.activeStep(); active != "" {
+		s.Base.Value = &accessibility.ValueInfo{Text: active}
+	} else {
+		s.Base.Value = nil
+	}
+}
+
+func (s *Stepper) activeStep() string {
+	for _, step := range s.Steps {
+		if step.State == StepActive {
+			return step.Title
+		}
+	}
+	return ""
 }

@@ -1,8 +1,11 @@
 package widgets
 
 import (
+	"fmt"
 	"strconv"
+	"strings"
 
+	"github.com/odvcencio/fluffy-ui/accessibility"
 	"github.com/odvcencio/fluffy-ui/backend"
 	"github.com/odvcencio/fluffy-ui/runtime"
 	"github.com/odvcencio/fluffy-ui/terminal"
@@ -15,6 +18,7 @@ type SearchWidget struct {
 	query        string
 	matchCount   int
 	currentMatch int
+	label        string
 
 	// Callbacks
 	onSearch func(query string)
@@ -31,12 +35,16 @@ type SearchWidget struct {
 
 // NewSearchWidget creates a new search widget.
 func NewSearchWidget() *SearchWidget {
-	return &SearchWidget{
+	w := &SearchWidget{
+		label:       "Search",
 		bgStyle:     backend.DefaultStyle(),
 		borderStyle: backend.DefaultStyle(),
 		textStyle:   backend.DefaultStyle(),
 		matchStyle:  backend.DefaultStyle().Foreground(backend.ColorYellow),
 	}
+	w.Base.Role = accessibility.RoleTextbox
+	w.syncA11y()
+	return w
 }
 
 // SetOnSearch sets the search callback.
@@ -67,6 +75,13 @@ func (s *SearchWidget) SetStyles(bg, border, text, match backend.Style) {
 func (s *SearchWidget) SetMatchInfo(current, total int) {
 	s.currentMatch = current
 	s.matchCount = total
+	s.syncA11y()
+}
+
+// SetLabel updates the accessibility label.
+func (s *SearchWidget) SetLabel(label string) {
+	s.label = label
+	s.syncA11y()
 }
 
 // Query returns the current search query.
@@ -97,6 +112,7 @@ func (s *SearchWidget) Layout(bounds runtime.Rect) {
 func (s *SearchWidget) Render(ctx runtime.RenderContext) {
 	b := s.bounds
 	buf := ctx.Buffer
+	s.syncA11y()
 
 	// Fill background
 	for x := b.X; x < b.X+b.Width; x++ {
@@ -143,6 +159,7 @@ func (s *SearchWidget) HandleMessage(msg runtime.Message) runtime.HandleResult {
 	switch key.Key {
 	case terminal.KeyEscape:
 		s.query = ""
+		s.syncA11y()
 		if s.onSearch != nil {
 			s.onSearch("")
 		}
@@ -167,6 +184,7 @@ func (s *SearchWidget) HandleMessage(msg runtime.Message) runtime.HandleResult {
 	case terminal.KeyBackspace:
 		if len(s.query) > 0 {
 			s.query = s.query[:len(s.query)-1]
+			s.syncA11y()
 			if s.onSearch != nil {
 				s.onSearch(s.query)
 			}
@@ -175,6 +193,7 @@ func (s *SearchWidget) HandleMessage(msg runtime.Message) runtime.HandleResult {
 
 	case terminal.KeyRune:
 		s.query += string(key.Rune)
+		s.syncA11y()
 		if s.onSearch != nil {
 			s.onSearch(s.query)
 		}
@@ -182,4 +201,26 @@ func (s *SearchWidget) HandleMessage(msg runtime.Message) runtime.HandleResult {
 	}
 
 	return runtime.Unhandled()
+}
+
+func (s *SearchWidget) syncA11y() {
+	if s == nil {
+		return
+	}
+	if s.Base.Role == "" {
+		s.Base.Role = accessibility.RoleTextbox
+	}
+	label := strings.TrimSpace(s.label)
+	if label == "" {
+		label = "Search"
+	}
+	s.Base.Label = label
+	s.Base.Value = &accessibility.ValueInfo{Text: s.query}
+	if s.matchCount > 0 {
+		s.Base.Description = fmt.Sprintf("%d of %d", s.currentMatch+1, s.matchCount)
+	} else if s.query != "" {
+		s.Base.Description = "no matches"
+	} else {
+		s.Base.Description = ""
+	}
 }

@@ -1,9 +1,11 @@
 package widgets
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
+	"github.com/odvcencio/fluffy-ui/accessibility"
 	"github.com/odvcencio/fluffy-ui/backend"
 	"github.com/odvcencio/fluffy-ui/runtime"
 	"github.com/odvcencio/fluffy-ui/state"
@@ -15,14 +17,19 @@ type Sparkline struct {
 	Data  *state.Signal[[]float64]
 	Width int
 	Style backend.Style
+	label string
 }
 
 // NewSparkline creates a sparkline.
 func NewSparkline(data *state.Signal[[]float64]) *Sparkline {
-	return &Sparkline{
+	s := &Sparkline{
 		Data:  data,
 		Style: backend.DefaultStyle(),
+		label: "Sparkline",
 	}
+	s.Base.Role = accessibility.RoleChart
+	s.syncA11y()
+	return s
 }
 
 // Measure returns desired size.
@@ -42,6 +49,7 @@ func (s *Sparkline) Render(ctx runtime.RenderContext) {
 	if s == nil || s.Data == nil {
 		return
 	}
+	s.syncA11y()
 	bounds := s.bounds
 	if bounds.Width <= 0 || bounds.Height <= 0 {
 		return
@@ -85,6 +93,43 @@ func (s *Sparkline) HandleMessage(msg runtime.Message) runtime.HandleResult {
 	return runtime.Unhandled()
 }
 
+func (s *Sparkline) syncA11y() {
+	if s == nil {
+		return
+	}
+	if s.Base.Role == "" {
+		s.Base.Role = accessibility.RoleChart
+	}
+	label := strings.TrimSpace(s.label)
+	if label == "" {
+		label = "Sparkline"
+	}
+	s.Base.Label = label
+	values := []float64(nil)
+	if s.Data != nil {
+		values = s.Data.Get()
+	}
+	if len(values) == 0 {
+		s.Base.Description = "0 points"
+		s.Base.Value = nil
+		return
+	}
+	minVal, maxVal := values[0], values[0]
+	for _, v := range values {
+		if v < minVal {
+			minVal = v
+		}
+		if v > maxVal {
+			maxVal = v
+		}
+	}
+	last := values[len(values)-1]
+	s.Base.Description = fmt.Sprintf("%d points", len(values))
+	s.Base.Value = &accessibility.ValueInfo{
+		Text: fmt.Sprintf("min %s, max %s, last %s", formatFloat(minVal), formatFloat(maxVal), formatFloat(last)),
+	}
+}
+
 // BarData describes a bar entry.
 type BarData struct {
 	Label string
@@ -98,16 +143,21 @@ type BarChart struct {
 	ShowValues bool
 	ShowLabels bool
 	Style      backend.Style
+	label      string
 }
 
 // NewBarChart creates a bar chart.
 func NewBarChart(data *state.Signal[[]BarData]) *BarChart {
-	return &BarChart{
+	b := &BarChart{
 		Data:       data,
 		ShowValues: true,
 		ShowLabels: true,
 		Style:      backend.DefaultStyle(),
+		label:      "Bar Chart",
 	}
+	b.Base.Role = accessibility.RoleChart
+	b.syncA11y()
+	return b
 }
 
 // Measure returns desired size.
@@ -127,6 +177,7 @@ func (b *BarChart) Render(ctx runtime.RenderContext) {
 	if b == nil || b.Data == nil {
 		return
 	}
+	b.syncA11y()
 	bounds := b.bounds
 	if bounds.Width <= 0 || bounds.Height <= 0 {
 		return
@@ -182,6 +233,41 @@ func (b *BarChart) Render(ctx runtime.RenderContext) {
 // HandleMessage returns unhandled.
 func (b *BarChart) HandleMessage(msg runtime.Message) runtime.HandleResult {
 	return runtime.Unhandled()
+}
+
+func (b *BarChart) syncA11y() {
+	if b == nil {
+		return
+	}
+	if b.Base.Role == "" {
+		b.Base.Role = accessibility.RoleChart
+	}
+	label := strings.TrimSpace(b.label)
+	if label == "" {
+		label = "Bar Chart"
+	}
+	b.Base.Label = label
+	entries := []BarData(nil)
+	if b.Data != nil {
+		entries = b.Data.Get()
+	}
+	if len(entries) == 0 {
+		b.Base.Description = "0 bars"
+		b.Base.Value = nil
+		return
+	}
+	maxEntry := entries[0]
+	for _, entry := range entries {
+		if entry.Value > maxEntry.Value {
+			maxEntry = entry
+		}
+	}
+	b.Base.Description = fmt.Sprintf("%d bars", len(entries))
+	if strings.TrimSpace(maxEntry.Label) != "" {
+		b.Base.Value = &accessibility.ValueInfo{Text: fmt.Sprintf("%s: %s", maxEntry.Label, formatFloat(maxEntry.Value))}
+	} else {
+		b.Base.Value = &accessibility.ValueInfo{Text: formatFloat(maxEntry.Value)}
+	}
 }
 
 func formatFloat(value float64) string {

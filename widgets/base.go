@@ -4,6 +4,7 @@ package widgets
 import (
 	"github.com/mattn/go-runewidth"
 
+	"github.com/odvcencio/fluffy-ui/accessibility"
 	"github.com/odvcencio/fluffy-ui/backend"
 	"github.com/odvcencio/fluffy-ui/runtime"
 )
@@ -11,6 +12,7 @@ import (
 // Base provides common functionality for widgets.
 // Embed this in widget structs to get default implementations.
 type Base struct {
+	accessibility.Base
 	bounds      runtime.Rect
 	focused     bool
 	needsRender bool

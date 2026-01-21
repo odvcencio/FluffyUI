@@ -1,6 +1,10 @@
 package widgets
 
 import (
+	"fmt"
+	"strings"
+
+	"github.com/odvcencio/fluffy-ui/accessibility"
 	"github.com/odvcencio/fluffy-ui/backend"
 	"github.com/odvcencio/fluffy-ui/runtime"
 	"github.com/odvcencio/fluffy-ui/scroll"
@@ -20,6 +24,7 @@ type Tree struct {
 	Root          *TreeNode
 	selectedIndex int
 	offset        int
+	label         string
 	style         backend.Style
 	selectedStyle backend.Style
 	indentCache   []string
@@ -30,14 +35,18 @@ type Tree struct {
 
 // NewTree creates a tree widget.
 func NewTree(root *TreeNode) *Tree {
-	return &Tree{
+	tree := &Tree{
 		Root:          root,
 		selectedIndex: 0,
+		label:         "Tree",
 		style:         backend.DefaultStyle(),
 		selectedStyle: backend.DefaultStyle().Reverse(true),
 		flatDirty:     true,
 		rootRef:       root,
 	}
+	tree.Base.Role = accessibility.RoleTree
+	tree.syncA11y()
+	return tree
 }
 
 // SetRoot updates the tree root and clears cached rows.
@@ -48,6 +57,16 @@ func (t *Tree) SetRoot(root *TreeNode) {
 	t.Root = root
 	t.rootRef = root
 	t.flatDirty = true
+	t.syncA11y()
+}
+
+// SetLabel updates the accessibility label.
+func (t *Tree) SetLabel(label string) {
+	if t == nil {
+		return
+	}
+	t.label = label
+	t.syncA11y()
 }
 
 // Measure returns desired size.
@@ -65,6 +84,7 @@ func (t *Tree) Render(ctx runtime.RenderContext) {
 	if t == nil {
 		return
 	}
+	t.syncA11y()
 	bounds := t.bounds
 	if bounds.Width <= 0 || bounds.Height <= 0 {
 		return
@@ -199,6 +219,7 @@ func (t *Tree) setSelected(index int, count int) {
 		index = count - 1
 	}
 	t.selectedIndex = index
+	t.syncA11y()
 }
 
 func (t *Tree) selectedRow(rows []treeRow) *treeRow {
@@ -273,6 +294,33 @@ func (t *Tree) ScrollToEnd() {
 	rows := t.flatten()
 	t.setSelected(len(rows)-1, len(rows))
 	t.Invalidate()
+}
+
+func (t *Tree) syncA11y() {
+	if t == nil {
+		return
+	}
+	if t.Base.Role == "" {
+		t.Base.Role = accessibility.RoleTree
+	}
+	label := strings.TrimSpace(t.label)
+	if label == "" {
+		label = "Tree"
+	}
+	t.Base.Label = label
+	rows := t.flatten()
+	t.Base.Description = fmt.Sprintf("%d items", len(rows))
+	if row := t.selectedRow(rows); row != nil && row.node != nil {
+		t.Base.Value = &accessibility.ValueInfo{Text: row.node.Label}
+		if len(row.node.Children) > 0 {
+			t.Base.State.Expanded = accessibility.BoolPtr(row.node.Expanded)
+		} else {
+			t.Base.State.Expanded = nil
+		}
+	} else {
+		t.Base.Value = nil
+		t.Base.State.Expanded = nil
+	}
 }
 
 var _ scroll.Controller = (*Tree)(nil)

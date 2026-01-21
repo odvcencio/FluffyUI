@@ -3,6 +3,7 @@ package widgets
 import (
 	"strings"
 
+	"github.com/odvcencio/fluffy-ui/accessibility"
 	"github.com/odvcencio/fluffy-ui/backend"
 	"github.com/odvcencio/fluffy-ui/runtime"
 	"github.com/odvcencio/fluffy-ui/terminal"
@@ -26,12 +27,16 @@ type Dialog struct {
 
 // NewDialog creates a dialog.
 func NewDialog(title, body string, buttons ...DialogButton) *Dialog {
-	return &Dialog{
+	dialog := &Dialog{
 		Title:   title,
 		Body:    body,
 		Buttons: buttons,
 		style:   backend.DefaultStyle(),
 	}
+	dialog.Base.Role = accessibility.RoleDialog
+	dialog.Base.Label = title
+	dialog.Base.Description = body
+	return dialog
 }
 
 // Measure returns desired size.
@@ -57,6 +62,7 @@ func (d *Dialog) Render(ctx runtime.RenderContext) {
 	if d == nil {
 		return
 	}
+	d.syncA11y()
 	bounds := d.bounds
 	if bounds.Width <= 0 || bounds.Height <= 0 {
 		return
@@ -137,4 +143,20 @@ func (d *Dialog) setSelected(index int) {
 		index = len(d.Buttons) - 1
 	}
 	d.selected = index
+}
+
+func (d *Dialog) syncA11y() {
+	if d == nil {
+		return
+	}
+	if d.Base.Role == "" {
+		d.Base.Role = accessibility.RoleDialog
+	}
+	d.Base.Label = d.Title
+	d.Base.Description = d.Body
+	if d.selected >= 0 && d.selected < len(d.Buttons) {
+		d.Base.Value = &accessibility.ValueInfo{Text: d.Buttons[d.selected].Label}
+	} else {
+		d.Base.Value = nil
+	}
 }
