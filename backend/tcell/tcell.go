@@ -384,10 +384,134 @@ func convertMouseAction(buttons tcell.ButtonMask) terminal.MouseAction {
 // reverseConvertEvent converts terminal.Event to tcell.Event for PostEvent.
 func reverseConvertEvent(ev terminal.Event) tcell.Event {
 	switch e := ev.(type) {
+	case terminal.KeyEvent:
+		mod := tcell.ModNone
+		if e.Alt {
+			mod |= tcell.ModAlt
+		}
+		if e.Ctrl {
+			mod |= tcell.ModCtrl
+		}
+		if e.Shift {
+			mod |= tcell.ModShift
+		}
+		return tcell.NewEventKey(reverseConvertKey(e.Key), e.Rune, mod)
+	case terminal.MouseEvent:
+		mod := tcell.ModNone
+		if e.Alt {
+			mod |= tcell.ModAlt
+		}
+		if e.Ctrl {
+			mod |= tcell.ModCtrl
+		}
+		if e.Shift {
+			mod |= tcell.ModShift
+		}
+		buttons := reverseConvertMouseButton(e.Button)
+		if e.Action == terminal.MouseRelease {
+			buttons = tcell.ButtonNone
+		}
+		return tcell.NewEventMouse(e.X, e.Y, buttons, mod)
 	case terminal.ResizeEvent:
 		return tcell.NewEventResize(e.Width, e.Height)
 	default:
 		return nil
+	}
+}
+
+// reverseConvertKey converts terminal.Key to tcell.Key.
+func reverseConvertKey(k terminal.Key) tcell.Key {
+	switch k {
+	case terminal.KeyRune:
+		return tcell.KeyRune
+	case terminal.KeyUp:
+		return tcell.KeyUp
+	case terminal.KeyDown:
+		return tcell.KeyDown
+	case terminal.KeyRight:
+		return tcell.KeyRight
+	case terminal.KeyLeft:
+		return tcell.KeyLeft
+	case terminal.KeyPageUp:
+		return tcell.KeyPgUp
+	case terminal.KeyPageDown:
+		return tcell.KeyPgDn
+	case terminal.KeyHome:
+		return tcell.KeyHome
+	case terminal.KeyEnd:
+		return tcell.KeyEnd
+	case terminal.KeyInsert:
+		return tcell.KeyInsert
+	case terminal.KeyDelete:
+		return tcell.KeyDelete
+	case terminal.KeyBackspace:
+		return tcell.KeyBackspace2
+	case terminal.KeyTab:
+		return tcell.KeyTab
+	case terminal.KeyEnter:
+		return tcell.KeyEnter
+	case terminal.KeyEscape:
+		return tcell.KeyEscape
+	case terminal.KeyCtrlB:
+		return tcell.KeyCtrlB
+	case terminal.KeyCtrlC:
+		return tcell.KeyCtrlC
+	case terminal.KeyCtrlD:
+		return tcell.KeyCtrlD
+	case terminal.KeyCtrlF:
+		return tcell.KeyCtrlF
+	case terminal.KeyCtrlP:
+		return tcell.KeyCtrlP
+	case terminal.KeyCtrlV:
+		return tcell.KeyCtrlV
+	case terminal.KeyCtrlX:
+		return tcell.KeyCtrlX
+	case terminal.KeyCtrlZ:
+		return tcell.KeyCtrlZ
+	case terminal.KeyF1:
+		return tcell.KeyF1
+	case terminal.KeyF2:
+		return tcell.KeyF2
+	case terminal.KeyF3:
+		return tcell.KeyF3
+	case terminal.KeyF4:
+		return tcell.KeyF4
+	case terminal.KeyF5:
+		return tcell.KeyF5
+	case terminal.KeyF6:
+		return tcell.KeyF6
+	case terminal.KeyF7:
+		return tcell.KeyF7
+	case terminal.KeyF8:
+		return tcell.KeyF8
+	case terminal.KeyF9:
+		return tcell.KeyF9
+	case terminal.KeyF10:
+		return tcell.KeyF10
+	case terminal.KeyF11:
+		return tcell.KeyF11
+	case terminal.KeyF12:
+		return tcell.KeyF12
+	default:
+		return tcell.KeyRune
+	}
+}
+
+// reverseConvertMouseButton converts terminal.MouseButton to tcell.ButtonMask.
+func reverseConvertMouseButton(b terminal.MouseButton) tcell.ButtonMask {
+	switch b {
+	case terminal.MouseLeft:
+		return tcell.Button1
+	case terminal.MouseMiddle:
+		return tcell.Button2
+	case terminal.MouseRight:
+		return tcell.Button3
+	case terminal.MouseWheelUp:
+		return tcell.WheelUp
+	case terminal.MouseWheelDown:
+		return tcell.WheelDown
+	default:
+		return tcell.ButtonNone
 	}
 }
 

@@ -59,17 +59,7 @@ func (t *Tabs) Measure(constraints runtime.Constraints) runtime.Size {
 // Layout positions the selected tab content.
 func (t *Tabs) Layout(bounds runtime.Rect) {
 	t.Base.Layout(bounds)
-	selected := t.selectedTab()
-	if selected == nil || selected.Content == nil {
-		return
-	}
-	contentBounds := runtime.Rect{
-		X:      bounds.X,
-		Y:      bounds.Y + 1,
-		Width:  bounds.Width,
-		Height: max(0, bounds.Height-1),
-	}
-	selected.Content.Layout(contentBounds)
+	t.layoutSelected()
 }
 
 // Render draws tab titles and content.
@@ -184,7 +174,26 @@ func (t *Tabs) setSelected(index int) {
 		index = len(t.Tabs) - 1
 	}
 	t.selected = index
+	t.layoutSelected()
 	t.syncA11y()
+}
+
+func (t *Tabs) layoutSelected() {
+	selected := t.selectedTab()
+	if selected == nil || selected.Content == nil {
+		return
+	}
+	bounds := t.bounds
+	if bounds.Width <= 0 || bounds.Height <= 0 {
+		return
+	}
+	contentBounds := runtime.Rect{
+		X:      bounds.X,
+		Y:      bounds.Y + 1,
+		Width:  bounds.Width,
+		Height: max(0, bounds.Height-1),
+	}
+	selected.Content.Layout(contentBounds)
 }
 
 func (t *Tabs) syncA11y() {

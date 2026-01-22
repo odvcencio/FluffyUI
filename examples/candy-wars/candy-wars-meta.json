@@ -11,8 +11,8 @@
   "losses": 0,
   "best_worth": 0,
   "hell_wins": 0,
-  "total_trade_value": 479,
-  "total_trade_count": 103,
+  "total_trade_value": 488,
+  "total_trade_count": 106,
   "total_crafted": 0,
   "total_enemies_defeated": 0,
   "total_loan_paid": 0,
@@ -29,15 +29,6 @@
   "last_run_ended_at_unix_secs": 0,
   "run_history": [],
   "trade_history": [
-    {
-      "timestamp": 1769047433,
-      "action": "Buy",
-      "item": "Gummy Bears",
-      "qty": 3,
-      "price_each": 1,
-      "total": 3,
-      "location": "Cafeteria"
-    },
     {
       "timestamp": 1769047436,
       "action": "Sell",
@@ -252,6 +243,15 @@
       "qty": 3,
       "price_each": 4,
       "total": 12,
+      "location": "Gymnasium"
+    },
+    {
+      "timestamp": 1769058340,
+      "action": "Buy",
+      "item": "Gummy Bears",
+      "qty": 3,
+      "price_each": 3,
+      "total": 9,
       "location": "Gymnasium"
     }
   ]

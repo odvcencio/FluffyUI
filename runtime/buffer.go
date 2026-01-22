@@ -148,10 +148,9 @@ func (b *Buffer) SetString(x, y int, s string, style backend.Style) {
 		if i >= len(s) {
 			return
 		}
-		offset := x + i
-		for j, r := range s[i:] {
-			px := offset + j
+		for _, r := range s[i:] {
 			if px < 0 {
+				px++
 				continue
 			}
 			if px >= b.width {
@@ -163,12 +162,14 @@ func (b *Buffer) SetString(x, y int, s string, style backend.Style) {
 				b.cells[idx] = Cell{Rune: r, Style: style}
 				b.markCellDirty(px, y, idx)
 			}
+			px++
 		}
 		return
 	}
-	for i, r := range s {
-		px := x + i
+	px := x
+	for _, r := range s {
 		if px < 0 {
+			px++
 			continue
 		}
 		if px >= b.width {
@@ -180,6 +181,7 @@ func (b *Buffer) SetString(x, y int, s string, style backend.Style) {
 			b.cells[idx] = Cell{Rune: r, Style: style}
 			b.markCellDirty(px, y, idx)
 		}
+		px++
 	}
 }
 

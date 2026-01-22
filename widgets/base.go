@@ -2,6 +2,8 @@
 package widgets
 
 import (
+	"strings"
+
 	"github.com/mattn/go-runewidth"
 
 	"github.com/odvcencio/fluffy-ui/accessibility"
@@ -157,15 +159,14 @@ func truncateString(s string, maxWidth int) string {
 
 // padRight pads a string with spaces to reach the given width.
 func padRight(s string, width int) string {
-	if len(s) >= width {
-		return s
+	if width <= 0 {
+		return ""
 	}
-	result := make([]byte, width)
-	copy(result, s)
-	for i := len(s); i < width; i++ {
-		result[i] = ' '
+	if runewidth.StringWidth(s) >= width {
+		return runewidth.Truncate(s, width, "")
 	}
-	return string(result)
+	padding := width - runewidth.StringWidth(s)
+	return s + strings.Repeat(" ", padding)
 }
 
 func writePadded(buf *runtime.Buffer, x, y, width int, text string, style backend.Style) {
@@ -176,12 +177,10 @@ func writePadded(buf *runtime.Buffer, x, y, width int, text string, style backen
 		buf.SetString(x, y, padRight(text, width), style)
 		return
 	}
-	if len(text) > width {
-		text = text[:width]
-	}
+	text = runewidth.Truncate(text, width, "")
 	buf.SetString(x, y, text, style)
-	if pad := width - len(text); pad > 0 {
-		buf.Fill(runtime.Rect{X: x + len(text), Y: y, Width: pad, Height: 1}, ' ', style)
+	if pad := width - runewidth.StringWidth(text); pad > 0 {
+		buf.Fill(runtime.Rect{X: x + runewidth.StringWidth(text), Y: y, Width: pad, Height: 1}, ' ', style)
 	}
 }
 
