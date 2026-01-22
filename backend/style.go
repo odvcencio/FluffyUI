@@ -159,6 +159,16 @@ func (s Style) Attributes() AttrMask {
 	return s.attrs
 }
 
+// ForegroundColor returns the current foreground color.
+func (s Style) ForegroundColor() Color {
+	return s.fg
+}
+
+// BackgroundColor returns the current background color.
+func (s Style) BackgroundColor() Color {
+	return s.bg
+}
+
 // FG returns the foreground color.
 func (s Style) FG() Color {
 	return s.fg

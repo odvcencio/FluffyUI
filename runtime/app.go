@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -68,6 +69,7 @@ type App struct {
 	taskCancel        context.CancelFunc
 	pendingMu         sync.Mutex
 	pendingEffects    []Effect
+	mcpCloser         io.Closer
 
 	running     bool
 	dirty       bool
@@ -218,6 +220,9 @@ func (a *App) Run(ctx context.Context) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
+	if err := a.enableMCPFromEnv(); err != nil {
+		return err
+	}
 	taskCtx, taskCancel := context.WithCancel(ctx)
 	a.taskCtx = taskCtx
 	a.taskCancel = taskCancel
@@ -226,6 +231,11 @@ func (a *App) Run(ctx context.Context) error {
 		a.taskCtx = nil
 		a.taskCancel = nil
 	}()
+	if a.mcpCloser != nil {
+		defer func() {
+			_ = a.mcpCloser.Close()
+		}()
+	}
 	if err := a.backend.Init(); err != nil {
 		return fmt.Errorf("init backend: %w", err)
 	}

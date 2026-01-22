@@ -18,6 +18,7 @@ type Base struct {
 	bounds      runtime.Rect
 	focused     bool
 	needsRender bool
+	id          string
 }
 
 // Layout stores the assigned bounds.
@@ -37,6 +38,22 @@ func (b *Base) Bounds() runtime.Rect {
 		return runtime.Rect{}
 	}
 	return b.bounds
+}
+
+// ID returns the optional explicit widget identifier.
+func (b *Base) ID() string {
+	if b == nil {
+		return ""
+	}
+	return b.id
+}
+
+// SetID assigns an explicit widget identifier.
+func (b *Base) SetID(id string) {
+	if b == nil {
+		return
+	}
+	b.id = strings.TrimSpace(id)
 }
 
 // HandleMessage returns Unhandled by default.

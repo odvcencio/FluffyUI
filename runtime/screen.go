@@ -202,6 +202,20 @@ func (s *Screen) Layer(i int) *Layer {
 	return s.layers[i]
 }
 
+// WidgetAt returns the widget at the given screen position.
+func (s *Screen) WidgetAt(x, y int) Widget {
+	if s == nil {
+		return nil
+	}
+	if s.hitGrid == nil || s.hitGridDirty {
+		s.buildHitGrid()
+	}
+	if s.hitGrid == nil {
+		return nil
+	}
+	return s.hitGrid.WidgetAt(x, y)
+}
+
 // FocusScope returns the focus scope of the top layer.
 func (s *Screen) FocusScope() *FocusScope {
 	if top := s.TopLayer(); top != nil {

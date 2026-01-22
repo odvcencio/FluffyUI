@@ -105,6 +105,61 @@ func (i *Input) CursorPos() int {
 	return i.cursorPos
 }
 
+// CursorOffset returns the current cursor offset (alias for CursorPos).
+func (i *Input) CursorOffset() int {
+	if i == nil {
+		return 0
+	}
+	return i.cursorPos
+}
+
+// CursorPosition returns the cursor coordinates within the input.
+func (i *Input) CursorPosition() (x, y int) {
+	if i == nil {
+		return 0, 0
+	}
+	return i.cursorPos, 0
+}
+
+// SetCursorOffset moves the cursor to the given offset.
+func (i *Input) SetCursorOffset(offset int) {
+	if i == nil {
+		return
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	if offset > i.text.Len() {
+		offset = i.text.Len()
+	}
+	i.cursorPos = offset
+	i.services.Invalidate()
+}
+
+// SetCursorPosition moves the cursor to the given coordinates.
+func (i *Input) SetCursorPosition(x, y int) {
+	_ = y
+	i.SetCursorOffset(x)
+}
+
+// CursorWordLeft moves the cursor to the previous word boundary.
+func (i *Input) CursorWordLeft() {
+	if i == nil {
+		return
+	}
+	i.cursorPos = i.wordBoundaryLeft()
+	i.services.Invalidate()
+}
+
+// CursorWordRight moves the cursor to the next word boundary.
+func (i *Input) CursorWordRight() {
+	if i == nil {
+		return
+	}
+	i.cursorPos = i.wordBoundaryRight()
+	i.services.Invalidate()
+}
+
 // Measure returns the size needed for the input.
 func (i *Input) Measure(constraints runtime.Constraints) runtime.Size {
 	// Input is typically 1 line tall, fills available width
@@ -415,6 +470,49 @@ func (i *Input) wordBoundaryRight() int {
 	return pos
 }
 
+func multilineWordBoundaryLeft(text string, cursor int) int {
+	if cursor <= 0 {
+		return 0
+	}
+	if cursor > len(text) {
+		cursor = len(text)
+	}
+	pos := cursor - 1
+	for pos > 0 && isWordSeparator(text[pos]) {
+		pos--
+	}
+	for pos > 0 && !isWordSeparator(text[pos-1]) {
+		pos--
+	}
+	return pos
+}
+
+func multilineWordBoundaryRight(text string, cursor int) int {
+	if cursor < 0 {
+		cursor = 0
+	}
+	if cursor >= len(text) {
+		return len(text)
+	}
+	pos := cursor
+	for pos < len(text) && !isWordSeparator(text[pos]) {
+		pos++
+	}
+	for pos < len(text) && isWordSeparator(text[pos]) {
+		pos++
+	}
+	return pos
+}
+
+func isWordSeparator(ch byte) bool {
+	switch ch {
+	case ' ', '\n', '\t':
+		return true
+	default:
+		return false
+	}
+}
+
 // MultilineInput is a text input that supports multiple lines.
 type MultilineInput struct {
 	FocusableBase
@@ -469,6 +567,107 @@ func (m *MultilineInput) SetText(text string) {
 	m.cursorY = len(m.lines) - 1
 	m.cursorX = len(m.lines[m.cursorY])
 	m.syncA11y()
+}
+
+// CursorPosition returns the cursor coordinates within the input.
+func (m *MultilineInput) CursorPosition() (x, y int) {
+	if m == nil {
+		return 0, 0
+	}
+	return m.cursorX, m.cursorY
+}
+
+// CursorOffset returns the cursor offset in the full text.
+func (m *MultilineInput) CursorOffset() int {
+	if m == nil {
+		return 0
+	}
+	offset := 0
+	for i := 0; i < m.cursorY && i < len(m.lines); i++ {
+		offset += len(m.lines[i]) + 1
+	}
+	offset += m.cursorX
+	return offset
+}
+
+// SetCursorPosition moves the cursor to the given coordinates.
+func (m *MultilineInput) SetCursorPosition(x, y int) {
+	if m == nil || len(m.lines) == 0 {
+		return
+	}
+	if y < 0 {
+		y = 0
+	}
+	if y >= len(m.lines) {
+		y = len(m.lines) - 1
+	}
+	line := m.lines[y]
+	if x < 0 {
+		x = 0
+	}
+	if x > len(line) {
+		x = len(line)
+	}
+	m.cursorX = x
+	m.cursorY = y
+	m.ensureCursorVisible()
+	m.services.Invalidate()
+}
+
+// SetCursorOffset moves the cursor to the given offset.
+func (m *MultilineInput) SetCursorOffset(offset int) {
+	if m == nil {
+		return
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	total := len(m.Text())
+	if offset > total {
+		offset = total
+	}
+	remaining := offset
+	for i, line := range m.lines {
+		lineLen := len(line)
+		if remaining <= lineLen {
+			m.cursorY = i
+			m.cursorX = remaining
+			m.ensureCursorVisible()
+			m.services.Invalidate()
+			return
+		}
+		remaining -= lineLen
+		if remaining == 0 {
+			m.cursorY = i
+			m.cursorX = lineLen
+			m.ensureCursorVisible()
+			m.services.Invalidate()
+			return
+		}
+		remaining--
+	}
+	m.cursorY = len(m.lines) - 1
+	m.cursorX = len(m.lines[m.cursorY])
+	m.ensureCursorVisible()
+	m.services.Invalidate()
+}
+
+// CursorWordLeft moves the cursor to the previous word boundary.
+func (m *MultilineInput) CursorWordLeft() {
+	if m == nil {
+		return
+	}
+	offset := multilineWordBoundaryLeft(m.Text(), m.CursorOffset())
+	m.SetCursorOffset(offset)
+}
+
+// CursorWordRight moves the cursor to the next word boundary.
+func (m *MultilineInput) CursorWordRight() {
+	if m == nil {
+		return
+	}
+	offset := multilineWordBoundaryRight(m.Text(), m.CursorOffset())
+	m.SetCursorOffset(offset)
 }
 
 // Clear clears all content.

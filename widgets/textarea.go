@@ -56,6 +56,84 @@ func (t *TextArea) SetText(text string) {
 	t.syncValue()
 }
 
+// CursorOffset returns the cursor offset in the text.
+func (t *TextArea) CursorOffset() int {
+	if t == nil {
+		return 0
+	}
+	return t.cursor
+}
+
+// CursorPosition returns the cursor coordinates within the text area.
+func (t *TextArea) CursorPosition() (x, y int) {
+	if t == nil {
+		return 0, 0
+	}
+	lineStarts, lineLengths := t.lineMeta()
+	line, col := t.cursorLineCol(lineStarts, lineLengths)
+	return col, line
+}
+
+// SetCursorOffset moves the cursor to the given offset.
+func (t *TextArea) SetCursorOffset(offset int) {
+	if t == nil {
+		return
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	if offset > len(t.text) {
+		offset = len(t.text)
+	}
+	t.cursor = offset
+	t.services.Invalidate()
+}
+
+// SetCursorPosition moves the cursor to the given coordinates.
+func (t *TextArea) SetCursorPosition(x, y int) {
+	if t == nil {
+		return
+	}
+	lineStarts, lineLengths := t.lineMeta()
+	if len(lineStarts) == 0 {
+		t.cursor = 0
+		return
+	}
+	if y < 0 {
+		y = 0
+	}
+	if y >= len(lineStarts) {
+		y = len(lineStarts) - 1
+	}
+	lineLen := lineLengths[y]
+	if x < 0 {
+		x = 0
+	}
+	if x > lineLen {
+		x = lineLen
+	}
+	t.cursor = lineStarts[y] + x
+	t.services.Invalidate()
+}
+
+// CursorWordLeft moves the cursor to the previous word boundary.
+func (t *TextArea) CursorWordLeft() {
+	if t == nil {
+		return
+	}
+	t.cursor = textAreaWordBoundaryLeft(t.text, t.cursor)
+	t.services.Invalidate()
+}
+
+// CursorWordRight moves the cursor to the next word boundary.
+func (t *TextArea) CursorWordRight() {
+	if t == nil {
+		return
+	}
+	t.cursor = textAreaWordBoundaryRight(t.text, t.cursor)
+	t.services.Invalidate()
+}
+
 // Text returns the current text.
 func (t *TextArea) Text() string {
 	if t == nil {
@@ -309,6 +387,49 @@ func (t *TextArea) cursorLineCol(starts []int, lengths []int) (int, int) {
 	}
 	last := len(starts) - 1
 	return last, lengths[last]
+}
+
+func textAreaWordBoundaryLeft(text []rune, cursor int) int {
+	if cursor <= 0 {
+		return 0
+	}
+	if cursor > len(text) {
+		cursor = len(text)
+	}
+	pos := cursor - 1
+	for pos > 0 && isTextAreaSeparator(text[pos]) {
+		pos--
+	}
+	for pos > 0 && !isTextAreaSeparator(text[pos-1]) {
+		pos--
+	}
+	return pos
+}
+
+func textAreaWordBoundaryRight(text []rune, cursor int) int {
+	if cursor < 0 {
+		cursor = 0
+	}
+	if cursor >= len(text) {
+		return len(text)
+	}
+	pos := cursor
+	for pos < len(text) && !isTextAreaSeparator(text[pos]) {
+		pos++
+	}
+	for pos < len(text) && isTextAreaSeparator(text[pos]) {
+		pos++
+	}
+	return pos
+}
+
+func isTextAreaSeparator(r rune) bool {
+	switch r {
+	case ' ', '\n', '\t':
+		return true
+	default:
+		return false
+	}
 }
 
 func (t *TextArea) syncValue() {

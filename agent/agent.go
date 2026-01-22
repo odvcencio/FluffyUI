@@ -8,7 +8,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"reflect"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -219,24 +221,17 @@ func (a *Agent) snapshotLocked(includeText bool) Snapshot {
 	for i := 0; i < a.screen.LayerCount(); i++ {
 		layer := a.screen.Layer(i)
 		if layer != nil && layer.Root != nil {
-			a.walkWidgets(layer.Root, &snap.Widgets)
+			explicitCounts := make(map[string]int)
+			info := a.walkWidgets(layer.Root, i, []int{0}, explicitCounts)
+			snap.Widgets = append(snap.Widgets, info)
 		}
 	}
 
-	// Find focused widget (check all layers)
-	for i := a.screen.LayerCount() - 1; i >= 0; i-- {
-		layer := a.screen.Layer(i)
-		if layer == nil || layer.FocusScope == nil {
-			continue
-		}
-		if focused := layer.FocusScope.Current(); focused != nil {
-			snap.FocusedID = widgetID(focused)
-			for j := range snap.Widgets {
-				if snap.Widgets[j].ID == snap.FocusedID {
-					snap.Focused = &snap.Widgets[j]
-					break
-				}
-			}
+	// Find focused widget, preferring the topmost layer.
+	for i := len(snap.Widgets) - 1; i >= 0; i-- {
+		if focused := findFocusedInfo(&snap.Widgets[i]); focused != nil {
+			snap.FocusedID = focused.ID
+			snap.Focused = focused
 			break
 		}
 	}
@@ -245,28 +240,34 @@ func (a *Agent) snapshotLocked(includeText bool) Snapshot {
 }
 
 // walkWidgets recursively collects widget info from the tree.
-func (a *Agent) walkWidgets(w runtime.Widget, out *[]WidgetInfo) {
+func (a *Agent) walkWidgets(w runtime.Widget, layer int, path []int, explicitCounts map[string]int) WidgetInfo {
 	if w == nil {
-		return
+		return WidgetInfo{}
 	}
 
-	info := a.extractWidgetInfo(w)
+	info := a.extractWidgetInfo(w, buildWidgetID(w, layer, path, explicitCounts, true))
 
 	// Check for children
 	if cp, ok := w.(runtime.ChildProvider); ok {
 		children := cp.ChildWidgets()
-		for _, child := range children {
-			a.walkWidgets(child, &info.Children)
+		for i, child := range children {
+			if child == nil {
+				continue
+			}
+			childPath := make([]int, len(path)+1)
+			copy(childPath, path)
+			childPath[len(path)] = i
+			info.Children = append(info.Children, a.walkWidgets(child, layer, childPath, explicitCounts))
 		}
 	}
 
-	*out = append(*out, info)
+	return info
 }
 
 // extractWidgetInfo builds WidgetInfo from a widget.
-func (a *Agent) extractWidgetInfo(w runtime.Widget) WidgetInfo {
+func (a *Agent) extractWidgetInfo(w runtime.Widget, id string) WidgetInfo {
 	info := WidgetInfo{
-		ID: widgetID(w),
+		ID: id,
 	}
 
 	// Get bounds
@@ -372,13 +373,28 @@ func removeAction(actions []string, action string) []string {
 	return out
 }
 
-// widgetID generates a unique identifier for a widget.
-func widgetID(w runtime.Widget) string {
+// buildWidgetID generates a deterministic identifier for a widget.
+func buildWidgetID(w runtime.Widget, layer int, path []int, explicitCounts map[string]int, logCollisions bool) string {
 	if w == nil {
 		return ""
 	}
-	// Use pointer address as unique ID
-	return fmt.Sprintf("%p", w)
+	widgetType := widgetTypeName(w)
+	explicit := widgetExplicitID(w)
+	pathID := formatWidgetPath(path)
+	if explicit != "" {
+		pathID = "*"
+		count := explicitCounts[explicit] + 1
+		explicitCounts[explicit] = count
+		suffix := ""
+		if count > 1 {
+			suffix = fmt.Sprintf("#%d", count)
+			if logCollisions {
+				log.Printf("agent: widget id collision %q on layer %d", explicit, layer)
+			}
+		}
+		return fmt.Sprintf("layer%d:%s:%s:%s%s", layer, widgetType, pathID, explicit, suffix)
+	}
+	return fmt.Sprintf("layer%d:%s:%s", layer, widgetType, pathID)
 }
 
 // actionsForRole returns available actions based on widget role and state.
@@ -419,6 +435,63 @@ func findByLabelIn(widgets []WidgetInfo, label string) *WidgetInfo {
 			return w
 		}
 		if found := findByLabelIn(w.Children, label); found != nil {
+			return found
+		}
+	}
+	return nil
+}
+
+func widgetExplicitID(w runtime.Widget) string {
+	if w == nil {
+		return ""
+	}
+	type idGetter interface {
+		ID() string
+	}
+	if getter, ok := w.(idGetter); ok {
+		return strings.TrimSpace(getter.ID())
+	}
+	return ""
+}
+
+func widgetTypeName(w runtime.Widget) string {
+	if w == nil {
+		return "widget"
+	}
+	typ := reflect.TypeOf(w)
+	for typ.Kind() == reflect.Pointer {
+		typ = typ.Elem()
+	}
+	name := strings.TrimSpace(typ.Name())
+	if name == "" {
+		return "widget"
+	}
+	return strings.ToLower(name)
+}
+
+func formatWidgetPath(path []int) string {
+	if len(path) == 0 {
+		return "0"
+	}
+	var b strings.Builder
+	for i, entry := range path {
+		if i > 0 {
+			b.WriteByte('.')
+		}
+		b.WriteString(strconv.Itoa(entry))
+	}
+	return b.String()
+}
+
+func findFocusedInfo(info *WidgetInfo) *WidgetInfo {
+	if info == nil {
+		return nil
+	}
+	if info.Focused {
+		return info
+	}
+	for i := range info.Children {
+		if found := findFocusedInfo(&info.Children[i]); found != nil {
 			return found
 		}
 	}
@@ -596,7 +669,7 @@ func (a *Agent) Select(label, option string) error {
 		return ErrNotInteractive
 	}
 
-	current := acc.AccessibleLabel()
+	current := accessibleChoice(acc)
 	if strings.EqualFold(current, option) {
 		return nil
 	}
@@ -607,7 +680,7 @@ func (a *Agent) Select(label, option string) error {
 			return err
 		}
 		a.Tick()
-		current = acc.AccessibleLabel()
+		current = accessibleChoice(acc)
 		if strings.EqualFold(current, option) {
 			_ = w
 			return nil
@@ -618,6 +691,16 @@ func (a *Agent) Select(label, option string) error {
 		seen[current] = true
 	}
 	return ErrWidgetNotFound
+}
+
+func accessibleChoice(acc accessibility.Accessible) string {
+	if acc == nil {
+		return ""
+	}
+	if val := acc.AccessibleValue(); val != nil && strings.TrimSpace(val.Text) != "" {
+		return val.Text
+	}
+	return acc.AccessibleLabel()
 }
 
 // SendKeyMsg injects a raw key message into the app.
@@ -912,7 +995,8 @@ func (a *Agent) focusWidgetByIDLocked(id string) (runtime.Widget, accessibility.
 		if layer == nil || layer.Root == nil {
 			continue
 		}
-		if found := findWidgetByID(layer.Root, id); found != nil {
+		explicitCounts := make(map[string]int)
+		if found := findWidgetByID(layer.Root, id, i, []int{0}, explicitCounts); found != nil {
 			w = found
 			foundLayer = layer
 			break
@@ -955,16 +1039,23 @@ func accessibleFromWidget(w runtime.Widget) accessibility.Accessible {
 	return nil
 }
 
-func findWidgetByID(w runtime.Widget, id string) runtime.Widget {
+func findWidgetByID(w runtime.Widget, id string, layer int, path []int, explicitCounts map[string]int) runtime.Widget {
 	if w == nil {
 		return nil
 	}
-	if widgetID(w) == id {
+	if buildWidgetID(w, layer, path, explicitCounts, false) == id {
 		return w
 	}
 	if cp, ok := w.(runtime.ChildProvider); ok {
-		for _, child := range cp.ChildWidgets() {
-			if found := findWidgetByID(child, id); found != nil {
+		children := cp.ChildWidgets()
+		for i, child := range children {
+			if child == nil {
+				continue
+			}
+			childPath := make([]int, len(path)+1)
+			copy(childPath, path)
+			childPath[len(path)] = i
+			if found := findWidgetByID(child, id, layer, childPath, explicitCounts); found != nil {
 				return found
 			}
 		}
