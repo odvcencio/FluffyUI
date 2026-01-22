@@ -49,10 +49,7 @@ func main() {
 			if ratio > 1 {
 				ratio = 1
 			}
-			gauge := widgets.DrawGaugeString(30, ratio, widgets.GaugeStyle{
-				FillChar:  '#',
-				EmptyChar: '-',
-			})
+			gauge := widgets.DrawGaugeString(30, ratio, widgets.GaugeStyle{})
 			text.SetText(fmt.Sprintf(
 				"FluffyUI recording\n%s %3.0f%% %s\nOutput: %s",
 				gauge,

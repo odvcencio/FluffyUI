@@ -193,6 +193,15 @@ func (s *Screen) LayerCount() int {
 	return len(s.layers)
 }
 
+// Layer returns the layer at index i (0 = base layer).
+// Returns nil if index is out of bounds.
+func (s *Screen) Layer(i int) *Layer {
+	if i < 0 || i >= len(s.layers) {
+		return nil
+	}
+	return s.layers[i]
+}
+
 // FocusScope returns the focus scope of the top layer.
 func (s *Screen) FocusScope() *FocusScope {
 	if top := s.TopLayer(); top != nil {

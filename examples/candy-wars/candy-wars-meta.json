@@ -1,18 +1,18 @@
 {
   "unlocks": {
-    "bank": false,
+    "bank": true,
     "crafting": false,
     "standard_loans": false,
     "black_market": false
   },
   "achievements": [],
-  "total_runs": 4,
+  "total_runs": 12,
   "wins": 0,
   "losses": 0,
   "best_worth": 0,
   "hell_wins": 0,
-  "total_trade_value": 119,
-  "total_trade_count": 21,
+  "total_trade_value": 479,
+  "total_trade_count": 103,
   "total_crafted": 0,
   "total_enemies_defeated": 0,
   "total_loan_paid": 0,
@@ -30,58 +30,229 @@
   "run_history": [],
   "trade_history": [
     {
-      "timestamp": 1768951759,
+      "timestamp": 1769047433,
       "action": "Buy",
       "item": "Gummy Bears",
-      "qty": 5,
-      "price_each": 5,
-      "total": 25,
+      "qty": 3,
+      "price_each": 1,
+      "total": 3,
       "location": "Cafeteria"
     },
     {
-      "timestamp": 1768951761,
+      "timestamp": 1769047436,
       "action": "Sell",
       "item": "Gummy Bears",
       "qty": 2,
-      "price_each": 9,
-      "total": 18,
-      "location": "Gymnasium"
-    },
-    {
-      "timestamp": 1768951888,
-      "action": "Buy",
-      "item": "Gummy Bears",
-      "qty": 5,
       "price_each": 2,
-      "total": 10,
-      "location": "Cafeteria"
-    },
-    {
-      "timestamp": 1768951889,
-      "action": "Sell",
-      "item": "Gummy Bears",
-      "qty": 2,
-      "price_each": 4,
-      "total": 8,
+      "total": 4,
       "location": "Gymnasium"
     },
     {
-      "timestamp": 1768952666,
+      "timestamp": 1769047439,
       "action": "Buy",
       "item": "Gummy Bears",
-      "qty": 5,
-      "price_each": 8,
-      "total": 40,
-      "location": "Cafeteria"
+      "qty": 3,
+      "price_each": 6,
+      "total": 18,
+      "location": "Gymnasium"
     },
     {
-      "timestamp": 1768952667,
+      "timestamp": 1769047442,
       "action": "Sell",
       "item": "Gummy Bears",
       "qty": 2,
-      "price_each": 9,
+      "price_each": 6,
+      "total": 12,
+      "location": "Gymnasium"
+    },
+    {
+      "timestamp": 1769047445,
+      "action": "Buy",
+      "item": "Gummy Bears",
+      "qty": 3,
+      "price_each": 1,
+      "total": 3,
+      "location": "Gymnasium"
+    },
+    {
+      "timestamp": 1769047448,
+      "action": "Sell",
+      "item": "Gummy Bears",
+      "qty": 2,
+      "price_each": 2,
+      "total": 4,
+      "location": "Gymnasium"
+    },
+    {
+      "timestamp": 1769047451,
+      "action": "Buy",
+      "item": "Gummy Bears",
+      "qty": 3,
+      "price_each": 4,
+      "total": 12,
+      "location": "Gymnasium"
+    },
+    {
+      "timestamp": 1769047454,
+      "action": "Sell",
+      "item": "Gummy Bears",
+      "qty": 2,
+      "price_each": 2,
+      "total": 4,
+      "location": "Gymnasium"
+    },
+    {
+      "timestamp": 1769047457,
+      "action": "Buy",
+      "item": "Gummy Bears",
+      "qty": 3,
+      "price_each": 7,
+      "total": 21,
+      "location": "Gymnasium"
+    },
+    {
+      "timestamp": 1769047460,
+      "action": "Sell",
+      "item": "Gummy Bears",
+      "qty": 2,
+      "price_each": 5,
+      "total": 10,
+      "location": "Gymnasium"
+    },
+    {
+      "timestamp": 1769047463,
+      "action": "Buy",
+      "item": "Gummy Bears",
+      "qty": 3,
+      "price_each": 2,
+      "total": 6,
+      "location": "Gymnasium"
+    },
+    {
+      "timestamp": 1769051007,
+      "action": "Buy",
+      "item": "Gummy Bears",
+      "qty": 3,
+      "price_each": 6,
       "total": 18,
       "location": "Cafeteria"
+    },
+    {
+      "timestamp": 1769051008,
+      "action": "Sell",
+      "item": "Gummy Bears",
+      "qty": 2,
+      "price_each": 3,
+      "total": 6,
+      "location": "Gymnasium"
+    },
+    {
+      "timestamp": 1769051048,
+      "action": "Buy",
+      "item": "Gummy Bears",
+      "qty": 3,
+      "price_each": 2,
+      "total": 6,
+      "location": "Cafeteria"
+    },
+    {
+      "timestamp": 1769051050,
+      "action": "Sell",
+      "item": "Gummy Bears",
+      "qty": 2,
+      "price_each": 3,
+      "total": 6,
+      "location": "Gymnasium"
+    },
+    {
+      "timestamp": 1769051054,
+      "action": "Buy",
+      "item": "Gummy Bears",
+      "qty": 3,
+      "price_each": 4,
+      "total": 12,
+      "location": "Gymnasium"
+    },
+    {
+      "timestamp": 1769051057,
+      "action": "Sell",
+      "item": "Gummy Bears",
+      "qty": 2,
+      "price_each": 8,
+      "total": 16,
+      "location": "Gymnasium"
+    },
+    {
+      "timestamp": 1769051060,
+      "action": "Buy",
+      "item": "Gummy Bears",
+      "qty": 3,
+      "price_each": 9,
+      "total": 27,
+      "location": "Gymnasium"
+    },
+    {
+      "timestamp": 1769051141,
+      "action": "Buy",
+      "item": "Gummy Bears",
+      "qty": 3,
+      "price_each": 8,
+      "total": 24,
+      "location": "Cafeteria"
+    },
+    {
+      "timestamp": 1769051144,
+      "action": "Sell",
+      "item": "Gummy Bears",
+      "qty": 2,
+      "price_each": 5,
+      "total": 10,
+      "location": "Gymnasium"
+    },
+    {
+      "timestamp": 1769051149,
+      "action": "Buy",
+      "item": "Gummy Bears",
+      "qty": 3,
+      "price_each": 8,
+      "total": 24,
+      "location": "Gymnasium"
+    },
+    {
+      "timestamp": 1769051151,
+      "action": "Sell",
+      "item": "Gummy Bears",
+      "qty": 2,
+      "price_each": 6,
+      "total": 12,
+      "location": "Gymnasium"
+    },
+    {
+      "timestamp": 1769051156,
+      "action": "Buy",
+      "item": "Gummy Bears",
+      "qty": 3,
+      "price_each": 2,
+      "total": 6,
+      "location": "Gymnasium"
+    },
+    {
+      "timestamp": 1769051158,
+      "action": "Sell",
+      "item": "Gummy Bears",
+      "qty": 2,
+      "price_each": 2,
+      "total": 4,
+      "location": "Gymnasium"
+    },
+    {
+      "timestamp": 1769051163,
+      "action": "Buy",
+      "item": "Gummy Bears",
+      "qty": 3,
+      "price_each": 4,
+      "total": 12,
+      "location": "Gymnasium"
     }
   ]
 }

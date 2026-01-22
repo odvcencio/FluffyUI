@@ -11,9 +11,10 @@ import (
 // Text is a simple text display widget.
 type Text struct {
 	Base
-	text  string
-	style backend.Style
-	lines []string // Cached line splits
+	text      string
+	style     backend.Style
+	lines     []string // Cached line splits
+	a11yLabel string
 }
 
 // NewText creates a new text widget.
@@ -32,6 +33,12 @@ func NewText(text string) *Text {
 func (t *Text) SetText(text string) {
 	t.text = text
 	t.lines = strings.Split(text, "\n")
+	t.syncA11y()
+}
+
+// SetA11yLabel overrides the accessibility label without changing visible text.
+func (t *Text) SetA11yLabel(label string) {
+	t.a11yLabel = label
 	t.syncA11y()
 }
 
@@ -103,11 +110,23 @@ func (t *Text) syncA11y() {
 	if t.Base.Role == "" {
 		t.Base.Role = accessibility.RoleText
 	}
+	override := strings.TrimSpace(t.a11yLabel)
+	if override != "" {
+		t.Base.Label = override
+		value := strings.TrimSpace(t.text)
+		if value != "" {
+			t.Base.Value = &accessibility.ValueInfo{Text: value}
+		} else {
+			t.Base.Value = nil
+		}
+		return
+	}
 	label := strings.TrimSpace(t.text)
 	if label == "" {
 		label = "Text"
 	}
 	t.Base.Label = label
+	t.Base.Value = nil
 }
 
 // Label is a single-line text widget often used for headers/labels.
@@ -116,6 +135,7 @@ type Label struct {
 	text      string
 	style     backend.Style
 	alignment Alignment
+	a11yLabel string
 }
 
 // Alignment specifies text alignment.
@@ -142,6 +162,12 @@ func NewLabel(text string) *Label {
 // SetText updates the label text.
 func (l *Label) SetText(text string) {
 	l.text = text
+	l.syncA11y()
+}
+
+// SetA11yLabel overrides the accessibility label without changing visible text.
+func (l *Label) SetA11yLabel(label string) {
+	l.a11yLabel = label
 	l.syncA11y()
 }
 
@@ -207,9 +233,21 @@ func (l *Label) syncA11y() {
 	if l.Base.Role == "" {
 		l.Base.Role = accessibility.RoleText
 	}
+	override := strings.TrimSpace(l.a11yLabel)
+	if override != "" {
+		l.Base.Label = override
+		value := strings.TrimSpace(l.text)
+		if value != "" {
+			l.Base.Value = &accessibility.ValueInfo{Text: value}
+		} else {
+			l.Base.Value = nil
+		}
+		return
+	}
 	label := strings.TrimSpace(l.text)
 	if label == "" {
 		label = "Label"
 	}
 	l.Base.Label = label
+	l.Base.Value = nil
 }

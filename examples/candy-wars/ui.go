@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 	"time"
-	"unicode"
 
 	"github.com/odvcencio/fluffy-ui/backend"
 	"github.com/odvcencio/fluffy-ui/runtime"
@@ -142,10 +141,15 @@ func NewGameView(game *Game) *GameView {
 	)
 
 	v.messageLabel = widgets.NewLabel("")
+	v.messageLabel.SetA11yLabel("Message")
 	v.statsLabel = widgets.NewLabel("").WithStyle(v.dimStyle)
+	v.statsLabel.SetA11yLabel("Stats")
 	v.inventoryLbl = widgets.NewLabel("")
+	v.inventoryLbl.SetA11yLabel("Inventory")
 	v.scheduleLbl = widgets.NewLabel("").WithStyle(v.dimStyle)
+	v.scheduleLbl.SetA11yLabel("Schedule")
 	v.statusLbl = widgets.NewLabel("").WithStyle(v.dimStyle)
+	v.statusLbl.SetA11yLabel("Status")
 
 	v.heatGauge = widgets.NewProgress()
 	v.heatGauge.Max = 100
@@ -159,12 +163,14 @@ func NewGameView(game *Game) *GameView {
 	v.toasts.SetOnChange(v.toastStack.SetToasts)
 
 	v.tradeInput = widgets.NewInput()
+	v.tradeInput.SetLabel("Qty")
 	v.tradeInput.SetPlaceholder("Quantity")
 	v.tradeInput.OnChange(func(string) {
 		v.Invalidate()
 	})
 
 	v.bankInput = widgets.NewInput()
+	v.bankInput.SetLabel("Amount")
 	v.bankInput.SetPlaceholder("Amount")
 	v.bankInput.OnChange(func(string) {
 		v.Invalidate()
@@ -172,6 +178,7 @@ func NewGameView(game *Game) *GameView {
 	v.bankAction = bankDeposit
 
 	v.loanInput = widgets.NewInput()
+	v.loanInput.SetLabel("Repay")
 	v.loanInput.SetPlaceholder("Amount")
 	v.loanInput.OnChange(func(string) {
 		v.Invalidate()
@@ -179,6 +186,7 @@ func NewGameView(game *Game) *GameView {
 	v.loanRepay = false
 
 	v.craftInput = widgets.NewInput()
+	v.craftInput.SetLabel("Qty")
 	v.craftInput.SetPlaceholder("1")
 	v.craftInput.OnChange(func(string) {
 		v.Invalidate()
@@ -186,6 +194,7 @@ func NewGameView(game *Game) *GameView {
 	v.craftIndex = 0
 
 	v.stashInput = widgets.NewInput()
+	v.stashInput.SetLabel("Qty")
 	v.stashInput.SetPlaceholder("1")
 	v.stashInput.OnChange(func(string) {
 		v.Invalidate()
@@ -193,6 +202,7 @@ func NewGameView(game *Game) *GameView {
 	v.stashMode = stashDeposit
 
 	v.blackMarketInput = widgets.NewInput()
+	v.blackMarketInput.SetLabel("Qty")
 	v.blackMarketInput.SetPlaceholder("1")
 	v.blackMarketInput.OnChange(func(string) {
 		v.Invalidate()
@@ -329,12 +339,6 @@ func (v *GameView) refresh() {
 	v.syncEventModal()
 
 	v.Invalidate()
-}
-
-func (v *GameView) updateMarketTable() {
-	if v.tradeTab != nil {
-		v.tradeTab.UpdateMarketTable()
-	}
 }
 
 func (v *GameView) Measure(constraints runtime.Constraints) runtime.Size {
@@ -682,42 +686,6 @@ func (v *GameView) renderTradeDialog(ctx runtime.RenderContext) {
 
 	hintX := rect.X + rect.Width - 2 - len(hint)
 	ctx.Buffer.SetString(hintX, rect.Y+6, hint, v.dimStyle)
-}
-
-func (v *GameView) renderEventDialog(ctx runtime.RenderContext) {
-	bounds := v.Bounds()
-	dialogW := 50
-	dialogH := 10
-	x := (bounds.Width - dialogW) / 2
-	y := (bounds.Height - dialogH) / 2
-
-	rect := runtime.Rect{X: x, Y: y, Width: dialogW, Height: dialogH}
-	ctx.Buffer.Fill(rect, ' ', v.style)
-	ctx.Buffer.DrawBox(rect, v.accentStyle)
-
-	title := " " + v.game.EventTitle.Get() + " "
-	ctx.Buffer.SetString(x+2, y, title, v.accentStyle.Reverse(true))
-
-	msg := v.game.EventMessage.Get()
-	lines := splitLines(msg, dialogW-4)
-	for i, line := range lines {
-		if i < dialogH-3 {
-			ctx.Buffer.SetString(x+2, y+2+i, line, v.style)
-		}
-	}
-
-	if len(v.game.eventOptions) == 0 {
-		ctx.Buffer.SetString(x+2, y+dialogH-2, "[Press any key to continue]", v.dimStyle)
-		return
-	}
-	optionsLine := ""
-	for _, option := range v.game.eventOptions {
-		if optionsLine != "" {
-			optionsLine += "  "
-		}
-		optionsLine += fmt.Sprintf("[%c] %s", unicode.ToUpper(option.Key), option.Label)
-	}
-	ctx.Buffer.SetString(x+2, y+dialogH-2, optionsLine, v.dimStyle)
 }
 
 func (v *GameView) renderGameOverDialog(ctx runtime.RenderContext) {
@@ -1263,7 +1231,7 @@ func (v *GameView) syncToasts() {
 
 func (v *GameView) syncEventModal() {
 	if v.game.ShowEvent.Get() && !v.game.InCombat() {
-		if v.eventModal == nil || v.eventModal.title != v.game.EventTitle.Get() || v.eventModal.message != v.game.EventMessage.Get() {
+		if v.eventModal == nil || v.eventModal.Dialog.Title != v.game.EventTitle.Get() || v.eventModal.message != v.game.EventMessage.Get() {
 			v.eventModal = v.buildEventModal()
 		}
 		return
@@ -1559,11 +1527,15 @@ func (v *GameView) ChildWidgets() []runtime.Widget {
 	if v.toastStack != nil {
 		widgets = append(widgets, v.toastStack)
 	}
-	if v.saveDialog != nil {
+	if v.showSave && v.saveDialog != nil {
 		widgets = append(widgets, v.saveDialog)
 	}
-	if v.loadDialog != nil {
+	if v.showLoad && v.loadDialog != nil {
 		widgets = append(widgets, v.loadDialog)
 	}
+	if v.eventModal != nil && !v.game.InCombat() {
+		widgets = append(widgets, v.eventModal)
+	}
+	widgets = append(widgets, v.dialogA11yWidgets()...)
 	return widgets
 }

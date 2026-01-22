@@ -17,6 +17,7 @@ type SignalLabel struct {
 	scheduler state.Scheduler
 	subs      state.Subscriptions
 	text      string
+	a11yLabel string
 	style     backend.Style
 	alignment Alignment
 	mounted   bool
@@ -50,6 +51,12 @@ func (s *SignalLabel) SetStyle(style backend.Style) {
 // SetAlignment sets text alignment.
 func (s *SignalLabel) SetAlignment(align Alignment) {
 	s.alignment = align
+}
+
+// SetA11yLabel overrides the accessibility label without changing visible text.
+func (s *SignalLabel) SetA11yLabel(label string) {
+	s.a11yLabel = label
+	s.syncA11y()
 }
 
 // Measure returns the size needed for the label.
@@ -123,9 +130,21 @@ func (s *SignalLabel) syncA11y() {
 	if s.Base.Role == "" {
 		s.Base.Role = accessibility.RoleText
 	}
+	override := strings.TrimSpace(s.a11yLabel)
+	if override != "" {
+		s.Base.Label = override
+		value := strings.TrimSpace(s.text)
+		if value != "" {
+			s.Base.Value = &accessibility.ValueInfo{Text: value}
+		} else {
+			s.Base.Value = nil
+		}
+		return
+	}
 	label := strings.TrimSpace(s.text)
 	if label == "" {
 		label = "Label"
 	}
 	s.Base.Label = label
+	s.Base.Value = nil
 }

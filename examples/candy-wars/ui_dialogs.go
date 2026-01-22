@@ -1,52 +1,42 @@
 package main
 
 import (
+	"strings"
 	"time"
 	"unicode"
 
+	"github.com/odvcencio/fluffy-ui/accessibility"
 	"github.com/odvcencio/fluffy-ui/backend"
 	"github.com/odvcencio/fluffy-ui/runtime"
 	"github.com/odvcencio/fluffy-ui/terminal"
 	"github.com/odvcencio/fluffy-ui/widgets"
 )
 
-// ModalDialog is a centered dialog with title, content area, and action bar.
+// ModalDialog wraps widgets.Dialog with fixed dimensions and game-specific styling.
+// This demonstrates how to extend the library dialog for application-specific needs.
 type ModalDialog struct {
-	widgets.Component
-	title       string
+	*widgets.Dialog
 	width       int
 	height      int
-	content     runtime.Widget
-	actions     []DialogAction
-	selectedAct int
-	onDismiss   func()
-	dismissable bool
-
-	// Auto-dismiss
-	autoDismissDuration time.Duration
-	startTime           time.Time
-	paused              bool
-
-	style       backend.Style
 	titleStyle  backend.Style
 	actionStyle backend.Style
 }
 
 // DialogAction represents a button in the dialog's action bar.
+// Maps to widgets.DialogButton but with game-specific naming.
 type DialogAction struct {
 	Label    string
 	Key      rune
 	OnSelect func()
 }
 
-// NewModalDialog creates a new modal dialog.
+// NewModalDialog creates a new modal dialog with fixed dimensions.
 func NewModalDialog(title string, width, height int) *ModalDialog {
+	dialog := widgets.NewDialog(title, "")
 	return &ModalDialog{
-		title:       title,
+		Dialog:      dialog,
 		width:       width,
 		height:      height,
-		dismissable: true,
-		style:       backend.DefaultStyle(),
 		titleStyle:  backend.DefaultStyle().Bold(true).Reverse(true),
 		actionStyle: backend.DefaultStyle().Dim(true),
 	}
@@ -54,67 +44,60 @@ func NewModalDialog(title string, width, height int) *ModalDialog {
 
 // WithContent sets the dialog's content widget.
 func (d *ModalDialog) WithContent(content runtime.Widget) *ModalDialog {
-	d.content = content
+	d.Dialog.WithContent(content)
 	return d
 }
 
 // WithActions sets the dialog's action buttons.
 func (d *ModalDialog) WithActions(actions ...DialogAction) *ModalDialog {
-	d.actions = actions
+	buttons := make([]widgets.DialogButton, len(actions))
+	for i, a := range actions {
+		buttons[i] = widgets.DialogButton{
+			Label:   a.Label,
+			Key:     a.Key,
+			OnClick: a.OnSelect,
+		}
+	}
+	d.Dialog.Buttons = buttons
 	return d
 }
 
 // WithDismissable sets whether Escape closes the dialog.
 func (d *ModalDialog) WithDismissable(dismissable bool) *ModalDialog {
-	d.dismissable = dismissable
+	d.Dialog.WithDismissable(dismissable)
 	return d
 }
 
 // OnDismiss sets the callback when dialog is dismissed.
 func (d *ModalDialog) OnDismiss(fn func()) *ModalDialog {
-	d.onDismiss = fn
+	d.Dialog.OnDismiss(fn)
 	return d
 }
 
 // WithAutoDismiss enables auto-dismiss after duration.
 func (d *ModalDialog) WithAutoDismiss(duration time.Duration) *ModalDialog {
-	d.autoDismissDuration = duration
-	d.startTime = time.Now()
+	d.Dialog.WithAutoDismiss(duration)
 	return d
 }
 
 // TimerProgress returns 0.0-1.0 progress toward auto-dismiss.
 func (d *ModalDialog) TimerProgress(now time.Time) float64 {
-	if d.autoDismissDuration <= 0 {
-		return 0
-	}
-	elapsed := now.Sub(d.startTime)
-	progress := float64(elapsed) / float64(d.autoDismissDuration)
-	if progress > 1.0 {
-		return 1.0
-	}
-	if progress < 0 {
-		return 0
-	}
-	return progress
+	return d.Dialog.TimerProgress(now)
 }
 
 // ShouldDismiss returns true if auto-dismiss time has elapsed.
 func (d *ModalDialog) ShouldDismiss(now time.Time) bool {
-	if d.autoDismissDuration <= 0 || d.paused {
-		return false
-	}
-	return now.Sub(d.startTime) >= d.autoDismissDuration
+	return d.Dialog.ShouldDismiss(now)
 }
 
 // PauseTimer pauses the auto-dismiss timer.
-func (d *ModalDialog) PauseTimer() { d.paused = true }
+func (d *ModalDialog) PauseTimer() { d.Dialog.PauseTimer() }
 
 // ResumeTimer resumes the auto-dismiss timer.
-func (d *ModalDialog) ResumeTimer() { d.paused = false }
+func (d *ModalDialog) ResumeTimer() { d.Dialog.ResumeTimer() }
 
 // IsPaused returns whether timer is paused.
-func (d *ModalDialog) IsPaused() bool { return d.paused }
+func (d *ModalDialog) IsPaused() bool { return d.Dialog.IsPaused() }
 
 // Measure returns the dialog's fixed size.
 func (d *ModalDialog) Measure(constraints runtime.Constraints) runtime.Size {
@@ -130,51 +113,46 @@ func (d *ModalDialog) CenteredBounds(parent runtime.Rect) runtime.Rect {
 
 // Layout positions the dialog and its content.
 func (d *ModalDialog) Layout(bounds runtime.Rect) {
-	d.Component.Layout(bounds)
-	if d.content != nil {
-		contentBounds := runtime.Rect{
-			X:      bounds.X + 2,
-			Y:      bounds.Y + 2,
-			Width:  bounds.Width - 4,
-			Height: bounds.Height - 4,
-		}
-		if len(d.actions) > 0 {
-			contentBounds.Height -= 1
-		}
-		if d.autoDismissDuration > 0 {
-			contentBounds.Height -= 1 // Room for timer bar
-		}
-		d.content.Layout(contentBounds)
-	}
+	d.Dialog.Layout(bounds)
 }
 
-// Render draws the dialog.
+// Render draws the dialog with game-specific styling.
 func (d *ModalDialog) Render(ctx runtime.RenderContext) {
-	bounds := d.Bounds()
+	bounds := d.Dialog.Bounds()
+	if bounds.Width <= 0 || bounds.Height <= 0 {
+		return
+	}
+
+	style := backend.DefaultStyle()
 
 	// Fill background and draw border
-	ctx.Buffer.Fill(bounds, ' ', d.style)
-	ctx.Buffer.DrawBox(bounds, d.style)
+	ctx.Buffer.Fill(bounds, ' ', style)
+	ctx.Buffer.DrawBox(bounds, style)
 
-	// Draw title
-	title := " " + d.title + " "
+	// Draw title with reverse style
+	title := " " + d.Dialog.Title + " "
 	if len(title) > bounds.Width-4 {
 		title = title[:bounds.Width-4]
 	}
 	ctx.Buffer.SetString(bounds.X+2, bounds.Y, title, d.titleStyle)
 
+	inner := bounds.Inset(1, 1, 1, 1)
+	if inner.Width <= 0 || inner.Height <= 0 {
+		return
+	}
+
 	// Render content
-	if d.content != nil {
-		d.content.Render(ctx)
+	if d.Dialog.Content != nil {
+		d.Dialog.Content.Render(ctx)
 	}
 
 	// Render auto-dismiss timer bar
-	if d.autoDismissDuration > 0 {
+	if d.Dialog.ShouldDismiss(time.Now().Add(time.Hour)) || d.Dialog.TimerProgress(time.Now()) > 0 {
 		timerY := bounds.Y + bounds.Height - 3
-		if len(d.actions) > 0 {
+		if len(d.Dialog.Buttons) > 0 {
 			timerY = bounds.Y + bounds.Height - 4
 		}
-		progress := 1.0 - d.TimerProgress(time.Now())
+		progress := 1.0 - d.Dialog.TimerProgress(time.Now())
 		barWidth := bounds.Width - 4
 		filledWidth := int(float64(barWidth) * progress)
 
@@ -183,76 +161,37 @@ func (d *ModalDialog) Render(ctx runtime.RenderContext) {
 			if i < filledWidth {
 				ch = '█'
 			}
-			ctx.Buffer.Set(bounds.X+2+i, timerY, ch, d.style)
+			ctx.Buffer.Set(bounds.X+2+i, timerY, ch, style)
 		}
 	}
 
-	// Render action bar
-	if len(d.actions) > 0 {
+	// Render action bar with game-specific styling
+	if len(d.Dialog.Buttons) > 0 {
 		actionY := bounds.Y + bounds.Height - 2
 		actionLine := ""
-		for i, action := range d.actions {
+		for i, button := range d.Dialog.Buttons {
 			if i > 0 {
 				actionLine += "  "
 			}
-			actionLine += "[" + string(action.Key) + "] " + action.Label
+			if button.Key != 0 {
+				actionLine += "[" + string(button.Key) + "] " + button.Label
+			} else {
+				actionLine += "[" + button.Label + "]"
+			}
 		}
 		ctx.Buffer.SetString(bounds.X+2, actionY, actionLine, d.actionStyle)
 	}
 }
 
-// HandleMessage handles keyboard input.
+// HandleMessage delegates to the underlying Dialog.
 func (d *ModalDialog) HandleMessage(msg runtime.Message) runtime.HandleResult {
-	// Handle mouse for pause
-	if mouse, ok := msg.(runtime.MouseMsg); ok {
-		bounds := d.Bounds()
-		if bounds.Contains(mouse.X, mouse.Y) {
-			d.PauseTimer()
-		} else {
-			d.ResumeTimer()
-		}
-	}
-
-	key, ok := msg.(runtime.KeyMsg)
-	if !ok {
-		if d.content != nil {
-			return d.content.HandleMessage(msg)
-		}
-		return runtime.Unhandled()
-	}
-
-	// Handle Escape
-	if key.Key == terminal.KeyEscape && d.dismissable {
-		if d.onDismiss != nil {
-			d.onDismiss()
-		}
-		return runtime.Handled()
-	}
-
-	// Handle action keys
-	for _, action := range d.actions {
-		if key.Rune == action.Key || key.Rune == unicode.ToLower(action.Key) || key.Rune == unicode.ToUpper(action.Key) {
-			if action.OnSelect != nil {
-				action.OnSelect()
-			}
-			return runtime.Handled()
-		}
-	}
-
-	// Pass to content
-	if d.content != nil {
-		return d.content.HandleMessage(msg)
-	}
-
-	return runtime.Handled()
+	d.Dialog.Focus()
+	return d.Dialog.HandleMessage(msg)
 }
 
 // ChildWidgets returns the content widget.
 func (d *ModalDialog) ChildWidgets() []runtime.Widget {
-	if d.content == nil {
-		return nil
-	}
-	return []runtime.Widget{d.content}
+	return d.Dialog.ChildWidgets()
 }
 
 // EventModal is a specialized dialog for game events with choices.
@@ -286,20 +225,43 @@ func NewEventModal(title, message string, choices ...EventChoice) *EventModal {
 		message:     message,
 		choices:     choices,
 	}
-	modal.dismissable = len(choices) == 0
+	modal.WithDismissable(len(choices) == 0)
+	modal.syncA11y()
 	return modal
+}
+
+func (e *EventModal) syncA11y() {
+	if e == nil || e.Dialog == nil {
+		return
+	}
+	if e.Dialog.Base.Role == "" {
+		e.Dialog.Base.Role = accessibility.RoleDialog
+	}
+	e.Dialog.Base.Label = e.Dialog.Title
+	e.Dialog.Base.Description = e.message
+	if e.selectedChoice >= 0 && e.selectedChoice < len(e.choices) {
+		e.Dialog.Base.Value = &accessibility.ValueInfo{Text: e.choices[e.selectedChoice].Label}
+	} else {
+		e.Dialog.Base.Value = nil
+	}
 }
 
 // Render draws the event modal with choices.
 func (e *EventModal) Render(ctx runtime.RenderContext) {
-	bounds := e.Bounds()
+	e.syncA11y()
+	bounds := e.Dialog.Bounds()
+	if bounds.Width <= 0 || bounds.Height <= 0 {
+		return
+	}
+
+	style := backend.DefaultStyle()
 
 	// Fill and border
-	ctx.Buffer.Fill(bounds, ' ', e.style)
-	ctx.Buffer.DrawBox(bounds, e.style)
+	ctx.Buffer.Fill(bounds, ' ', style)
+	ctx.Buffer.DrawBox(bounds, style)
 
 	// Title
-	title := " " + e.title + " "
+	title := " " + e.Dialog.Title + " "
 	ctx.Buffer.SetString(bounds.X+2, bounds.Y, title, e.titleStyle)
 
 	// Message
@@ -307,7 +269,7 @@ func (e *EventModal) Render(ctx runtime.RenderContext) {
 	maxMsgLines := bounds.Height - 4 - len(e.choices)
 	for i, line := range lines {
 		if i < maxMsgLines {
-			ctx.Buffer.SetString(bounds.X+2, bounds.Y+2+i, line, e.style)
+			ctx.Buffer.SetString(bounds.X+2, bounds.Y+2+i, line, style)
 		}
 	}
 
@@ -319,13 +281,40 @@ func (e *EventModal) Render(ctx runtime.RenderContext) {
 		choiceY := bounds.Y + bounds.Height - 2 - len(e.choices)
 		for i, choice := range e.choices {
 			line := "[" + string(choice.Key) + "] " + choice.Label
-			style := e.actionStyle
+			choiceStyle := e.actionStyle
 			if i == e.selectedChoice {
-				style = style.Reverse(true)
+				choiceStyle = choiceStyle.Reverse(true)
 			}
-			ctx.Buffer.SetString(bounds.X+2, choiceY+i, line, style)
+			ctx.Buffer.SetString(bounds.X+2, choiceY+i, line, choiceStyle)
 		}
 	}
+}
+
+// ChildWidgets returns accessibility children describing the message and choices.
+func (e *EventModal) ChildWidgets() []runtime.Widget {
+	if e == nil {
+		return nil
+	}
+	e.syncA11y()
+	lines := splitLines(e.message, 46)
+	children := make([]runtime.Widget, 0, len(lines)+len(e.choices)+1)
+	for _, line := range lines {
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
+		children = append(children, a11yText(line))
+	}
+	if len(e.choices) == 0 {
+		children = append(children, a11yText("[Press any key to continue]"))
+		return children
+	}
+	items := make([]runtime.Widget, 0, len(e.choices))
+	for i, choice := range e.choices {
+		label := "[" + string(choice.Key) + "] " + choice.Label
+		items = append(items, a11yListItem(label, i == e.selectedChoice, false))
+	}
+	children = append(children, a11yList("Choices", items))
+	return children
 }
 
 // HandleMessage handles choice selection.
@@ -337,9 +326,8 @@ func (e *EventModal) HandleMessage(msg runtime.Message) runtime.HandleResult {
 
 	// No choices = any key dismisses
 	if len(e.choices) == 0 {
-		if e.onDismiss != nil {
-			e.onDismiss()
-		}
+		e.Dialog.Focus()
+		e.Dialog.HandleMessage(runtime.KeyMsg{Key: terminal.KeyEscape})
 		return runtime.Handled()
 	}
 
@@ -349,9 +337,8 @@ func (e *EventModal) HandleMessage(msg runtime.Message) runtime.HandleResult {
 			if choice.OnSelect != nil {
 				choice.OnSelect()
 			}
-			if e.onDismiss != nil {
-				e.onDismiss()
-			}
+			e.Dialog.Focus()
+			e.Dialog.HandleMessage(runtime.KeyMsg{Key: terminal.KeyEscape})
 			return runtime.Handled()
 		}
 	}
@@ -372,11 +359,11 @@ func (e *EventModal) HandleMessage(msg runtime.Message) runtime.HandleResult {
 			if choice.OnSelect != nil {
 				choice.OnSelect()
 			}
-			if e.onDismiss != nil {
-				e.onDismiss()
-			}
+			e.Dialog.Focus()
+			e.Dialog.HandleMessage(runtime.KeyMsg{Key: terminal.KeyEscape})
 		}
 	}
 
+	e.syncA11y()
 	return runtime.Handled()
 }

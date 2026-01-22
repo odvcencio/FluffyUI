@@ -380,24 +380,21 @@ func (p *progressDemo) Render(ctx runtime.RenderContext) {
 	y := bounds.Y + 3
 	ctx.Buffer.SetString(bounds.X+2, y, "Download:", backend.DefaultStyle())
 	widgets.DrawGauge(ctx.Buffer, bounds.X+14, y, 40, progress1, widgets.GaugeStyle{
-		FillChar:  '#',
-		EmptyChar: '-',
+		EmptyStyle: backend.DefaultStyle(),
 	})
 	ctx.Buffer.SetString(bounds.X+56, y, fmt.Sprintf("%3.0f%%", progress1*100), backend.DefaultStyle())
 
 	y += 2
 	ctx.Buffer.SetString(bounds.X+2, y, "Upload:  ", backend.DefaultStyle())
 	widgets.DrawGauge(ctx.Buffer, bounds.X+14, y, 40, progress2, widgets.GaugeStyle{
-		FillChar:  '=',
-		EmptyChar: ' ',
+		EmptyStyle: backend.DefaultStyle(),
 	})
 	ctx.Buffer.SetString(bounds.X+56, y, fmt.Sprintf("%3.0f%%", progress2*100), backend.DefaultStyle())
 
 	y += 2
 	ctx.Buffer.SetString(bounds.X+2, y, "Process: ", backend.DefaultStyle())
 	widgets.DrawGauge(ctx.Buffer, bounds.X+14, y, 40, progress3, widgets.GaugeStyle{
-		FillChar:  '*',
-		EmptyChar: '.',
+		EmptyStyle: backend.DefaultStyle(),
 	})
 	ctx.Buffer.SetString(bounds.X+56, y, fmt.Sprintf("%3.0f%%", progress3*100), backend.DefaultStyle())
 

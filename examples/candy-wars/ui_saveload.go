@@ -107,9 +107,9 @@ func (d *SaveLoadDialog) confirmSelection() {
 }
 
 func (d *SaveLoadDialog) dismiss() {
-	if d.onDismiss != nil {
-		d.onDismiss()
-	}
+	// Trigger dismiss via the underlying dialog
+	d.Dialog.Focus()
+	d.Dialog.HandleMessage(runtime.KeyMsg{Key: terminal.KeyEscape})
 }
 
 func (d *SaveLoadDialog) Layout(bounds runtime.Rect) {

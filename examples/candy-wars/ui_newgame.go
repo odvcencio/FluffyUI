@@ -92,12 +92,15 @@ func (a *AppView) HandleMessage(msg runtime.Message) runtime.HandleResult {
 }
 
 func (a *AppView) ChildWidgets() []runtime.Widget {
-	widgets := make([]runtime.Widget, 0, 2)
+	widgets := make([]runtime.Widget, 0, 1)
+	if a.showNewGame {
+		if a.newGameView != nil {
+			widgets = append(widgets, a.newGameView)
+		}
+		return widgets
+	}
 	if a.gameView != nil {
 		widgets = append(widgets, a.gameView)
-	}
-	if a.newGameView != nil {
-		widgets = append(widgets, a.newGameView)
 	}
 	return widgets
 }

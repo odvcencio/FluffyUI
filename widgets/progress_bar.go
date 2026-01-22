@@ -24,7 +24,7 @@ func NewProgress() *Progress {
 	p := &Progress{
 		Max:         100,
 		ShowPercent: true,
-		Style:       GaugeStyle{FillChar: '#', EmptyChar: '-', EmptyStyle: backend.DefaultStyle()},
+		Style:       GaugeStyle{EmptyStyle: backend.DefaultStyle()},
 	}
 	p.Base.Role = accessibility.RoleProgressBar
 	p.syncA11y()

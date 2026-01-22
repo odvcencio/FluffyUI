@@ -215,21 +215,29 @@ func (a *Agent) snapshotLocked(includeText bool) Snapshot {
 	snap.Width, snap.Height = a.screen.Size()
 	snap.LayerCount = a.screen.LayerCount()
 
-	// Walk widget tree
-	if top := a.screen.TopLayer(); top != nil && top.Root != nil {
-		a.walkWidgets(top.Root, &snap.Widgets)
+	// Walk all layers from base to top for complete widget tree
+	for i := 0; i < a.screen.LayerCount(); i++ {
+		layer := a.screen.Layer(i)
+		if layer != nil && layer.Root != nil {
+			a.walkWidgets(layer.Root, &snap.Widgets)
+		}
 	}
 
-	// Find focused widget
-	if scope := a.screen.FocusScope(); scope != nil {
-		if focused := scope.Current(); focused != nil {
+	// Find focused widget (check all layers)
+	for i := a.screen.LayerCount() - 1; i >= 0; i-- {
+		layer := a.screen.Layer(i)
+		if layer == nil || layer.FocusScope == nil {
+			continue
+		}
+		if focused := layer.FocusScope.Current(); focused != nil {
 			snap.FocusedID = widgetID(focused)
-			for i := range snap.Widgets {
-				if snap.Widgets[i].ID == snap.FocusedID {
-					snap.Focused = &snap.Widgets[i]
+			for j := range snap.Widgets {
+				if snap.Widgets[j].ID == snap.FocusedID {
+					snap.Focused = &snap.Widgets[j]
 					break
 				}
 			}
+			break
 		}
 	}
 
@@ -895,12 +903,22 @@ func (a *Agent) focusWidgetByIDLocked(id string) (runtime.Widget, accessibility.
 	if screen == nil {
 		return nil, nil, ErrNoApp
 	}
-	layer := screen.TopLayer()
-	if layer == nil || layer.Root == nil {
-		return nil, nil, ErrNoApp
+
+	// Search all layers for the widget (top to bottom for overlays first)
+	var w runtime.Widget
+	var foundLayer *runtime.Layer
+	for i := screen.LayerCount() - 1; i >= 0; i-- {
+		layer := screen.Layer(i)
+		if layer == nil || layer.Root == nil {
+			continue
+		}
+		if found := findWidgetByID(layer.Root, id); found != nil {
+			w = found
+			foundLayer = layer
+			break
+		}
 	}
 
-	w := findWidgetByID(layer.Root, id)
 	if w == nil {
 		return nil, nil, ErrWidgetNotFound
 	}
@@ -909,7 +927,8 @@ func (a *Agent) focusWidgetByIDLocked(id string) (runtime.Widget, accessibility.
 		return w, accessibleFromWidget(w), ErrNotFocusable
 	}
 
-	scope := screen.FocusScope()
+	// Use the focus scope from the layer where we found the widget
+	scope := foundLayer.FocusScope
 	if scope == nil {
 		return w, accessibleFromWidget(w), ErrNotFocusable
 	}
@@ -919,7 +938,7 @@ func (a *Agent) focusWidgetByIDLocked(id string) (runtime.Widget, accessibility.
 	}
 
 	scope.Reset()
-	runtime.RegisterFocusables(scope, layer.Root)
+	runtime.RegisterFocusables(scope, foundLayer.Root)
 	if scope.SetFocus(focusable) || scope.Current() == focusable {
 		return w, accessibleFromWidget(w), nil
 	}

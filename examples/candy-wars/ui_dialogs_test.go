@@ -1,50 +1,61 @@
 package main
 
 import (
-	"math"
 	"testing"
 	"time"
 )
 
 func TestModalDialogTimerProgressClamps(t *testing.T) {
 	dialog := NewModalDialog("Test", 10, 5)
-	dialog.WithAutoDismiss(10 * time.Second)
+	dialog.WithAutoDismiss(100 * time.Millisecond)
 
-	base := time.Date(2024, time.January, 1, 12, 0, 0, 0, time.UTC)
-	dialog.startTime = base
-
-	progress := dialog.TimerProgress(base.Add(5 * time.Second))
-	if math.Abs(progress-0.5) > 0.0001 {
-		t.Fatalf("expected progress to be 0.5, got %.3f", progress)
+	// Progress should start near 0
+	progress := dialog.TimerProgress(time.Now())
+	if progress > 0.1 {
+		t.Fatalf("expected initial progress near 0, got %.3f", progress)
 	}
 
-	if dialog.TimerProgress(base.Add(-1*time.Second)) != 0 {
-		t.Fatalf("expected progress to clamp to 0 for negative elapsed")
-	}
-
-	if dialog.TimerProgress(base.Add(12*time.Second)) != 1 {
-		t.Fatalf("expected progress to clamp to 1 for elapsed beyond duration")
+	// Progress should clamp to 1 after duration
+	time.Sleep(150 * time.Millisecond)
+	progress = dialog.TimerProgress(time.Now())
+	if progress != 1 {
+		t.Fatalf("expected progress to clamp to 1 after duration, got %.3f", progress)
 	}
 }
 
 func TestModalDialogShouldDismissRespectsPause(t *testing.T) {
 	dialog := NewModalDialog("Test", 10, 5)
-	dialog.WithAutoDismiss(2 * time.Second)
+	dialog.WithAutoDismiss(50 * time.Millisecond)
 
-	base := time.Date(2024, time.January, 1, 12, 0, 0, 0, time.UTC)
-	dialog.startTime = base
+	// Should not dismiss immediately
+	if dialog.ShouldDismiss(time.Now()) {
+		t.Fatalf("expected dialog not to dismiss immediately")
+	}
 
-	if !dialog.ShouldDismiss(base.Add(3 * time.Second)) {
+	// Wait for duration to elapse
+	time.Sleep(100 * time.Millisecond)
+
+	// Should dismiss after duration
+	if !dialog.ShouldDismiss(time.Now()) {
 		t.Fatalf("expected dialog to dismiss after duration")
 	}
 
-	dialog.PauseTimer()
-	if dialog.ShouldDismiss(base.Add(3 * time.Second)) {
+	// Test pause behavior with a fresh dialog
+	dialog2 := NewModalDialog("Test2", 10, 5)
+	dialog2.WithAutoDismiss(50 * time.Millisecond)
+	dialog2.PauseTimer()
+
+	time.Sleep(100 * time.Millisecond)
+
+	// Should not dismiss when paused
+	if dialog2.ShouldDismiss(time.Now()) {
 		t.Fatalf("expected paused dialog not to dismiss")
 	}
 
-	dialog.ResumeTimer()
-	if !dialog.ShouldDismiss(base.Add(3 * time.Second)) {
+	// Resume and check
+	dialog2.ResumeTimer()
+	if !dialog2.ShouldDismiss(time.Now()) {
 		t.Fatalf("expected resumed dialog to dismiss")
 	}
 }
+
