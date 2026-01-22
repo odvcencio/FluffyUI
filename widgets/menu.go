@@ -55,6 +55,27 @@ func NewMenu(items ...*MenuItem) *Menu {
 	return menu
 }
 
+// SetStyle updates the menu base style.
+func (m *Menu) SetStyle(style backend.Style) {
+	if m == nil {
+		return
+	}
+	m.style = style
+}
+
+// SetSelectedStyle updates the selected row style.
+func (m *Menu) SetSelectedStyle(style backend.Style) {
+	if m == nil {
+		return
+	}
+	m.selectedStyle = style
+}
+
+// StyleType returns the selector type name.
+func (m *Menu) StyleType() string {
+	return "Menu"
+}
+
 // SetItems replaces the menu items and clears cached rows.
 func (m *Menu) SetItems(items ...*MenuItem) {
 	if m == nil {
@@ -78,12 +99,14 @@ func (m *Menu) SetLabel(label string) {
 
 // Measure returns desired size.
 func (m *Menu) Measure(constraints runtime.Constraints) runtime.Size {
-	count := len(m.flatten())
-	height := min(count, constraints.MaxHeight)
-	if height <= 0 {
-		height = constraints.MinHeight
-	}
-	return constraints.Constrain(runtime.Size{Width: constraints.MaxWidth, Height: height})
+	return m.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {
+		count := len(m.flatten())
+		height := min(count, contentConstraints.MaxHeight)
+		if height <= 0 {
+			height = contentConstraints.MinHeight
+		}
+		return contentConstraints.Constrain(runtime.Size{Width: contentConstraints.MaxWidth, Height: height})
+	})
 }
 
 // Render draws the menu.
@@ -92,11 +115,16 @@ func (m *Menu) Render(ctx runtime.RenderContext) {
 		return
 	}
 	m.syncA11y()
-	bounds := m.bounds
-	if bounds.Width <= 0 || bounds.Height <= 0 {
+	outer := m.bounds
+	content := m.ContentBounds()
+	if outer.Width <= 0 || outer.Height <= 0 {
 		return
 	}
-	ctx.Buffer.Fill(bounds, ' ', m.style)
+	baseStyle := mergeBackendStyles(resolveBaseStyle(ctx, m, backend.DefaultStyle(), false), m.style)
+	ctx.Buffer.Fill(outer, ' ', baseStyle)
+	if content.Width <= 0 || content.Height <= 0 {
+		return
+	}
 	rows := m.flatten()
 	if len(rows) == 0 {
 		return
@@ -110,18 +138,18 @@ func (m *Menu) Render(ctx runtime.RenderContext) {
 	if m.selectedIndex < m.offset {
 		m.offset = m.selectedIndex
 	}
-	if m.selectedIndex >= m.offset+bounds.Height {
-		m.offset = m.selectedIndex - bounds.Height + 1
+	if m.selectedIndex >= m.offset+content.Height {
+		m.offset = m.selectedIndex - content.Height + 1
 	}
-	for i := 0; i < bounds.Height; i++ {
+	for i := 0; i < content.Height; i++ {
 		rowIndex := m.offset + i
 		if rowIndex < 0 || rowIndex >= len(rows) {
 			break
 		}
 		row := rows[rowIndex]
-		style := m.style
+		style := baseStyle
 		if rowIndex == m.selectedIndex {
-			style = m.selectedStyle
+			style = mergeBackendStyles(baseStyle, m.selectedStyle)
 		}
 		prefix := "  "
 		if len(row.item.Children) > 0 {
@@ -136,8 +164,8 @@ func (m *Menu) Render(ctx runtime.RenderContext) {
 		if row.item.Shortcut != "" {
 			line += " (" + row.item.Shortcut + ")"
 		}
-		line = truncateString(line, bounds.Width)
-		writePadded(ctx.Buffer, bounds.X, bounds.Y+i, bounds.Width, line, style)
+		line = truncateString(line, content.Width)
+		writePadded(ctx.Buffer, content.X, content.Y+i, content.Width, line, style)
 	}
 }
 

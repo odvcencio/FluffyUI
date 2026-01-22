@@ -6,6 +6,7 @@ import (
 	"github.com/odvcencio/fluffy-ui/accessibility"
 	"github.com/odvcencio/fluffy-ui/backend"
 	"github.com/odvcencio/fluffy-ui/runtime"
+	uistyle "github.com/odvcencio/fluffy-ui/style"
 )
 
 // Text is a simple text display widget.
@@ -15,6 +16,7 @@ type Text struct {
 	style     backend.Style
 	lines     []string // Cached line splits
 	a11yLabel string
+	styleSet  bool
 }
 
 // NewText creates a new text widget.
@@ -50,45 +52,62 @@ func (t *Text) Text() string {
 // SetStyle sets the text style.
 func (t *Text) SetStyle(style backend.Style) {
 	t.style = style
+	t.styleSet = true
 }
 
 // WithStyle sets the style and returns the widget for chaining.
 func (t *Text) WithStyle(style backend.Style) *Text {
 	t.style = style
+	t.styleSet = true
 	return t
+}
+
+// StyleType returns the selector type name.
+func (t *Text) StyleType() string {
+	return "Text"
 }
 
 // Measure returns the size needed to display the text.
 func (t *Text) Measure(constraints runtime.Constraints) runtime.Size {
-	// Calculate width: longest line
-	maxWidth := 0
-	for _, line := range t.lines {
-		if len(line) > maxWidth {
-			maxWidth = len(line)
+	return t.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {
+		// Calculate width: longest line
+		maxWidth := 0
+		for _, line := range t.lines {
+			if len(line) > maxWidth {
+				maxWidth = len(line)
+			}
 		}
-	}
 
-	// Height: number of lines
-	height := len(t.lines)
-	if height == 0 {
-		height = 1
-	}
+		// Height: number of lines
+		height := len(t.lines)
+		if height == 0 {
+			height = 1
+		}
 
-	return constraints.Constrain(runtime.Size{
-		Width:  maxWidth,
-		Height: height,
+		return contentConstraints.Constrain(runtime.Size{
+			Width:  maxWidth,
+			Height: height,
+		})
 	})
 }
 
 // Render draws the text.
 func (t *Text) Render(ctx runtime.RenderContext) {
-	bounds := t.bounds
+	bounds := t.ContentBounds()
 	if bounds.Width == 0 || bounds.Height == 0 {
 		return
 	}
 	t.syncA11y()
 
 	style := t.style
+	resolved := ctx.ResolveStyle(t)
+		if !resolved.IsZero() {
+			final := resolved
+			if t.styleSet {
+				final = final.Merge(uistyle.FromBackend(t.style))
+			}
+			style = final.ToBackend()
+		}
 
 	for i, line := range t.lines {
 		if i >= bounds.Height {
@@ -136,6 +155,7 @@ type Label struct {
 	style     backend.Style
 	alignment Alignment
 	a11yLabel string
+	styleSet  bool
 }
 
 // Alignment specifies text alignment.
@@ -174,6 +194,7 @@ func (l *Label) SetA11yLabel(label string) {
 // SetStyle sets the label style.
 func (l *Label) SetStyle(style backend.Style) {
 	l.style = style
+	l.styleSet = true
 }
 
 // SetAlignment sets text alignment.
@@ -184,7 +205,13 @@ func (l *Label) SetAlignment(align Alignment) {
 // WithStyle sets the style and returns for chaining.
 func (l *Label) WithStyle(style backend.Style) *Label {
 	l.style = style
+	l.styleSet = true
 	return l
+}
+
+// StyleType returns the selector type name.
+func (l *Label) StyleType() string {
+	return "Label"
 }
 
 // WithAlignment sets alignment and returns for chaining.
@@ -195,15 +222,17 @@ func (l *Label) WithAlignment(align Alignment) *Label {
 
 // Measure returns the size needed for the label.
 func (l *Label) Measure(constraints runtime.Constraints) runtime.Size {
-	return constraints.Constrain(runtime.Size{
-		Width:  len(l.text),
-		Height: 1,
+	return l.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {
+		return contentConstraints.Constrain(runtime.Size{
+			Width:  len(l.text),
+			Height: 1,
+		})
 	})
 }
 
 // Render draws the label.
 func (l *Label) Render(ctx runtime.RenderContext) {
-	bounds := l.bounds
+	bounds := l.ContentBounds()
 	if bounds.Width == 0 || bounds.Height == 0 {
 		return
 	}
@@ -223,7 +252,16 @@ func (l *Label) Render(ctx runtime.RenderContext) {
 		x = bounds.X + bounds.Width - len(text)
 	}
 
-	ctx.Buffer.SetString(x, bounds.Y, text, l.style)
+	style := l.style
+	resolved := ctx.ResolveStyle(l)
+		if !resolved.IsZero() {
+			final := resolved
+			if l.styleSet {
+				final = final.Merge(uistyle.FromBackend(l.style))
+			}
+			style = final.ToBackend()
+		}
+	ctx.Buffer.SetString(x, bounds.Y, text, style)
 }
 
 func (l *Label) syncA11y() {

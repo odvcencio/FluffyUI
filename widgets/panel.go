@@ -6,6 +6,7 @@ import (
 	"github.com/odvcencio/fluffy-ui/accessibility"
 	"github.com/odvcencio/fluffy-ui/backend"
 	"github.com/odvcencio/fluffy-ui/runtime"
+	"github.com/odvcencio/fluffy-ui/style"
 )
 
 // Panel is a container widget with optional border and background.
@@ -17,6 +18,8 @@ type Panel struct {
 	hasBorder   bool
 	title       string
 	label       string
+	styleSet       bool
+	borderStyleSet bool
 }
 
 // NewPanel creates a new panel widget.
@@ -36,11 +39,13 @@ func NewPanel(child runtime.Widget) *Panel {
 // SetStyle sets the panel background style.
 func (p *Panel) SetStyle(style backend.Style) {
 	p.style = style
+	p.styleSet = true
 }
 
 // WithStyle sets the style and returns for chaining.
 func (p *Panel) WithStyle(style backend.Style) *Panel {
 	p.style = style
+	p.styleSet = true
 	return p
 }
 
@@ -53,7 +58,13 @@ func (p *Panel) SetBorder(enabled bool) {
 func (p *Panel) WithBorder(style backend.Style) *Panel {
 	p.hasBorder = true
 	p.borderStyle = style
+	p.borderStyleSet = true
 	return p
+}
+
+// StyleType returns the selector type name.
+func (p *Panel) StyleType() string {
+	return "Panel"
 }
 
 // SetTitle sets the panel title (shown in border).
@@ -71,31 +82,25 @@ func (p *Panel) WithTitle(title string) *Panel {
 
 // Measure returns the size needed for the panel.
 func (p *Panel) Measure(constraints runtime.Constraints) runtime.Size {
-	borderSize := 0
-	if p.hasBorder {
-		borderSize = 2 // 1 on each side
-	}
+	return p.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {
+		extraBorder := 0
+		if p.hasBorder && p.layoutMetrics.border == 0 {
+			extraBorder = 1
+		}
 
-	if p.child == nil {
-		return constraints.Constrain(runtime.Size{
-			Width:  borderSize,
-			Height: borderSize,
-		})
-	}
+		childConstraints := shrinkConstraints(contentConstraints, extraBorder, extraBorder, extraBorder, extraBorder)
+		if p.child == nil {
+			size := runtime.Size{Width: extraBorder * 2, Height: extraBorder * 2}
+			return contentConstraints.Constrain(size)
+		}
 
-	// Measure child with reduced constraints for border
-	childConstraints := runtime.Constraints{
-		MinWidth:  max(0, constraints.MinWidth-borderSize),
-		MaxWidth:  max(0, constraints.MaxWidth-borderSize),
-		MinHeight: max(0, constraints.MinHeight-borderSize),
-		MaxHeight: max(0, constraints.MaxHeight-borderSize),
-	}
-
-	childSize := p.child.Measure(childConstraints)
-	return runtime.Size{
-		Width:  childSize.Width + borderSize,
-		Height: childSize.Height + borderSize,
-	}
+		childSize := p.child.Measure(childConstraints)
+		size := runtime.Size{
+			Width:  childSize.Width + extraBorder*2,
+			Height: childSize.Height + extraBorder*2,
+		}
+		return contentConstraints.Constrain(size)
+	})
 }
 
 // Layout positions the panel and its child.
@@ -106,12 +111,10 @@ func (p *Panel) Layout(bounds runtime.Rect) {
 		return
 	}
 
-	// Calculate child bounds (inside border)
-	childBounds := bounds
-	if p.hasBorder {
-		childBounds = bounds.Inset(1, 1, 1, 1)
+	childBounds := p.ContentBounds()
+	if p.hasBorder && p.layoutMetrics.border == 0 {
+		childBounds = childBounds.Inset(1, 1, 1, 1)
 	}
-
 	p.child.Layout(childBounds)
 }
 
@@ -123,21 +126,58 @@ func (p *Panel) Render(ctx runtime.RenderContext) {
 	}
 	p.syncA11y()
 
+	resolved := ctx.ResolveStyle(p)
+	background := p.style
+	borderStyle := p.borderStyle
+	hasBorder := p.hasBorder
+	borderSpec := (*style.Border)(nil)
+
+	if !resolved.IsZero() {
+		final := resolved
+		if p.styleSet {
+			final = final.Merge(style.FromBackend(p.style))
+		}
+		background = final.ToBackend()
+		borderSpec = final.Border
+		if p.borderStyleSet {
+			borderStyle = p.borderStyle
+		}
+	}
+
 	// Fill background
-	ctx.Buffer.Fill(bounds, ' ', p.style)
+	ctx.Buffer.Fill(bounds, ' ', background)
 
 	// Draw border if enabled
-	if p.hasBorder {
-		ctx.Buffer.DrawRoundedBox(bounds, p.borderStyle)
+	if borderSpec != nil || hasBorder {
+		drawStyle := borderStyle
+		drawSpec := borderSpec
+		if drawSpec == nil {
+			drawSpec = &style.Border{Style: style.BorderRounded}
+		}
+		if drawSpec.Color.Mode != style.ColorNone.Mode {
+			drawStyle = style.Style{Foreground: drawSpec.Color}.ToBackend()
+		}
+		drawn := false
+		switch drawSpec.Style {
+		case style.BorderDouble:
+			ctx.Buffer.DrawDoubleBox(bounds, drawStyle)
+			drawn = true
+		case style.BorderSingle:
+			ctx.Buffer.DrawBox(bounds, drawStyle)
+			drawn = true
+		case style.BorderRounded:
+			ctx.Buffer.DrawRoundedBox(bounds, drawStyle)
+			drawn = true
+		}
 
 		// Draw title in top border
-		if p.title != "" {
+		if drawn && p.title != "" {
 			title := " " + p.title + " "
 			if len(title) > bounds.Width-4 {
 				title = title[:bounds.Width-4]
 			}
 			x := bounds.X + 2
-			ctx.Buffer.SetString(x, bounds.Y, title, p.borderStyle)
+			ctx.Buffer.SetString(x, bounds.Y, title, drawStyle)
 		}
 	}
 
@@ -186,6 +226,7 @@ type Box struct {
 	child runtime.Widget
 	style backend.Style
 	label string
+	styleSet bool
 }
 
 // NewBox creates a new box widget.
@@ -203,34 +244,52 @@ func NewBox(child runtime.Widget) *Box {
 // SetStyle sets the background style.
 func (b *Box) SetStyle(style backend.Style) {
 	b.style = style
+	b.styleSet = true
 }
 
 // WithStyle sets style and returns for chaining.
 func (b *Box) WithStyle(style backend.Style) *Box {
 	b.style = style
+	b.styleSet = true
 	return b
+}
+
+// StyleType returns the selector type name.
+func (b *Box) StyleType() string {
+	return "Box"
 }
 
 // Measure returns the child's size.
 func (b *Box) Measure(constraints runtime.Constraints) runtime.Size {
-	if b.child == nil {
-		return constraints.MinSize()
-	}
-	return b.child.Measure(constraints)
+	return b.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {
+		if b.child == nil {
+			return contentConstraints.MinSize()
+		}
+		return b.child.Measure(contentConstraints)
+	})
 }
 
 // Layout assigns bounds to the box and child.
 func (b *Box) Layout(bounds runtime.Rect) {
 	b.Base.Layout(bounds)
 	if b.child != nil {
-		b.child.Layout(bounds)
+		b.child.Layout(b.ContentBounds())
 	}
 }
 
 // Render draws the background and child.
 func (b *Box) Render(ctx runtime.RenderContext) {
 	// Fill background
-	ctx.Buffer.Fill(b.bounds, ' ', b.style)
+	background := b.style
+	resolved := ctx.ResolveStyle(b)
+	if !resolved.IsZero() {
+		final := resolved
+		if b.styleSet {
+			final = final.Merge(style.FromBackend(b.style))
+		}
+		background = final.ToBackend()
+	}
+	ctx.Buffer.Fill(b.bounds, ' ', background)
 
 	// Render child
 	if b.child != nil {

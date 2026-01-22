@@ -52,31 +52,34 @@ func (s *Splitter) SetLabel(label string) {
 
 // Measure returns the max child size.
 func (s *Splitter) Measure(constraints runtime.Constraints) runtime.Size {
-	size := constraints.MinSize()
-	if s.First != nil {
-		child := s.First.Measure(constraints)
-		if child.Width > size.Width {
-			size.Width = child.Width
+	return s.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {
+		size := contentConstraints.MinSize()
+		if s.First != nil {
+			child := s.First.Measure(contentConstraints)
+			if child.Width > size.Width {
+				size.Width = child.Width
+			}
+			if child.Height > size.Height {
+				size.Height = child.Height
+			}
 		}
-		if child.Height > size.Height {
-			size.Height = child.Height
+		if s.Second != nil {
+			child := s.Second.Measure(contentConstraints)
+			if child.Width > size.Width {
+				size.Width = child.Width
+			}
+			if child.Height > size.Height {
+				size.Height = child.Height
+			}
 		}
-	}
-	if s.Second != nil {
-		child := s.Second.Measure(constraints)
-		if child.Width > size.Width {
-			size.Width = child.Width
-		}
-		if child.Height > size.Height {
-			size.Height = child.Height
-		}
-	}
-	return constraints.Constrain(size)
+		return contentConstraints.Constrain(size)
+	})
 }
 
 // Layout positions the panes.
 func (s *Splitter) Layout(bounds runtime.Rect) {
 	s.Base.Layout(bounds)
+	content := s.ContentBounds()
 	if s.Ratio <= 0 {
 		s.Ratio = 0.5
 	}
@@ -88,39 +91,39 @@ func (s *Splitter) Layout(bounds runtime.Rect) {
 		divider = 0
 	}
 	if s.Orientation == SplitHorizontal {
-		width := bounds.Width - divider
+		width := content.Width - divider
 		if width < 0 {
 			width = 0
 		}
 		firstWidth := int(float64(width) * s.Ratio)
 		secondWidth := width - firstWidth
 		if s.First != nil {
-			s.First.Layout(runtime.Rect{X: bounds.X, Y: bounds.Y, Width: firstWidth, Height: bounds.Height})
+			s.First.Layout(runtime.Rect{X: content.X, Y: content.Y, Width: firstWidth, Height: content.Height})
 		}
 		if s.Second != nil {
 			s.Second.Layout(runtime.Rect{
-				X:      bounds.X + firstWidth + divider,
-				Y:      bounds.Y,
+				X:      content.X + firstWidth + divider,
+				Y:      content.Y,
 				Width:  secondWidth,
-				Height: bounds.Height,
+				Height: content.Height,
 			})
 		}
 		return
 	}
-	height := bounds.Height - divider
+	height := content.Height - divider
 	if height < 0 {
 		height = 0
 	}
 	firstHeight := int(float64(height) * s.Ratio)
 	secondHeight := height - firstHeight
 	if s.First != nil {
-		s.First.Layout(runtime.Rect{X: bounds.X, Y: bounds.Y, Width: bounds.Width, Height: firstHeight})
+		s.First.Layout(runtime.Rect{X: content.X, Y: content.Y, Width: content.Width, Height: firstHeight})
 	}
 	if s.Second != nil {
 		s.Second.Layout(runtime.Rect{
-			X:      bounds.X,
-			Y:      bounds.Y + firstHeight + divider,
-			Width:  bounds.Width,
+			X:      content.X,
+			Y:      content.Y + firstHeight + divider,
+			Width:  content.Width,
 			Height: secondHeight,
 		})
 	}

@@ -32,16 +32,23 @@ func NewSparkline(data *state.Signal[[]float64]) *Sparkline {
 	return s
 }
 
+// StyleType returns the selector type name.
+func (s *Sparkline) StyleType() string {
+	return "Sparkline"
+}
+
 // Measure returns desired size.
 func (s *Sparkline) Measure(constraints runtime.Constraints) runtime.Size {
-	width := s.Width
-	if width <= 0 {
-		width = constraints.MaxWidth
-	}
-	if width <= 0 {
-		width = constraints.MinWidth
-	}
-	return constraints.Constrain(runtime.Size{Width: width, Height: 1})
+	return s.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {
+		width := s.Width
+		if width <= 0 {
+			width = contentConstraints.MaxWidth
+		}
+		if width <= 0 {
+			width = contentConstraints.MinWidth
+		}
+		return contentConstraints.Constrain(runtime.Size{Width: width, Height: 1})
+	})
 }
 
 // Render draws the sparkline.
@@ -50,7 +57,7 @@ func (s *Sparkline) Render(ctx runtime.RenderContext) {
 		return
 	}
 	s.syncA11y()
-	bounds := s.bounds
+	bounds := s.ContentBounds()
 	if bounds.Width <= 0 || bounds.Height <= 0 {
 		return
 	}
@@ -58,6 +65,7 @@ func (s *Sparkline) Render(ctx runtime.RenderContext) {
 	if len(values) == 0 {
 		return
 	}
+	style := mergeBackendStyles(resolveBaseStyle(ctx, s, backend.DefaultStyle(), false), s.Style)
 	chars := []rune{' ', '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'}
 	min, max := values[0], values[0]
 	for _, v := range values {
@@ -84,7 +92,7 @@ func (s *Sparkline) Render(ctx runtime.RenderContext) {
 		if level >= len(chars) {
 			level = len(chars) - 1
 		}
-		ctx.Buffer.Set(bounds.X+i, bounds.Y, chars[level], s.Style)
+		ctx.Buffer.Set(bounds.X+i, bounds.Y, chars[level], style)
 	}
 }
 
@@ -160,16 +168,23 @@ func NewBarChart(data *state.Signal[[]BarData]) *BarChart {
 	return b
 }
 
+// StyleType returns the selector type name.
+func (b *BarChart) StyleType() string {
+	return "BarChart"
+}
+
 // Measure returns desired size.
 func (b *BarChart) Measure(constraints runtime.Constraints) runtime.Size {
-	height := 0
-	if b != nil && b.Data != nil {
-		height = len(b.Data.Get())
-	}
-	if height <= 0 {
-		height = constraints.MinHeight
-	}
-	return constraints.Constrain(runtime.Size{Width: constraints.MaxWidth, Height: height})
+	return b.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {
+		height := 0
+		if b != nil && b.Data != nil {
+			height = len(b.Data.Get())
+		}
+		if height <= 0 {
+			height = contentConstraints.MinHeight
+		}
+		return contentConstraints.Constrain(runtime.Size{Width: contentConstraints.MaxWidth, Height: height})
+	})
 }
 
 // Render draws the bars.
@@ -178,7 +193,7 @@ func (b *BarChart) Render(ctx runtime.RenderContext) {
 		return
 	}
 	b.syncA11y()
-	bounds := b.bounds
+	bounds := b.ContentBounds()
 	if bounds.Width <= 0 || bounds.Height <= 0 {
 		return
 	}
@@ -186,6 +201,7 @@ func (b *BarChart) Render(ctx runtime.RenderContext) {
 	if len(entries) == 0 {
 		return
 	}
+	style := mergeBackendStyles(resolveBaseStyle(ctx, b, backend.DefaultStyle(), false), b.Style)
 	maxVal := entries[0].Value
 	for _, entry := range entries {
 		if entry.Value > maxVal {
@@ -226,7 +242,7 @@ func (b *BarChart) Render(ctx runtime.RenderContext) {
 			line += " " + formatFloat(entry.Value)
 		}
 		line = truncateString(line, bounds.Width)
-		writePadded(ctx.Buffer, bounds.X, bounds.Y+i, bounds.Width, line, b.Style)
+		writePadded(ctx.Buffer, bounds.X, bounds.Y+i, bounds.Width, line, style)
 	}
 }
 

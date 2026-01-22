@@ -124,6 +124,27 @@ func NewList[T any](adapter ListAdapter[T]) *List[T] {
 	return list
 }
 
+// SetStyle updates the list base style.
+func (l *List[T]) SetStyle(style backend.Style) {
+	if l == nil {
+		return
+	}
+	l.style = style
+}
+
+// SetSelectedStyle updates the selected row style.
+func (l *List[T]) SetSelectedStyle(style backend.Style) {
+	if l == nil {
+		return
+	}
+	l.selectedStyle = style
+}
+
+// StyleType returns the selector type name.
+func (l *List[T]) StyleType() string {
+	return "List"
+}
+
 // OnSelect registers a selection handler.
 func (l *List[T]) OnSelect(fn func(index int, item T)) {
 	if l == nil {
@@ -143,15 +164,17 @@ func (l *List[T]) SetLabel(label string) {
 
 // Measure returns the desired size.
 func (l *List[T]) Measure(constraints runtime.Constraints) runtime.Size {
-	count := 0
-	if l != nil && l.adapter != nil {
-		count = l.adapter.Count()
-	}
-	height := min(count, constraints.MaxHeight)
-	if height <= 0 {
-		height = constraints.MinHeight
-	}
-	return constraints.Constrain(runtime.Size{Width: constraints.MaxWidth, Height: height})
+	return l.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {
+		count := 0
+		if l != nil && l.adapter != nil {
+			count = l.adapter.Count()
+		}
+		height := min(count, contentConstraints.MaxHeight)
+		if height <= 0 {
+			height = contentConstraints.MinHeight
+		}
+		return contentConstraints.Constrain(runtime.Size{Width: contentConstraints.MaxWidth, Height: height})
+	})
 }
 
 // Render draws list items.
@@ -160,11 +183,17 @@ func (l *List[T]) Render(ctx runtime.RenderContext) {
 		return
 	}
 	l.syncA11y()
-	bounds := l.bounds
-	if bounds.Width <= 0 || bounds.Height <= 0 {
+	outer := l.bounds
+	content := l.ContentBounds()
+	if outer.Width <= 0 || outer.Height <= 0 {
 		return
 	}
-	ctx.Buffer.Fill(bounds, ' ', l.style)
+	baseStyle := mergeBackendStyles(resolveBaseStyle(ctx, l, backend.DefaultStyle(), false), l.style)
+	selectedStyle := mergeBackendStyles(baseStyle, l.selectedStyle)
+	ctx.Buffer.Fill(outer, ' ', baseStyle)
+	if content.Width <= 0 || content.Height <= 0 {
+		return
+	}
 	count := l.adapter.Count()
 	if l.selected < 0 {
 		l.selected = 0
@@ -175,17 +204,20 @@ func (l *List[T]) Render(ctx runtime.RenderContext) {
 	if l.selected < l.offset {
 		l.offset = l.selected
 	}
-	if l.selected >= l.offset+bounds.Height {
-		l.offset = l.selected - bounds.Height + 1
+	if l.selected >= l.offset+content.Height {
+		l.offset = l.selected - content.Height + 1
 	}
-	for i := 0; i < bounds.Height; i++ {
+	for i := 0; i < content.Height; i++ {
 		index := l.offset + i
 		if index < 0 || index >= count {
 			break
 		}
 		item := l.adapter.Item(index)
-		rowBounds := runtime.Rect{X: bounds.X, Y: bounds.Y + i, Width: bounds.Width, Height: 1}
+		rowBounds := runtime.Rect{X: content.X, Y: content.Y + i, Width: content.Width, Height: 1}
 		rowCtx := ctx.Sub(rowBounds)
+		if index == l.selected {
+			ctx.Buffer.Fill(rowBounds, ' ', selectedStyle)
+		}
 		l.adapter.Render(item, index, index == l.selected, rowCtx)
 	}
 }

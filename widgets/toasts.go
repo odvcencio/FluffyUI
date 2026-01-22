@@ -64,6 +64,11 @@ func NewToastStack() *ToastStack {
 	return stack
 }
 
+// StyleType returns the selector type name.
+func (t *ToastStack) StyleType() string {
+	return "ToastStack"
+}
+
 // SetToasts updates the toast list.
 func (t *ToastStack) SetToasts(toasts []*toast.Toast) {
 	t.toasts = toasts
@@ -103,16 +108,26 @@ func (t *ToastStack) SetStyles(bg, text, info, success, warn, err backend.Style)
 
 // Measure fills the available space.
 func (t *ToastStack) Measure(constraints runtime.Constraints) runtime.Size {
-	return runtime.Size{Width: constraints.MaxWidth, Height: constraints.MaxHeight}
+	return t.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {
+		return runtime.Size{Width: contentConstraints.MaxWidth, Height: contentConstraints.MaxHeight}
+	})
 }
 
 // Render draws the toast stack.
 func (t *ToastStack) Render(ctx runtime.RenderContext) {
-	bounds := t.bounds
+	bounds := t.ContentBounds()
 	if bounds.Width == 0 || bounds.Height == 0 {
 		return
 	}
 	t.syncA11y()
+
+	baseStyle := resolveBaseStyle(ctx, t, backend.DefaultStyle(), false)
+	baseBG := mergeBackendStyles(baseStyle, t.bgStyle)
+	baseText := mergeBackendStyles(baseStyle, t.textStyle)
+	baseInfo := mergeBackendStyles(baseStyle, t.infoStyle)
+	baseSuccess := mergeBackendStyles(baseStyle, t.successStyle)
+	baseWarn := mergeBackendStyles(baseStyle, t.warnStyle)
+	baseError := mergeBackendStyles(baseStyle, t.errorStyle)
 
 	t.toastRects = t.toastRects[:0]
 	if len(t.toasts) == 0 {
@@ -183,12 +198,12 @@ func (t *ToastStack) Render(ctx runtime.RenderContext) {
 
 		for lineIdx, line := range lines {
 			row := runtime.Rect{X: rect.X, Y: rect.Y + lineIdx, Width: rect.Width, Height: 1}
-			bgStyle := t.bgStyle
-			textStyle := t.textStyle
-			infoStyle := t.infoStyle
-			successStyle := t.successStyle
-			warnStyle := t.warnStyle
-			errorStyle := t.errorStyle
+			bgStyle := baseBG
+			textStyle := baseText
+			infoStyle := baseInfo
+			successStyle := baseSuccess
+			warnStyle := baseWarn
+			errorStyle := baseError
 			if fade {
 				bgStyle = bgStyle.Dim(true)
 				textStyle = textStyle.Dim(true)

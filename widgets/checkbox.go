@@ -5,6 +5,7 @@ import (
 	"github.com/odvcencio/fluffy-ui/backend"
 	"github.com/odvcencio/fluffy-ui/runtime"
 	"github.com/odvcencio/fluffy-ui/state"
+	uistyle "github.com/odvcencio/fluffy-ui/style"
 	"github.com/odvcencio/fluffy-ui/terminal"
 )
 
@@ -18,6 +19,8 @@ type Checkbox struct {
 
 	style      backend.Style
 	focusStyle backend.Style
+	styleSet   bool
+	focusSet   bool
 }
 
 // NewCheckbox creates a checkbox with a label.
@@ -73,17 +76,42 @@ func (c *Checkbox) SetLabel(label string) {
 	c.Base.Label = label
 }
 
+// SetStyle sets the normal style.
+func (c *Checkbox) SetStyle(style backend.Style) {
+	if c == nil {
+		return
+	}
+	c.style = style
+	c.styleSet = true
+}
+
+// SetFocusStyle sets the focused style.
+func (c *Checkbox) SetFocusStyle(style backend.Style) {
+	if c == nil {
+		return
+	}
+	c.focusStyle = style
+	c.focusSet = true
+}
+
+// StyleType returns the selector type name.
+func (c *Checkbox) StyleType() string {
+	return "Checkbox"
+}
+
 // Measure returns the size needed.
 func (c *Checkbox) Measure(constraints runtime.Constraints) runtime.Size {
-	label := ""
-	if c.label != nil {
-		label = c.label.Get()
-	}
-	width := 4 + len(label)
-	if width < 4 {
-		width = 4
-	}
-	return constraints.Constrain(runtime.Size{Width: width, Height: 1})
+	return c.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {
+		label := ""
+		if c.label != nil {
+			label = c.label.Get()
+		}
+		width := 4 + len(label)
+		if width < 4 {
+			width = 4
+		}
+		return contentConstraints.Constrain(runtime.Size{Width: width, Height: 1})
+	})
 }
 
 // Render draws the checkbox.
@@ -91,8 +119,9 @@ func (c *Checkbox) Render(ctx runtime.RenderContext) {
 	if c == nil {
 		return
 	}
-	bounds := c.bounds
-	if bounds.Width <= 0 || bounds.Height <= 0 {
+	outer := c.bounds
+	content := c.ContentBounds()
+	if outer.Width <= 0 || outer.Height <= 0 {
 		return
 	}
 	c.syncState()
@@ -107,12 +136,27 @@ func (c *Checkbox) Render(ctx runtime.RenderContext) {
 	if c.label != nil {
 		label = c.label.Get()
 	}
-	text := marker + " " + truncateString(label, bounds.Width-4)
+	available := max(0, content.Width-4)
+	text := marker + " " + truncateString(label, available)
 	style := c.style
-	if c.focused {
+	resolved := ctx.ResolveStyle(c)
+		if !resolved.IsZero() {
+			final := resolved
+			if c.styleSet {
+				final = final.Merge(uistyle.FromBackend(c.style))
+			}
+			if c.focused && c.focusSet {
+				final = final.Merge(uistyle.FromBackend(c.focusStyle))
+			}
+			style = final.ToBackend()
+	} else if c.focused {
 		style = c.focusStyle
 	}
-	writePadded(ctx.Buffer, bounds.X, bounds.Y, bounds.Width, text, style)
+	ctx.Buffer.Fill(outer, ' ', style)
+	if content.Width <= 0 || content.Height <= 0 {
+		return
+	}
+	writePadded(ctx.Buffer, content.X, content.Y, content.Width, text, style)
 }
 
 // HandleMessage toggles the checkbox.

@@ -6,6 +6,7 @@ import (
 	"github.com/odvcencio/fluffy-ui/accessibility"
 	"github.com/odvcencio/fluffy-ui/backend"
 	"github.com/odvcencio/fluffy-ui/runtime"
+	uistyle "github.com/odvcencio/fluffy-ui/style"
 	"github.com/odvcencio/fluffy-ui/terminal"
 )
 
@@ -26,6 +27,8 @@ type Select struct {
 	label      string
 	style      backend.Style
 	focusStyle backend.Style
+	styleSet   bool
+	focusSet   bool
 }
 
 // NewSelect creates a select widget.
@@ -57,6 +60,29 @@ func (s *Select) SetLabel(label string) {
 	}
 	s.label = label
 	s.syncState()
+}
+
+// SetStyle sets the normal style.
+func (s *Select) SetStyle(style backend.Style) {
+	if s == nil {
+		return
+	}
+	s.style = style
+	s.styleSet = true
+}
+
+// SetFocusStyle sets the focused style.
+func (s *Select) SetFocusStyle(style backend.Style) {
+	if s == nil {
+		return
+	}
+	s.focusStyle = style
+	s.focusSet = true
+}
+
+// StyleType returns the selector type name.
+func (s *Select) StyleType() string {
+	return "Select"
 }
 
 // Selected returns the current selection index.
@@ -92,12 +118,14 @@ func (s *Select) SetSelected(index int) {
 
 // Measure returns the desired size.
 func (s *Select) Measure(constraints runtime.Constraints) runtime.Size {
-	label := s.currentLabel()
-	width := len(label) + 4
-	if width < 6 {
-		width = 6
-	}
-	return constraints.Constrain(runtime.Size{Width: width, Height: 1})
+	return s.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {
+		label := s.currentLabel()
+		width := len(label) + 4
+		if width < 6 {
+			width = 6
+		}
+		return contentConstraints.Constrain(runtime.Size{Width: width, Height: 1})
+	})
 }
 
 // Render draws the select.
@@ -105,17 +133,33 @@ func (s *Select) Render(ctx runtime.RenderContext) {
 	if s == nil {
 		return
 	}
-	bounds := s.bounds
-	if bounds.Width <= 0 || bounds.Height <= 0 {
+	outer := s.bounds
+	content := s.ContentBounds()
+	if outer.Width <= 0 || outer.Height <= 0 {
 		return
 	}
 	label := s.currentLabel()
-	text := "[" + truncateString(label, bounds.Width-4) + " v]"
+	available := max(0, content.Width-4)
+	text := "[" + truncateString(label, available) + " v]"
 	style := s.style
-	if s.focused {
+	resolved := ctx.ResolveStyle(s)
+		if !resolved.IsZero() {
+			final := resolved
+			if s.styleSet {
+				final = final.Merge(uistyle.FromBackend(s.style))
+			}
+			if s.focused && s.focusSet {
+				final = final.Merge(uistyle.FromBackend(s.focusStyle))
+			}
+			style = final.ToBackend()
+	} else if s.focused {
 		style = s.focusStyle
 	}
-	writePadded(ctx.Buffer, bounds.X, bounds.Y, bounds.Width, text, style)
+	ctx.Buffer.Fill(outer, ' ', style)
+	if content.Width <= 0 || content.Height <= 0 {
+		return
+	}
+	writePadded(ctx.Buffer, content.X, content.Y, content.Width, text, style)
 }
 
 // HandleMessage changes selection.

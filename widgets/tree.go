@@ -49,6 +49,27 @@ func NewTree(root *TreeNode) *Tree {
 	return tree
 }
 
+// SetStyle updates the base tree style.
+func (t *Tree) SetStyle(style backend.Style) {
+	if t == nil {
+		return
+	}
+	t.style = style
+}
+
+// SetSelectedStyle updates the selected row style.
+func (t *Tree) SetSelectedStyle(style backend.Style) {
+	if t == nil {
+		return
+	}
+	t.selectedStyle = style
+}
+
+// StyleType returns the selector type name.
+func (t *Tree) StyleType() string {
+	return "Tree"
+}
+
 // SetRoot updates the tree root and clears cached rows.
 func (t *Tree) SetRoot(root *TreeNode) {
 	if t == nil {
@@ -71,12 +92,14 @@ func (t *Tree) SetLabel(label string) {
 
 // Measure returns desired size.
 func (t *Tree) Measure(constraints runtime.Constraints) runtime.Size {
-	count := len(t.flatten())
-	height := min(count, constraints.MaxHeight)
-	if height <= 0 {
-		height = constraints.MinHeight
-	}
-	return constraints.Constrain(runtime.Size{Width: constraints.MaxWidth, Height: height})
+	return t.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {
+		count := len(t.flatten())
+		height := min(count, contentConstraints.MaxHeight)
+		if height <= 0 {
+			height = contentConstraints.MinHeight
+		}
+		return contentConstraints.Constrain(runtime.Size{Width: contentConstraints.MaxWidth, Height: height})
+	})
 }
 
 // Render draws the tree.
@@ -85,11 +108,16 @@ func (t *Tree) Render(ctx runtime.RenderContext) {
 		return
 	}
 	t.syncA11y()
-	bounds := t.bounds
-	if bounds.Width <= 0 || bounds.Height <= 0 {
+	outer := t.bounds
+	content := t.ContentBounds()
+	if outer.Width <= 0 || outer.Height <= 0 {
 		return
 	}
-	ctx.Buffer.Fill(bounds, ' ', t.style)
+	baseStyle := mergeBackendStyles(resolveBaseStyle(ctx, t, backend.DefaultStyle(), false), t.style)
+	ctx.Buffer.Fill(outer, ' ', baseStyle)
+	if content.Width <= 0 || content.Height <= 0 {
+		return
+	}
 	rows := t.flatten()
 	if len(rows) == 0 {
 		return
@@ -103,18 +131,18 @@ func (t *Tree) Render(ctx runtime.RenderContext) {
 	if t.selectedIndex < t.offset {
 		t.offset = t.selectedIndex
 	}
-	if t.selectedIndex >= t.offset+bounds.Height {
-		t.offset = t.selectedIndex - bounds.Height + 1
+	if t.selectedIndex >= t.offset+content.Height {
+		t.offset = t.selectedIndex - content.Height + 1
 	}
-	for i := 0; i < bounds.Height; i++ {
+	for i := 0; i < content.Height; i++ {
 		rowIndex := t.offset + i
 		if rowIndex < 0 || rowIndex >= len(rows) {
 			break
 		}
 		row := rows[rowIndex]
-		style := t.style
+		style := baseStyle
 		if rowIndex == t.selectedIndex {
-			style = t.selectedStyle
+			style = mergeBackendStyles(baseStyle, t.selectedStyle)
 		}
 		prefix := ""
 		if len(row.node.Children) > 0 {
@@ -128,8 +156,8 @@ func (t *Tree) Render(ctx runtime.RenderContext) {
 		}
 		indent := t.indent(row.depth)
 		line := indent + prefix + row.node.Label
-		line = truncateString(line, bounds.Width)
-		writePadded(ctx.Buffer, bounds.X, bounds.Y+i, bounds.Width, line, style)
+		line = truncateString(line, content.Width)
+		writePadded(ctx.Buffer, content.X, content.Y+i, content.Width, line, style)
 	}
 }
 

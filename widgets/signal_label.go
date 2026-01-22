@@ -21,6 +21,7 @@ type SignalLabel struct {
 	style     backend.Style
 	alignment Alignment
 	mounted   bool
+	styleSet  bool
 }
 
 // NewSignalLabel creates a new signal-backed label.
@@ -46,6 +47,7 @@ func (s *SignalLabel) Text() string {
 // SetStyle sets the label style.
 func (s *SignalLabel) SetStyle(style backend.Style) {
 	s.style = style
+	s.styleSet = true
 }
 
 // SetAlignment sets text alignment.
@@ -59,17 +61,24 @@ func (s *SignalLabel) SetA11yLabel(label string) {
 	s.syncA11y()
 }
 
+// StyleType returns the selector type name.
+func (s *SignalLabel) StyleType() string {
+	return "Label"
+}
+
 // Measure returns the size needed for the label.
 func (s *SignalLabel) Measure(constraints runtime.Constraints) runtime.Size {
-	return constraints.Constrain(runtime.Size{
-		Width:  len(s.text),
-		Height: 1,
+	return s.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {
+		return contentConstraints.Constrain(runtime.Size{
+			Width:  len(s.text),
+			Height: 1,
+		})
 	})
 }
 
 // Render draws the label.
 func (s *SignalLabel) Render(ctx runtime.RenderContext) {
-	bounds := s.bounds
+	bounds := s.ContentBounds()
 	if bounds.Width == 0 || bounds.Height == 0 {
 		return
 	}
@@ -88,7 +97,8 @@ func (s *SignalLabel) Render(ctx runtime.RenderContext) {
 		x = bounds.X + bounds.Width - len(text)
 	}
 
-	ctx.Buffer.SetString(x, bounds.Y, text, s.style)
+	baseStyle := resolveBaseStyle(ctx, s, s.style, s.styleSet)
+	ctx.Buffer.SetString(x, bounds.Y, text, baseStyle)
 }
 
 // Mount subscribes to signal changes.

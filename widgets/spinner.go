@@ -12,6 +12,7 @@ type Spinner struct {
 	Frames []string
 	index  int
 	style  backend.Style
+	styleSet bool
 }
 
 // NewSpinner creates a spinner.
@@ -25,6 +26,20 @@ func NewSpinner() *Spinner {
 	return spinner
 }
 
+// SetStyle updates the spinner style.
+func (s *Spinner) SetStyle(style backend.Style) {
+	if s == nil {
+		return
+	}
+	s.style = style
+	s.styleSet = true
+}
+
+// StyleType returns the selector type name.
+func (s *Spinner) StyleType() string {
+	return "Spinner"
+}
+
 // Advance moves to the next frame.
 func (s *Spinner) Advance() {
 	if s == nil || len(s.Frames) == 0 {
@@ -35,7 +50,9 @@ func (s *Spinner) Advance() {
 
 // Measure returns desired size.
 func (s *Spinner) Measure(constraints runtime.Constraints) runtime.Size {
-	return constraints.Constrain(runtime.Size{Width: 1, Height: 1})
+	return s.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {
+		return contentConstraints.Constrain(runtime.Size{Width: 1, Height: 1})
+	})
 }
 
 // Render draws the spinner frame.
@@ -44,13 +61,14 @@ func (s *Spinner) Render(ctx runtime.RenderContext) {
 		return
 	}
 	s.syncA11y()
-	bounds := s.bounds
+	bounds := s.ContentBounds()
 	if bounds.Width <= 0 || bounds.Height <= 0 {
 		return
 	}
 	frame := s.Frames[s.index%len(s.Frames)]
 	frame = truncateString(frame, bounds.Width)
-	ctx.Buffer.SetString(bounds.X, bounds.Y, frame, s.style)
+	style := resolveBaseStyle(ctx, s, s.style, s.styleSet)
+	ctx.Buffer.SetString(bounds.X, bounds.Y, frame, style)
 }
 
 // HandleMessage advances on ticks.

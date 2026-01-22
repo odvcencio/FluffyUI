@@ -30,17 +30,19 @@ func NewBreadcrumb(items ...BreadcrumbItem) *Breadcrumb {
 
 // Measure returns desired size.
 func (b *Breadcrumb) Measure(constraints runtime.Constraints) runtime.Size {
-	width := 0
-	for i, item := range b.Items {
-		width += len(item.Label)
-		if i < len(b.Items)-1 {
-			width += 3
+	return b.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {
+		width := 0
+		for i, item := range b.Items {
+			width += len(item.Label)
+			if i < len(b.Items)-1 {
+				width += 3
+			}
 		}
-	}
-	if width < 1 {
-		width = 1
-	}
-	return constraints.Constrain(runtime.Size{Width: width, Height: 1})
+		if width < 1 {
+			width = 1
+		}
+		return contentConstraints.Constrain(runtime.Size{Width: width, Height: 1})
+	})
 }
 
 // Render draws breadcrumb text.
@@ -49,7 +51,7 @@ func (b *Breadcrumb) Render(ctx runtime.RenderContext) {
 		return
 	}
 	b.syncA11y()
-	bounds := b.bounds
+	bounds := b.ContentBounds()
 	if bounds.Width <= 0 || bounds.Height <= 0 {
 		return
 	}

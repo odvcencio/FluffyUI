@@ -7,6 +7,7 @@ import (
 	"github.com/odvcencio/fluffy-ui/backend"
 	"github.com/odvcencio/fluffy-ui/clipboard"
 	"github.com/odvcencio/fluffy-ui/runtime"
+	uistyle "github.com/odvcencio/fluffy-ui/style"
 	"github.com/odvcencio/fluffy-ui/terminal"
 )
 
@@ -21,6 +22,8 @@ type Input struct {
 	focusStyle  backend.Style
 	placeholder string
 	services    runtime.Services
+	styleSet    bool
+	focusSet    bool
 
 	// Callbacks
 	onSubmit func(text string)
@@ -57,11 +60,18 @@ func (i *Input) SetPlaceholder(text string) {
 // SetStyle sets the normal style.
 func (i *Input) SetStyle(style backend.Style) {
 	i.style = style
+	i.styleSet = true
 }
 
 // SetFocusStyle sets the focused style.
 func (i *Input) SetFocusStyle(style backend.Style) {
 	i.focusStyle = style
+	i.focusSet = true
+}
+
+// StyleType returns the selector type name.
+func (i *Input) StyleType() string {
+	return "Input"
 }
 
 // OnSubmit sets the callback for when Enter is pressed.
@@ -162,27 +172,44 @@ func (i *Input) CursorWordRight() {
 
 // Measure returns the size needed for the input.
 func (i *Input) Measure(constraints runtime.Constraints) runtime.Size {
-	// Input is typically 1 line tall, fills available width
-	return runtime.Size{
-		Width:  constraints.MaxWidth,
-		Height: 1,
-	}
+	return i.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {
+		// Input is typically 1 line tall, fills available width
+		return runtime.Size{
+			Width:  contentConstraints.MaxWidth,
+			Height: 1,
+		}
+	})
 }
 
 // Render draws the input field.
 func (i *Input) Render(ctx runtime.RenderContext) {
-	bounds := i.bounds
-	if bounds.Width == 0 || bounds.Height == 0 {
+	outer := i.bounds
+	content := i.ContentBounds()
+	if outer.Width == 0 || outer.Height == 0 {
 		return
 	}
 
 	style := i.style
-	if i.focused {
+	resolved := ctx.ResolveStyle(i)
+		if !resolved.IsZero() {
+			final := resolved
+			if i.styleSet {
+				final = final.Merge(uistyle.FromBackend(i.style))
+			}
+			if i.focused && i.focusSet {
+				final = final.Merge(uistyle.FromBackend(i.focusStyle))
+			}
+			style = final.ToBackend()
+	} else if i.focused {
 		style = i.focusStyle
 	}
 
 	// Clear the input area
-	ctx.Buffer.Fill(bounds, ' ', style)
+	ctx.Buffer.Fill(outer, ' ', style)
+
+	if content.Width == 0 || content.Height == 0 {
+		return
+	}
 
 	text := i.text.String()
 
@@ -190,21 +217,21 @@ func (i *Input) Render(ctx runtime.RenderContext) {
 	if text == "" && !i.focused && i.placeholder != "" {
 		placeholderStyle := style.Dim(true)
 		display := i.placeholder
-		if len(display) > bounds.Width {
-			display = display[:bounds.Width]
+		if len(display) > content.Width {
+			display = display[:content.Width]
 		}
-		ctx.Buffer.SetString(bounds.X, bounds.Y, display, placeholderStyle)
+		ctx.Buffer.SetString(content.X, content.Y, display, placeholderStyle)
 		return
 	}
 
 	// Calculate visible portion of text
 	// Scroll so cursor is always visible
 	visibleStart := 0
-	if i.cursorPos >= bounds.Width {
-		visibleStart = i.cursorPos - bounds.Width + 1
+	if i.cursorPos >= content.Width {
+		visibleStart = i.cursorPos - content.Width + 1
 	}
 
-	visibleEnd := visibleStart + bounds.Width
+	visibleEnd := visibleStart + content.Width
 	if visibleEnd > len(text) {
 		visibleEnd = len(text)
 	}
@@ -215,18 +242,18 @@ func (i *Input) Render(ctx runtime.RenderContext) {
 	}
 
 	// Draw text
-	ctx.Buffer.SetString(bounds.X, bounds.Y, visible, style)
+	ctx.Buffer.SetString(content.X, content.Y, visible, style)
 
 	// Draw cursor if focused (by inverting the cell)
 	if i.focused {
-		cursorX := bounds.X + i.cursorPos - visibleStart
-		if cursorX >= bounds.X && cursorX < bounds.X+bounds.Width {
+		cursorX := content.X + i.cursorPos - visibleStart
+		if cursorX >= content.X && cursorX < content.X+content.Width {
 			var cursorChar rune = ' '
 			if i.cursorPos < len(text) {
 				cursorChar = rune(text[i.cursorPos])
 			}
 			cursorStyle := style.Reverse(true)
-			ctx.Buffer.Set(cursorX, bounds.Y, cursorChar, cursorStyle)
+			ctx.Buffer.Set(cursorX, content.Y, cursorChar, cursorStyle)
 		}
 	}
 }
@@ -525,6 +552,8 @@ type MultilineInput struct {
 	style      backend.Style
 	focusStyle backend.Style
 	services   runtime.Services
+	styleSet   bool
+	focusSet   bool
 
 	onSubmit func(text string)
 	onChange func(text string)
@@ -541,6 +570,11 @@ func NewMultilineInput() *MultilineInput {
 	input.Base.Role = accessibility.RoleTextbox
 	input.syncA11y()
 	return input
+}
+
+// StyleType returns the selector type name.
+func (m *MultilineInput) StyleType() string {
+	return "MultilineInput"
 }
 
 // Bind attaches app services.
@@ -695,59 +729,94 @@ func (m *MultilineInput) SetLabel(label string) {
 	m.syncA11y()
 }
 
+// SetStyle sets the normal style.
+func (m *MultilineInput) SetStyle(style backend.Style) {
+	if m == nil {
+		return
+	}
+	m.style = style
+	m.styleSet = true
+}
+
+// SetFocusStyle sets the focused style.
+func (m *MultilineInput) SetFocusStyle(style backend.Style) {
+	if m == nil {
+		return
+	}
+	m.focusStyle = style
+	m.focusSet = true
+}
+
 // Measure returns the preferred size.
 func (m *MultilineInput) Measure(constraints runtime.Constraints) runtime.Size {
-	// Prefer to be at least 3 lines tall, up to content or max
-	height := len(m.lines)
-	if height < 3 {
-		height = 3
-	}
-	return constraints.Constrain(runtime.Size{
-		Width:  constraints.MaxWidth,
-		Height: height,
+	return m.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {
+		// Prefer to be at least 3 lines tall, up to content or max
+		height := len(m.lines)
+		if height < 3 {
+			height = 3
+		}
+		return contentConstraints.Constrain(runtime.Size{
+			Width:  contentConstraints.MaxWidth,
+			Height: height,
+		})
 	})
 }
 
 // Render draws the multiline input.
 func (m *MultilineInput) Render(ctx runtime.RenderContext) {
-	bounds := m.bounds
-	if bounds.Width == 0 || bounds.Height == 0 {
+	outer := m.bounds
+	content := m.ContentBounds()
+	if outer.Width == 0 || outer.Height == 0 {
 		return
 	}
 
 	style := m.style
-	if m.focused {
+	resolved := ctx.ResolveStyle(m)
+	if !resolved.IsZero() {
+		final := resolved
+		if m.styleSet {
+			final = final.Merge(uistyle.FromBackend(m.style))
+		}
+		if m.focused && m.focusSet {
+			final = final.Merge(uistyle.FromBackend(m.focusStyle))
+		}
+		style = final.ToBackend()
+	} else if m.focused {
 		style = m.focusStyle
 	}
 
 	// Clear area
-	ctx.Buffer.Fill(bounds, ' ', style)
+	ctx.Buffer.Fill(outer, ' ', style)
+
+	if content.Width == 0 || content.Height == 0 {
+		return
+	}
 
 	// Draw visible lines
-	for i := 0; i < bounds.Height; i++ {
+	for i := 0; i < content.Height; i++ {
 		lineIdx := m.scrollY + i
 		if lineIdx >= len(m.lines) {
 			break
 		}
 
 		line := m.lines[lineIdx]
-		if len(line) > bounds.Width {
-			line = line[:bounds.Width]
+		if len(line) > content.Width {
+			line = line[:content.Width]
 		}
-		ctx.Buffer.SetString(bounds.X, bounds.Y+i, line, style)
+		ctx.Buffer.SetString(content.X, content.Y+i, line, style)
 	}
 
 	// Draw cursor
 	if m.focused {
 		cursorScreenY := m.cursorY - m.scrollY
-		if cursorScreenY >= 0 && cursorScreenY < bounds.Height {
-			cursorX := bounds.X + m.cursorX
-			if cursorX >= bounds.X && cursorX < bounds.X+bounds.Width {
+		if cursorScreenY >= 0 && cursorScreenY < content.Height {
+			cursorX := content.X + m.cursorX
+			if cursorX >= content.X && cursorX < content.X+content.Width {
 				var ch rune = ' '
 				if m.cursorY < len(m.lines) && m.cursorX < len(m.lines[m.cursorY]) {
 					ch = rune(m.lines[m.cursorY][m.cursorX])
 				}
-				ctx.Buffer.Set(cursorX, bounds.Y+cursorScreenY, ch, style.Reverse(true))
+				ctx.Buffer.Set(cursorX, content.Y+cursorScreenY, ch, style.Reverse(true))
 			}
 		}
 	}
@@ -863,10 +932,15 @@ func (m *MultilineInput) HandleMessage(msg runtime.Message) runtime.HandleResult
 }
 
 func (m *MultilineInput) ensureCursorVisible() {
+	content := m.ContentBounds()
+	if content.Height <= 0 {
+		m.scrollY = 0
+		return
+	}
 	if m.cursorY < m.scrollY {
 		m.scrollY = m.cursorY
-	} else if m.cursorY >= m.scrollY+m.bounds.Height {
-		m.scrollY = m.cursorY - m.bounds.Height + 1
+	} else if m.cursorY >= m.scrollY+content.Height {
+		m.scrollY = m.cursorY - content.Height + 1
 	}
 }
 

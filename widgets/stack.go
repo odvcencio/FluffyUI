@@ -33,28 +33,31 @@ func (s *Stack) SetLabel(label string) {
 
 // Measure returns the max size of children.
 func (s *Stack) Measure(constraints runtime.Constraints) runtime.Size {
-	maxSize := runtime.Size{}
-	for _, child := range s.Children {
-		if child == nil {
-			continue
+	return s.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {
+		maxSize := runtime.Size{}
+		for _, child := range s.Children {
+			if child == nil {
+				continue
+			}
+			size := child.Measure(contentConstraints)
+			if size.Width > maxSize.Width {
+				maxSize.Width = size.Width
+			}
+			if size.Height > maxSize.Height {
+				maxSize.Height = size.Height
+			}
 		}
-		size := child.Measure(constraints)
-		if size.Width > maxSize.Width {
-			maxSize.Width = size.Width
-		}
-		if size.Height > maxSize.Height {
-			maxSize.Height = size.Height
-		}
-	}
-	return constraints.Constrain(maxSize)
+		return contentConstraints.Constrain(maxSize)
+	})
 }
 
 // Layout assigns bounds to children.
 func (s *Stack) Layout(bounds runtime.Rect) {
 	s.Base.Layout(bounds)
+	content := s.ContentBounds()
 	for _, child := range s.Children {
 		if child != nil {
-			child.Layout(bounds)
+			child.Layout(content)
 		}
 	}
 }

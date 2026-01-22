@@ -7,6 +7,7 @@ import (
 	"github.com/odvcencio/fluffy-ui/audio"
 	"github.com/odvcencio/fluffy-ui/clipboard"
 	"github.com/odvcencio/fluffy-ui/state"
+	"github.com/odvcencio/fluffy-ui/style"
 )
 
 // Services exposes app-level scheduling and messaging helpers.
@@ -53,6 +54,14 @@ func (s Services) Audio() audio.Service {
 		return nil
 	}
 	return s.app.audio
+}
+
+// Stylesheet returns the active stylesheet.
+func (s Services) Stylesheet() *style.Stylesheet {
+	if s.app == nil {
+		return nil
+	}
+	return s.app.stylesheet
 }
 
 // Scheduler returns the app state scheduler.

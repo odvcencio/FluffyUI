@@ -7,6 +7,7 @@ import (
 	"github.com/odvcencio/fluffy-ui/backend"
 	"github.com/odvcencio/fluffy-ui/runtime"
 	"github.com/odvcencio/fluffy-ui/state"
+	uistyle "github.com/odvcencio/fluffy-ui/style"
 	"github.com/odvcencio/fluffy-ui/terminal"
 )
 
@@ -32,6 +33,10 @@ type Button struct {
 	style       backend.Style
 	focusStyle  backend.Style
 	disabledSty backend.Style
+
+	styleSet         bool
+	focusStyleSet    bool
+	disabledStyleSet bool
 }
 
 // ButtonOption configures a button.
@@ -62,6 +67,24 @@ func WithVariant(v Variant) ButtonOption {
 	return func(b *Button) {
 		if b != nil {
 			b.variant = v
+		}
+	}
+}
+
+// WithClass adds a style class.
+func WithClass(class string) ButtonOption {
+	return func(b *Button) {
+		if b != nil {
+			b.AddClass(class)
+		}
+	}
+}
+
+// WithClasses adds multiple style classes.
+func WithClasses(classes ...string) ButtonOption {
+	return func(b *Button) {
+		if b != nil {
+			b.AddClasses(classes...)
 		}
 	}
 }
@@ -109,6 +132,7 @@ func (b *Button) SetStyle(style backend.Style) {
 		return
 	}
 	b.style = style
+	b.styleSet = true
 }
 
 // SetFocusStyle updates the focus style.
@@ -117,19 +141,51 @@ func (b *Button) SetFocusStyle(style backend.Style) {
 		return
 	}
 	b.focusStyle = style
+	b.focusStyleSet = true
+}
+
+// SetDisabledStyle updates the disabled style.
+func (b *Button) SetDisabledStyle(style backend.Style) {
+	if b == nil {
+		return
+	}
+	b.disabledSty = style
+	b.disabledStyleSet = true
+}
+
+// StyleType returns the selector type name.
+func (b *Button) StyleType() string {
+	return "Button"
+}
+
+// StyleClasses returns selector classes including the variant.
+func (b *Button) StyleClasses() []string {
+	classes := b.Base.StyleClasses()
+	if b == nil || b.variant == "" {
+		return classes
+	}
+	variant := string(b.variant)
+	for _, cls := range classes {
+		if cls == variant {
+			return classes
+		}
+	}
+	return append(classes, variant)
 }
 
 // Measure returns the size needed by the button.
 func (b *Button) Measure(constraints runtime.Constraints) runtime.Size {
-	label := ""
-	if b.label != nil {
-		label = b.label.Get()
-	}
-	width := len(label) + 4
-	if width < 4 {
-		width = 4
-	}
-	return constraints.Constrain(runtime.Size{Width: width, Height: 1})
+	return b.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {
+		label := ""
+		if b.label != nil {
+			label = b.label.Get()
+		}
+		width := len(label) + 4
+		if width < 4 {
+			width = 4
+		}
+		return contentConstraints.Constrain(runtime.Size{Width: width, Height: 1})
+	})
 }
 
 // Render draws the button.
@@ -137,8 +193,9 @@ func (b *Button) Render(ctx runtime.RenderContext) {
 	if b == nil {
 		return
 	}
-	bounds := b.bounds
-	if bounds.Width <= 0 || bounds.Height <= 0 {
+	outer := b.bounds
+	content := b.ContentBounds()
+	if outer.Width <= 0 || outer.Height <= 0 {
 		return
 	}
 	label := ""
@@ -159,15 +216,35 @@ func (b *Button) Render(ctx runtime.RenderContext) {
 	case VariantDanger:
 		style = style.Bold(true).Underline(true)
 	}
-	if b.focused {
-		style = b.focusStyle
-	}
-	if disabled {
-		style = b.disabledSty
+		resolved := ctx.ResolveStyle(b)
+		if !resolved.IsZero() {
+			final := resolved
+			if b.styleSet {
+				final = final.Merge(uistyle.FromBackend(b.style))
+			}
+			if b.focused && b.focusStyleSet {
+				final = final.Merge(uistyle.FromBackend(b.focusStyle))
+			}
+			if disabled && b.disabledStyleSet {
+				final = final.Merge(uistyle.FromBackend(b.disabledSty))
+			}
+			style = final.ToBackend()
+	} else {
+		if b.focused {
+			style = b.focusStyle
+		}
+		if disabled {
+			style = b.disabledSty
+		}
 	}
 
-	text := "[" + truncateString(label, bounds.Width-2) + "]"
-	writePadded(ctx.Buffer, bounds.X, bounds.Y, bounds.Width, text, style)
+	available := max(0, content.Width-2)
+	ctx.Buffer.Fill(outer, ' ', style)
+	if content.Width <= 0 || content.Height <= 0 {
+		return
+	}
+	text := "[" + truncateString(label, available) + "]"
+	writePadded(ctx.Buffer, content.X, content.Y, content.Width, text, style)
 }
 
 func (b *Button) syncA11y() {

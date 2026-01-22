@@ -58,6 +58,11 @@ func NewSection(title string) *Section {
 	return section
 }
 
+// StyleType returns the selector type name.
+func (s *Section) StyleType() string {
+	return "Section"
+}
+
 // SetTitle updates the section title.
 func (s *Section) SetTitle(title string) {
 	s.title = title
@@ -102,22 +107,29 @@ func (s *Section) SetStyles(header, item, active, completed, pending, activeIcon
 	s.activeIcon = activeIcon
 }
 
+// SetIconStyle configures the default icon style.
+func (s *Section) SetIconStyle(style backend.Style) {
+	s.iconStyle = style
+}
+
 // Measure returns the preferred size.
 func (s *Section) Measure(constraints runtime.Constraints) runtime.Size {
-	height := 1 // Header always shown
+	return s.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {
+		height := 1 // Header always shown
 
-	if s.expanded {
-		itemCount := len(s.items)
-		if s.maxItems > 0 && itemCount > s.maxItems {
-			itemCount = s.maxItems
+		if s.expanded {
+			itemCount := len(s.items)
+			if s.maxItems > 0 && itemCount > s.maxItems {
+				itemCount = s.maxItems
+			}
+			height += itemCount
 		}
-		height += itemCount
-	}
 
-	return runtime.Size{
-		Width:  constraints.MaxWidth,
-		Height: height,
-	}
+		return contentConstraints.Constrain(runtime.Size{
+			Width:  contentConstraints.MaxWidth,
+			Height: height,
+		})
+	})
 }
 
 // Layout stores the assigned bounds.
@@ -127,11 +139,20 @@ func (s *Section) Layout(bounds runtime.Rect) {
 
 // Render draws the section.
 func (s *Section) Render(ctx runtime.RenderContext) {
-	b := s.bounds
+	b := s.ContentBounds()
 	if b.Width < 5 || b.Height < 1 {
 		return
 	}
 	s.syncA11y()
+
+	baseStyle := resolveBaseStyle(ctx, s, backend.DefaultStyle(), false)
+	headerStyle := mergeBackendStyles(baseStyle, s.headerStyle)
+	itemStyle := mergeBackendStyles(baseStyle, s.itemStyle)
+	activeStyle := mergeBackendStyles(baseStyle, s.activeStyle)
+	baseIconStyle := mergeBackendStyles(baseStyle, s.iconStyle)
+	completedIcon := mergeBackendStyles(baseStyle, s.completedIcon)
+	pendingIcon := mergeBackendStyles(baseStyle, s.pendingIcon)
+	activeIcon := mergeBackendStyles(baseStyle, s.activeIcon)
 
 	y := b.Y
 
@@ -140,14 +161,14 @@ func (s *Section) Render(ctx runtime.RenderContext) {
 	if !s.expanded {
 		expandIcon = '▶'
 	}
-	ctx.Buffer.Set(b.X, y, expandIcon, s.headerStyle)
-	ctx.Buffer.Set(b.X+1, y, ' ', s.headerStyle)
+	ctx.Buffer.Set(b.X, y, expandIcon, headerStyle)
+	ctx.Buffer.Set(b.X+1, y, ' ', headerStyle)
 
 	title := s.title
 	if len(title) > b.Width-3 {
 		title = title[:b.Width-3]
 	}
-	ctx.Buffer.SetString(b.X+2, y, title, s.headerStyle)
+	ctx.Buffer.SetString(b.X+2, y, title, headerStyle)
 	y++
 
 	// Draw items if expanded
@@ -161,26 +182,26 @@ func (s *Section) Render(ctx runtime.RenderContext) {
 			item := s.items[i]
 
 			// Indent
-			ctx.Buffer.Set(b.X, y, ' ', s.itemStyle)
-			ctx.Buffer.Set(b.X+1, y, ' ', s.itemStyle)
+			ctx.Buffer.Set(b.X, y, ' ', itemStyle)
+			ctx.Buffer.Set(b.X+1, y, ' ', itemStyle)
 
 			// Icon
-			iconStyle := s.iconStyle
+			iconStyle := baseIconStyle
 			switch item.Icon {
 			case '✓':
-				iconStyle = s.completedIcon
+				iconStyle = completedIcon
 			case '→', '⟳':
-				iconStyle = s.activeIcon
+				iconStyle = activeIcon
 			case '○':
-				iconStyle = s.pendingIcon
+				iconStyle = pendingIcon
 			}
 			ctx.Buffer.Set(b.X+2, y, item.Icon, iconStyle)
-			ctx.Buffer.Set(b.X+3, y, ' ', s.itemStyle)
+			ctx.Buffer.Set(b.X+3, y, ' ', itemStyle)
 
 			// Text
-			textStyle := s.itemStyle
+			textStyle := itemStyle
 			if item.Active {
-				textStyle = s.activeStyle
+				textStyle = activeStyle
 			}
 
 			text := item.Text
@@ -193,7 +214,7 @@ func (s *Section) Render(ctx runtime.RenderContext) {
 
 			// SubText on next line if present
 			if item.SubText != "" && y < b.Y+b.Height {
-				ctx.Buffer.SetString(b.X+4, y, "  "+item.SubText, s.itemStyle)
+				ctx.Buffer.SetString(b.X+4, y, "  "+item.SubText, itemStyle)
 				y++
 			}
 		}

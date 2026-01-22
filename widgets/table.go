@@ -47,6 +47,35 @@ func NewTable(columns ...TableColumn) *Table {
 	return table
 }
 
+// SetStyle updates the base table style.
+func (t *Table) SetStyle(style backend.Style) {
+	if t == nil {
+		return
+	}
+	t.style = style
+}
+
+// SetHeaderStyle updates the header style.
+func (t *Table) SetHeaderStyle(style backend.Style) {
+	if t == nil {
+		return
+	}
+	t.headerStyle = style
+}
+
+// SetSelectedStyle updates the selected row style.
+func (t *Table) SetSelectedStyle(style backend.Style) {
+	if t == nil {
+		return
+	}
+	t.selectedStyle = style
+}
+
+// StyleType returns the selector type name.
+func (t *Table) StyleType() string {
+	return "Table"
+}
+
 // SetRows updates table rows.
 func (t *Table) SetRows(rows [][]string) {
 	if t == nil {
@@ -83,11 +112,13 @@ func (t *Table) SetSelected(index int) {
 
 // Measure returns the desired size.
 func (t *Table) Measure(constraints runtime.Constraints) runtime.Size {
-	height := min(len(t.Rows)+1, constraints.MaxHeight)
-	if height <= 0 {
-		height = constraints.MinHeight
-	}
-	return constraints.Constrain(runtime.Size{Width: constraints.MaxWidth, Height: height})
+	return t.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {
+		height := min(len(t.Rows)+1, contentConstraints.MaxHeight)
+		if height <= 0 {
+			height = contentConstraints.MinHeight
+		}
+		return contentConstraints.Constrain(runtime.Size{Width: contentConstraints.MaxWidth, Height: height})
+	})
 }
 
 // Render draws the table.
@@ -96,29 +127,35 @@ func (t *Table) Render(ctx runtime.RenderContext) {
 		return
 	}
 	t.syncA11y()
-	bounds := t.bounds
-	if bounds.Width <= 0 || bounds.Height <= 0 {
+	outer := t.bounds
+	content := t.ContentBounds()
+	if outer.Width <= 0 || outer.Height <= 0 {
 		return
 	}
-	ctx.Buffer.Fill(bounds, ' ', t.style)
-	widths := t.columnWidths(bounds.Width)
+	baseStyle := mergeBackendStyles(resolveBaseStyle(ctx, t, backend.DefaultStyle(), false), t.style)
+	ctx.Buffer.Fill(outer, ' ', baseStyle)
+	if content.Width <= 0 || content.Height <= 0 {
+		return
+	}
+	widths := t.columnWidths(content.Width)
 	if len(widths) == 0 {
 		return
 	}
 	// Header
-	x := bounds.X
+	headerStyle := mergeBackendStyles(baseStyle, t.headerStyle)
+	x := content.X
 	for i, col := range t.Columns {
-		if x >= bounds.X+bounds.Width {
+		if x >= content.X+content.Width {
 			break
 		}
 		width := widths[i]
 		title := truncateString(col.Title, width)
-		writePadded(ctx.Buffer, x, bounds.Y, width, title, t.headerStyle)
+		writePadded(ctx.Buffer, x, content.Y, width, title, headerStyle)
 		x += width + 1
 	}
 
 	// Rows
-	rowArea := bounds.Height - 1
+	rowArea := content.Height - 1
 	if rowArea <= 0 {
 		return
 	}
@@ -139,13 +176,13 @@ func (t *Table) Render(ctx runtime.RenderContext) {
 		if rowIndex < 0 || rowIndex >= len(t.Rows) {
 			break
 		}
-		style := t.style
+		style := baseStyle
 		if rowIndex == t.selected {
-			style = t.selectedStyle
+			style = mergeBackendStyles(baseStyle, t.selectedStyle)
 		}
-		x = bounds.X
+		x = content.X
 		for colIndex, width := range widths {
-			if x >= bounds.X+bounds.Width {
+			if x >= content.X+content.Width {
 				break
 			}
 			cell := ""
@@ -153,7 +190,7 @@ func (t *Table) Render(ctx runtime.RenderContext) {
 				cell = t.Rows[rowIndex][colIndex]
 			}
 			cell = truncateString(cell, width)
-			writePadded(ctx.Buffer, x, bounds.Y+1+row, width, cell, style)
+			writePadded(ctx.Buffer, x, content.Y+1+row, width, cell, style)
 			x += width + 1
 		}
 	}

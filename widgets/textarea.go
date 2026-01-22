@@ -7,6 +7,7 @@ import (
 	"github.com/odvcencio/fluffy-ui/backend"
 	"github.com/odvcencio/fluffy-ui/clipboard"
 	"github.com/odvcencio/fluffy-ui/runtime"
+	uistyle "github.com/odvcencio/fluffy-ui/style"
 	"github.com/odvcencio/fluffy-ui/terminal"
 )
 
@@ -22,6 +23,8 @@ type TextArea struct {
 	focusStyle backend.Style
 	onChange   func(text string)
 	services   runtime.Services
+	styleSet   bool
+	focusSet   bool
 }
 
 // NewTextArea creates a new text area.
@@ -159,9 +162,34 @@ func (t *TextArea) SetLabel(label string) {
 	t.syncA11y()
 }
 
+// SetStyle sets the normal style.
+func (t *TextArea) SetStyle(style backend.Style) {
+	if t == nil {
+		return
+	}
+	t.style = style
+	t.styleSet = true
+}
+
+// SetFocusStyle sets the focused style.
+func (t *TextArea) SetFocusStyle(style backend.Style) {
+	if t == nil {
+		return
+	}
+	t.focusStyle = style
+	t.focusSet = true
+}
+
+// StyleType returns the selector type name.
+func (t *TextArea) StyleType() string {
+	return "TextArea"
+}
+
 // Measure returns the desired size.
 func (t *TextArea) Measure(constraints runtime.Constraints) runtime.Size {
-	return constraints.Constrain(runtime.Size{Width: constraints.MaxWidth, Height: constraints.MaxHeight})
+	return t.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {
+		return contentConstraints.Constrain(runtime.Size{Width: contentConstraints.MaxWidth, Height: contentConstraints.MaxHeight})
+	})
 }
 
 // Render draws the text area.
@@ -169,30 +197,45 @@ func (t *TextArea) Render(ctx runtime.RenderContext) {
 	if t == nil {
 		return
 	}
-	bounds := t.bounds
-	if bounds.Width <= 0 || bounds.Height <= 0 {
+	outer := t.bounds
+	content := t.ContentBounds()
+	if outer.Width <= 0 || outer.Height <= 0 {
 		return
 	}
 	style := t.style
-	if t.focused {
+	resolved := ctx.ResolveStyle(t)
+		if !resolved.IsZero() {
+			final := resolved
+			if t.styleSet {
+				final = final.Merge(uistyle.FromBackend(t.style))
+			}
+			if t.focused && t.focusSet {
+				final = final.Merge(uistyle.FromBackend(t.focusStyle))
+			}
+			style = final.ToBackend()
+	} else if t.focused {
 		style = t.focusStyle
 	}
-	ctx.Buffer.Fill(bounds, ' ', style)
+	ctx.Buffer.Fill(outer, ' ', style)
+
+	if content.Width <= 0 || content.Height <= 0 {
+		return
+	}
 
 	lineStarts, lineLengths := t.lineMeta()
 	line, col := t.cursorLineCol(lineStarts, lineLengths)
 	t.scrollY = min(max(t.scrollY, 0), max(0, len(lineStarts)-1))
 	if line < t.scrollY {
 		t.scrollY = line
-	} else if line >= t.scrollY+bounds.Height {
-		t.scrollY = line - bounds.Height + 1
+	} else if line >= t.scrollY+content.Height {
+		t.scrollY = line - content.Height + 1
 	}
 	scrollX := 0
-	if col >= bounds.Width {
-		scrollX = col - bounds.Width + 1
+	if col >= content.Width {
+		scrollX = col - content.Width + 1
 	}
 
-	for row := 0; row < bounds.Height; row++ {
+	for row := 0; row < content.Height; row++ {
 		lineIndex := t.scrollY + row
 		if lineIndex >= len(lineStarts) {
 			break
@@ -203,18 +246,18 @@ func (t *TextArea) Render(ctx runtime.RenderContext) {
 		} else {
 			lineText = ""
 		}
-		if len(lineText) > bounds.Width {
-			lineText = lineText[:bounds.Width]
+		if len(lineText) > content.Width {
+			lineText = lineText[:content.Width]
 		}
-		writePadded(ctx.Buffer, bounds.X, bounds.Y+row, bounds.Width, lineText, style)
+		writePadded(ctx.Buffer, content.X, content.Y+row, content.Width, lineText, style)
 	}
 
 	if t.focused {
 		cursorRow := line - t.scrollY
 		cursorCol := col - scrollX
-		if cursorRow >= 0 && cursorRow < bounds.Height && cursorCol >= 0 && cursorCol < bounds.Width {
-			cursorX := bounds.X + cursorCol
-			cursorY := bounds.Y + cursorRow
+		if cursorRow >= 0 && cursorRow < content.Height && cursorCol >= 0 && cursorCol < content.Width {
+			cursorX := content.X + cursorCol
+			cursorY := content.Y + cursorRow
 			ch := ' '
 			lineText := t.lineText(line, lineStarts, lineLengths)
 			if col < len(lineText) {

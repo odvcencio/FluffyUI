@@ -14,6 +14,7 @@ import (
 	"github.com/odvcencio/fluffy-ui/backend"
 	"github.com/odvcencio/fluffy-ui/clipboard"
 	"github.com/odvcencio/fluffy-ui/state"
+	"github.com/odvcencio/fluffy-ui/style"
 	"github.com/odvcencio/fluffy-ui/terminal"
 )
 
@@ -42,6 +43,7 @@ type AppConfig struct {
 	RenderObserver    RenderObserver
 	FocusRegistration FocusRegistrationMode
 	Audio             audio.Service
+	Stylesheet        *style.Stylesheet
 }
 
 // App runs a widget tree against a terminal backend.
@@ -65,6 +67,7 @@ type App struct {
 	renderObserver    RenderObserver
 	focusRegistration FocusRegistrationMode
 	audio             audio.Service
+	stylesheet        *style.Stylesheet
 	taskCtx           context.Context
 	taskCancel        context.CancelFunc
 	pendingMu         sync.Mutex
@@ -105,6 +108,7 @@ func NewApp(cfg AppConfig) *App {
 		renderObserver:    cfg.RenderObserver,
 		focusRegistration: cfg.FocusRegistration,
 		audio:             cfg.Audio,
+		stylesheet:        cfg.Stylesheet,
 	}
 	if app.flushPolicy == 0 {
 		app.flushPolicy = FlushOnMessageAndTick
@@ -125,6 +129,26 @@ func (a *App) StateQueue() *state.Queue {
 		return nil
 	}
 	return a.stateQueue
+}
+
+// Stylesheet returns the active stylesheet.
+func (a *App) Stylesheet() *style.Stylesheet {
+	if a == nil {
+		return nil
+	}
+	return a.stylesheet
+}
+
+// SetStylesheet replaces the active stylesheet and invalidates the render pass.
+func (a *App) SetStylesheet(sheet *style.Stylesheet) {
+	if a == nil {
+		return
+	}
+	a.stylesheet = sheet
+	if a.screen != nil {
+		a.screen.relayout()
+	}
+	a.Invalidate()
 }
 
 // StateScheduler returns a scheduler that wakes the app to flush.

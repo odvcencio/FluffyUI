@@ -5,6 +5,7 @@ import (
 
 	"github.com/odvcencio/fluffy-ui/backend"
 	"github.com/odvcencio/fluffy-ui/runtime"
+	"github.com/odvcencio/fluffy-ui/style"
 	"github.com/odvcencio/fluffy-ui/terminal"
 )
 
@@ -171,6 +172,44 @@ func TestBase_Focus(t *testing.T) {
 	b.Blur()
 	if b.IsFocused() {
 		t.Error("After Blur(), should not be focused")
+	}
+}
+
+func TestBase_ContentBoundsWithPadding(t *testing.T) {
+	var b Base
+	b.ApplyStyle(style.Style{Padding: style.Pad(1)})
+	b.Layout(runtime.Rect{X: 0, Y: 0, Width: 10, Height: 5})
+
+	content := b.ContentBounds()
+	if content.X != 1 || content.Y != 1 {
+		t.Errorf("ContentBounds origin = (%d,%d), want (1,1)", content.X, content.Y)
+	}
+	if content.Width != 8 || content.Height != 3 {
+		t.Errorf("ContentBounds size = %dx%d, want 8x3", content.Width, content.Height)
+	}
+}
+
+func TestBase_LayoutWithMargin(t *testing.T) {
+	var b Base
+	b.ApplyStyle(style.Style{Margin: style.Pad(1)})
+	b.Layout(runtime.Rect{X: 0, Y: 0, Width: 10, Height: 5})
+
+	bounds := b.Bounds()
+	if bounds.X != 1 || bounds.Y != 1 {
+		t.Errorf("Bounds origin = (%d,%d), want (1,1)", bounds.X, bounds.Y)
+	}
+	if bounds.Width != 8 || bounds.Height != 3 {
+		t.Errorf("Bounds size = %dx%d, want 8x3", bounds.Width, bounds.Height)
+	}
+}
+
+func TestLabel_MeasureWithPaddingAndMargin(t *testing.T) {
+	label := NewLabel("Hi")
+	label.ApplyStyle(style.Style{Padding: style.Pad(1), Margin: style.Pad(1)})
+
+	size := label.Measure(runtime.Unbounded())
+	if size.Width != 6 || size.Height != 5 {
+		t.Errorf("Measure size = %dx%d, want 6x5", size.Width, size.Height)
 	}
 }
 

@@ -71,35 +71,38 @@ func (g *Grid) SetLabel(label string) {
 
 // Measure estimates the grid size.
 func (g *Grid) Measure(constraints runtime.Constraints) runtime.Size {
-	rows := g.Rows
-	cols := g.Cols
-	if rows <= 0 {
-		rows = 1
-	}
-	if cols <= 0 {
-		cols = 1
-	}
-	maxW, maxH := 0, 0
-	for _, child := range g.Children {
-		if child.Widget == nil {
-			continue
+	return g.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {
+		rows := g.Rows
+		cols := g.Cols
+		if rows <= 0 {
+			rows = 1
 		}
-		size := child.Widget.Measure(runtime.Unbounded())
-		if size.Width > maxW {
-			maxW = size.Width
+		if cols <= 0 {
+			cols = 1
 		}
-		if size.Height > maxH {
-			maxH = size.Height
+		maxW, maxH := 0, 0
+		for _, child := range g.Children {
+			if child.Widget == nil {
+				continue
+			}
+			size := child.Widget.Measure(runtime.Unbounded())
+			if size.Width > maxW {
+				maxW = size.Width
+			}
+			if size.Height > maxH {
+				maxH = size.Height
+			}
 		}
-	}
-	width := maxW*cols + g.Gap*max(0, cols-1)
-	height := maxH*rows + g.Gap*max(0, rows-1)
-	return constraints.Constrain(runtime.Size{Width: width, Height: height})
+		width := maxW*cols + g.Gap*max(0, cols-1)
+		height := maxH*rows + g.Gap*max(0, rows-1)
+		return contentConstraints.Constrain(runtime.Size{Width: width, Height: height})
+	})
 }
 
 // Layout positions children within the grid.
 func (g *Grid) Layout(bounds runtime.Rect) {
 	g.Base.Layout(bounds)
+	content := g.ContentBounds()
 	rows := g.Rows
 	cols := g.Cols
 	if rows <= 0 {
@@ -113,10 +116,10 @@ func (g *Grid) Layout(bounds runtime.Rect) {
 	cellW := 0
 	cellH := 0
 	if cols > 0 {
-		cellW = max(0, (bounds.Width-totalGapW)/cols)
+		cellW = max(0, (content.Width-totalGapW)/cols)
 	}
 	if rows > 0 {
-		cellH = max(0, (bounds.Height-totalGapH)/rows)
+		cellH = max(0, (content.Height-totalGapH)/rows)
 	}
 	for _, child := range g.Children {
 		if child.Widget == nil {
@@ -130,8 +133,8 @@ func (g *Grid) Layout(bounds runtime.Rect) {
 		if colSpan <= 0 {
 			colSpan = 1
 		}
-		x := bounds.X + child.Col*cellW + g.Gap*child.Col
-		y := bounds.Y + child.Row*cellH + g.Gap*child.Row
+		x := content.X + child.Col*cellW + g.Gap*child.Col
+		y := content.Y + child.Row*cellH + g.Gap*child.Row
 		width := cellW*colSpan + g.Gap*max(0, colSpan-1)
 		height := cellH*rowSpan + g.Gap*max(0, rowSpan-1)
 		child.Widget.Layout(runtime.Rect{X: x, Y: y, Width: width, Height: height})

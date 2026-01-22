@@ -31,9 +31,16 @@ func NewProgress() *Progress {
 	return p
 }
 
+// StyleType returns the selector type name.
+func (p *Progress) StyleType() string {
+	return "Progress"
+}
+
 // Measure returns desired size.
 func (p *Progress) Measure(constraints runtime.Constraints) runtime.Size {
-	return constraints.Constrain(runtime.Size{Width: constraints.MaxWidth, Height: 1})
+	return p.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {
+		return contentConstraints.Constrain(runtime.Size{Width: contentConstraints.MaxWidth, Height: 1})
+	})
 }
 
 // Render draws the progress bar.
@@ -42,10 +49,11 @@ func (p *Progress) Render(ctx runtime.RenderContext) {
 		return
 	}
 	p.syncA11y()
-	bounds := p.bounds
+	bounds := p.ContentBounds()
 	if bounds.Width <= 0 || bounds.Height <= 0 {
 		return
 	}
+	baseStyle := resolveBaseStyle(ctx, p, backend.DefaultStyle(), false)
 	max := p.Max
 	if max <= 0 {
 		max = 1
@@ -57,10 +65,11 @@ func (p *Progress) Render(ctx runtime.RenderContext) {
 	if ratio > 1 {
 		ratio = 1
 	}
-	DrawGauge(ctx.Buffer, bounds.X, bounds.Y, bounds.Width, ratio, p.Style)
+	style := mergeGaugeStyle(baseStyle, p.Style)
+	DrawGauge(ctx.Buffer, bounds.X, bounds.Y, bounds.Width, ratio, style)
 	if p.ShowPercent && bounds.Width >= 4 {
 		text := fmt.Sprintf("%3.0f%%", ratio*100)
-		ctx.Buffer.SetString(bounds.X+bounds.Width-len(text), bounds.Y, text, backend.DefaultStyle())
+		ctx.Buffer.SetString(bounds.X+bounds.Width-len(text), bounds.Y, text, baseStyle)
 	}
 }
 
@@ -99,4 +108,20 @@ func (p *Progress) syncA11y() {
 		Current: value,
 		Text:    fmt.Sprintf("%3.0f%%", ratio*100),
 	}
+}
+
+func mergeGaugeStyle(base backend.Style, style GaugeStyle) GaugeStyle {
+	merged := style
+	merged.EmptyStyle = mergeBackendStyles(base, style.EmptyStyle)
+	if style.EdgeStyle != (backend.Style{}) {
+		merged.EdgeStyle = mergeBackendStyles(base, style.EdgeStyle)
+	}
+	if len(style.Thresholds) > 0 {
+		merged.Thresholds = make([]GaugeThreshold, len(style.Thresholds))
+		for i, threshold := range style.Thresholds {
+			merged.Thresholds[i] = threshold
+			merged.Thresholds[i].Style = mergeBackendStyles(base, threshold.Style)
+		}
+	}
+	return merged
 }

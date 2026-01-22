@@ -47,6 +47,11 @@ func NewSearchWidget() *SearchWidget {
 	return w
 }
 
+// StyleType returns the selector type name.
+func (s *SearchWidget) StyleType() string {
+	return "Search"
+}
+
 // SetOnSearch sets the search callback.
 func (s *SearchWidget) SetOnSearch(fn func(query string)) {
 	s.onSearch = fn
@@ -91,36 +96,60 @@ func (s *SearchWidget) Query() string {
 
 // Measure returns the preferred size (fixed height bar).
 func (s *SearchWidget) Measure(constraints runtime.Constraints) runtime.Size {
-	return runtime.Size{
-		Width:  constraints.MaxWidth,
-		Height: 1,
-	}
+	return s.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {
+		return runtime.Size{
+			Width:  contentConstraints.MaxWidth,
+			Height: 1,
+		}
+	})
 }
 
 // Layout positions at the bottom of the screen.
 func (s *SearchWidget) Layout(bounds runtime.Rect) {
+	size := s.Measure(runtime.Constraints{
+		MinWidth:  bounds.Width,
+		MaxWidth:  bounds.Width,
+		MinHeight: 0,
+		MaxHeight: bounds.Height,
+	})
+	height := size.Height
+	if height <= 0 {
+		height = 1
+	}
+	if height > bounds.Height {
+		height = bounds.Height
+	}
 	newBounds := runtime.Rect{
 		X:      bounds.X,
-		Y:      bounds.Y + bounds.Height - 1,
+		Y:      bounds.Y + bounds.Height - height,
 		Width:  bounds.Width,
-		Height: 1,
+		Height: height,
 	}
 	s.Base.Layout(newBounds)
 }
 
 // Render draws the search bar.
 func (s *SearchWidget) Render(ctx runtime.RenderContext) {
-	b := s.bounds
+	outer := s.bounds
+	b := s.ContentBounds()
 	buf := ctx.Buffer
 	s.syncA11y()
 
+	baseStyle := resolveBaseStyle(ctx, s, backend.DefaultStyle(), false)
+	bgStyle := mergeBackendStyles(baseStyle, s.bgStyle)
+	borderStyle := mergeBackendStyles(baseStyle, s.borderStyle)
+	textStyle := mergeBackendStyles(baseStyle, s.textStyle)
+	matchStyle := mergeBackendStyles(baseStyle, s.matchStyle)
+
 	// Fill background
-	for x := b.X; x < b.X+b.Width; x++ {
-		buf.Set(x, b.Y, ' ', s.bgStyle)
+	ctx.Buffer.Fill(outer, ' ', bgStyle)
+
+	if b.Width <= 0 || b.Height <= 0 {
+		return
 	}
 
 	// Draw "/ " prefix
-	buf.SetString(b.X, b.Y, "/ ", s.borderStyle)
+	buf.SetString(b.X, b.Y, "/ ", borderStyle)
 
 	// Draw query
 	queryX := b.X + 2
@@ -129,23 +158,23 @@ func (s *SearchWidget) Render(ctx runtime.RenderContext) {
 	if len(query) > maxQuery {
 		query = query[len(query)-maxQuery:]
 	}
-	buf.SetString(queryX, b.Y, query, s.textStyle)
+	buf.SetString(queryX, b.Y, query, textStyle)
 
 	// Draw cursor
 	cursorX := queryX + len(query)
 	if cursorX < b.X+b.Width-15 && s.focused {
-		buf.Set(cursorX, b.Y, '█', s.textStyle)
+		buf.Set(cursorX, b.Y, '█', textStyle)
 	}
 
 	// Draw match count on the right
 	if s.matchCount > 0 {
 		matchInfo := strconv.Itoa(s.currentMatch+1) + "/" + strconv.Itoa(s.matchCount)
 		infoX := b.X + b.Width - len(matchInfo) - 2
-		buf.SetString(infoX, b.Y, matchInfo, s.matchStyle)
+		buf.SetString(infoX, b.Y, matchInfo, matchStyle)
 	} else if s.query != "" {
 		noMatch := "No matches"
 		infoX := b.X + b.Width - len(noMatch) - 2
-		buf.SetString(infoX, b.Y, noMatch, s.matchStyle)
+		buf.SetString(infoX, b.Y, noMatch, matchStyle)
 	}
 }
 

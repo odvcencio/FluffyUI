@@ -118,6 +118,11 @@ func (b *Buffer) Set(x, y int, r rune, s backend.Style) {
 	}
 }
 
+// SetContent implements backend.RenderTarget.
+func (b *Buffer) SetContent(x, y int, mainc rune, _ []rune, style backend.Style) {
+	b.Set(x, y, mainc, style)
+}
+
 // SetString writes a string starting at (x, y).
 // Clips to buffer bounds. Marks changed cells as dirty.
 func (b *Buffer) SetString(x, y int, s string, style backend.Style) {
@@ -254,6 +259,28 @@ func (b *Buffer) DrawRoundedBox(r Rect, s backend.Style) {
 	for y := r.Y + 1; y < r.Y+r.Height-1; y++ {
 		b.Set(r.X, y, '│', s)
 		b.Set(r.X+r.Width-1, y, '│', s)
+	}
+}
+
+// DrawDoubleBox draws a border with double-line characters.
+func (b *Buffer) DrawDoubleBox(r Rect, s backend.Style) {
+	if r.Width < 2 || r.Height < 2 {
+		return
+	}
+
+	b.Set(r.X, r.Y, '╔', s)
+	b.Set(r.X+r.Width-1, r.Y, '╗', s)
+	b.Set(r.X, r.Y+r.Height-1, '╚', s)
+	b.Set(r.X+r.Width-1, r.Y+r.Height-1, '╝', s)
+
+	for x := r.X + 1; x < r.X+r.Width-1; x++ {
+		b.Set(x, r.Y, '═', s)
+		b.Set(x, r.Y+r.Height-1, '═', s)
+	}
+
+	for y := r.Y + 1; y < r.Y+r.Height-1; y++ {
+		b.Set(r.X, y, '║', s)
+		b.Set(r.X+r.Width-1, y, '║', s)
 	}
 }
 

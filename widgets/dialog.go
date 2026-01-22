@@ -37,6 +37,7 @@ type Dialog struct {
 	paused      bool
 
 	style backend.Style
+	styleSet bool
 }
 
 // NewDialog creates a dialog with title, body text, and optional buttons.
@@ -53,6 +54,20 @@ func NewDialog(title, body string, buttons ...DialogButton) *Dialog {
 	dialog.Base.Label = title
 	dialog.Base.Description = body
 	return dialog
+}
+
+// StyleType returns the selector type name.
+func (d *Dialog) StyleType() string {
+	return "Dialog"
+}
+
+// SetStyle updates the dialog style.
+func (d *Dialog) SetStyle(style backend.Style) {
+	if d == nil {
+		return
+	}
+	d.style = style
+	d.styleSet = true
 }
 
 // WithContent sets a custom widget as dialog body (replaces text Body).
@@ -127,43 +142,45 @@ func (d *Dialog) ShouldDismiss(now time.Time) bool {
 
 // Measure returns desired size.
 func (d *Dialog) Measure(constraints runtime.Constraints) runtime.Size {
-	width := len(d.Title)
+	return d.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {
+		width := len(d.Title)
 
-	// Measure body text width
-	if d.Content == nil {
-		for _, line := range strings.Split(d.Body, "\n") {
-			if len(line) > width {
-				width = len(line)
+		// Measure body text width
+		if d.Content == nil {
+			for _, line := range strings.Split(d.Body, "\n") {
+				if len(line) > width {
+					width = len(line)
+				}
+			}
+		} else {
+			// For custom content, use a reasonable default or measure it
+			contentSize := d.Content.Measure(contentConstraints)
+			if contentSize.Width > width {
+				width = contentSize.Width
 			}
 		}
-	} else {
-		// For custom content, use a reasonable default or measure it
-		contentSize := d.Content.Measure(constraints)
-		if contentSize.Width > width {
-			width = contentSize.Width
+
+		if width < 10 {
+			width = 10
 		}
-	}
 
-	if width < 10 {
-		width = 10
-	}
+		// Calculate height
+		height := 3 // title + padding
+		if d.Content == nil {
+			height += len(strings.Split(d.Body, "\n"))
+		} else {
+			contentSize := d.Content.Measure(contentConstraints)
+			height += contentSize.Height
+		}
+		if len(d.Buttons) > 0 {
+			height++
+		}
+		if d.autoDismiss > 0 {
+			height++ // timer bar
+		}
 
-	// Calculate height
-	height := 3 // title + padding
-	if d.Content == nil {
-		height += len(strings.Split(d.Body, "\n"))
-	} else {
-		contentSize := d.Content.Measure(constraints)
-		height += contentSize.Height
-	}
-	if len(d.Buttons) > 0 {
-		height++
-	}
-	if d.autoDismiss > 0 {
-		height++ // timer bar
-	}
-
-	return constraints.Constrain(runtime.Size{Width: width + 4, Height: height + 2})
+		return contentConstraints.Constrain(runtime.Size{Width: width + 4, Height: height + 2})
+	})
 }
 
 // Layout positions the dialog and its content.
@@ -171,7 +188,7 @@ func (d *Dialog) Layout(bounds runtime.Rect) {
 	d.FocusableBase.Layout(bounds)
 
 	if d.Content != nil {
-		inner := bounds.Inset(1, 1, 1, 1)
+		inner := d.ContentBounds().Inset(1, 1, 1, 1)
 		contentBounds := runtime.Rect{
 			X:      inner.X,
 			Y:      inner.Y + 1, // below title
@@ -199,18 +216,20 @@ func (d *Dialog) Render(ctx runtime.RenderContext) {
 		return
 	}
 
-	// Fill background and draw border
-	ctx.Buffer.Fill(bounds, ' ', d.style)
-	ctx.Buffer.DrawBox(bounds, d.style)
+	baseStyle := resolveBaseStyle(ctx, d, d.style, d.styleSet)
 
-	inner := bounds.Inset(1, 1, 1, 1)
+	// Fill background and draw border
+	ctx.Buffer.Fill(bounds, ' ', baseStyle)
+	ctx.Buffer.DrawBox(bounds, baseStyle)
+
+	inner := d.ContentBounds().Inset(1, 1, 1, 1)
 	if inner.Width <= 0 || inner.Height <= 0 {
 		return
 	}
 
 	// Title
 	title := truncateString(d.Title, inner.Width)
-	ctx.Buffer.SetString(inner.X, inner.Y, title, d.style.Bold(true))
+	ctx.Buffer.SetString(inner.X, inner.Y, title, baseStyle.Bold(true))
 
 	// Calculate content area
 	contentEndY := inner.Y + inner.Height
@@ -232,7 +251,7 @@ func (d *Dialog) Render(ctx runtime.RenderContext) {
 				break
 			}
 			line = truncateString(line, inner.Width)
-			ctx.Buffer.SetString(inner.X, y, line, d.style)
+			ctx.Buffer.SetString(inner.X, y, line, baseStyle)
 		}
 	}
 
@@ -248,7 +267,7 @@ func (d *Dialog) Render(ctx runtime.RenderContext) {
 			if i < filled {
 				ch = '█'
 			}
-			ctx.Buffer.Set(inner.X+i, timerY, ch, d.style.Dim(true))
+			ctx.Buffer.Set(inner.X+i, timerY, ch, baseStyle.Dim(true))
 		}
 	}
 
@@ -268,7 +287,7 @@ func (d *Dialog) Render(ctx runtime.RenderContext) {
 		if x+len(label) > inner.X+inner.Width {
 			break
 		}
-		style := d.style
+		style := baseStyle
 		if i == d.selected {
 			style = style.Reverse(true)
 		}

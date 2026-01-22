@@ -76,6 +76,11 @@ func NewPaletteWidget(title string) *PaletteWidget {
 	return p
 }
 
+// StyleType returns the selector type name.
+func (p *PaletteWidget) StyleType() string {
+	return "Palette"
+}
+
 // SetItems sets the palette items.
 func (p *PaletteWidget) SetItems(items []PaletteItem) {
 	p.items = items
@@ -256,22 +261,24 @@ func isWordBoundary(r rune) bool {
 
 // Measure returns the preferred size.
 func (p *PaletteWidget) Measure(constraints runtime.Constraints) runtime.Size {
-	width := 60
-	if constraints.MaxWidth < width {
-		width = constraints.MaxWidth
-	}
+	return p.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {
+		width := 60
+		if contentConstraints.MaxWidth < width {
+			width = contentConstraints.MaxWidth
+		}
 
-	// Height: title(1) + query(1) + separator(1) + items(up to maxVisible) + border(2)
-	itemCount := len(p.filtered)
-	if itemCount > p.maxVisible {
-		itemCount = p.maxVisible
-	}
-	height := 5 + itemCount
-	if constraints.MaxHeight < height {
-		height = constraints.MaxHeight
-	}
+		// Height: title(1) + query(1) + separator(1) + items(up to maxVisible) + border(2)
+		itemCount := len(p.filtered)
+		if itemCount > p.maxVisible {
+			itemCount = p.maxVisible
+		}
+		height := 5 + itemCount
+		if contentConstraints.MaxHeight < height {
+			height = contentConstraints.MaxHeight
+		}
 
-	return runtime.Size{Width: width, Height: height}
+		return contentConstraints.Constrain(runtime.Size{Width: width, Height: height})
+	})
 }
 
 // Layout positions the widget (centered overlay).
@@ -295,21 +302,35 @@ func (p *PaletteWidget) Layout(bounds runtime.Rect) {
 
 // Render draws the palette.
 func (p *PaletteWidget) Render(ctx runtime.RenderContext) {
-	b := p.bounds
+	outer := p.bounds
+	b := p.ContentBounds()
+	p.syncA11y()
+
+	baseStyle := resolveBaseStyle(ctx, p, backend.DefaultStyle(), false)
+	bgStyle := mergeBackendStyles(baseStyle, p.bgStyle)
+	borderStyle := mergeBackendStyles(baseStyle, p.borderStyle)
+	titleStyle := mergeBackendStyles(baseStyle, p.titleStyle)
+	queryStyle := mergeBackendStyles(baseStyle, p.queryStyle)
+	itemStyle := mergeBackendStyles(baseStyle, p.itemStyle)
+	selectedStyle := mergeBackendStyles(baseStyle, p.selectedStyle)
+	categoryStyle := mergeBackendStyles(baseStyle, p.categoryStyle)
+	shortcutStyle := mergeBackendStyles(baseStyle, p.shortcutStyle)
+
+	// Draw background
+	if outer.Width > 0 && outer.Height > 0 {
+		ctx.Buffer.Fill(outer, ' ', bgStyle)
+	}
+
 	if b.Width < 20 || b.Height < 5 {
 		return
 	}
-	p.syncA11y()
-
-	// Draw background
-	ctx.Buffer.Fill(b, ' ', p.bgStyle)
 
 	// Draw border
-	p.drawBorder(ctx.Buffer, b)
+	p.drawBorder(ctx.Buffer, b, borderStyle)
 
 	// Draw title
 	titleX := b.X + (b.Width-len(p.title))/2
-	ctx.Buffer.SetString(titleX, b.Y, " "+p.title+" ", p.titleStyle)
+	ctx.Buffer.SetString(titleX, b.Y, " "+p.title+" ", titleStyle)
 
 	y := b.Y + 1
 
@@ -318,18 +339,18 @@ func (p *PaletteWidget) Render(ctx runtime.RenderContext) {
 	if len(query) > b.Width-4 {
 		query = query[:b.Width-4]
 	}
-	ctx.Buffer.SetString(b.X+2, y, query, p.queryStyle)
+	ctx.Buffer.SetString(b.X+2, y, query, queryStyle)
 
 	// Draw cursor
 	cursorX := b.X + 2 + len(query)
 	if cursorX < b.X+b.Width-2 && p.focused {
-		ctx.Buffer.Set(cursorX, y, '█', p.queryStyle)
+		ctx.Buffer.Set(cursorX, y, '█', queryStyle)
 	}
 	y++
 
 	// Draw separator
 	for x := b.X + 1; x < b.X+b.Width-1; x++ {
-		ctx.Buffer.Set(x, y, '─', p.borderStyle)
+		ctx.Buffer.Set(x, y, '─', borderStyle)
 	}
 	y++
 
@@ -346,7 +367,7 @@ func (p *PaletteWidget) Render(ctx runtime.RenderContext) {
 		// Draw category header if changed
 		if item.Category != "" && item.Category != lastCategory {
 			lastCategory = item.Category
-			ctx.Buffer.SetString(b.X+2, y, item.Category, p.categoryStyle)
+			ctx.Buffer.SetString(b.X+2, y, item.Category, categoryStyle)
 			y++
 			if y >= b.Y+b.Height-1 {
 				break
@@ -354,9 +375,9 @@ func (p *PaletteWidget) Render(ctx runtime.RenderContext) {
 		}
 
 		// Draw item
-		style := p.itemStyle
+		style := itemStyle
 		if i == p.selected {
-			style = p.selectedStyle
+			style = selectedStyle
 			// Fill entire line for selected
 			for x := b.X + 1; x < b.X+b.Width-1; x++ {
 				ctx.Buffer.Set(x, y, ' ', style)
@@ -377,11 +398,11 @@ func (p *PaletteWidget) Render(ctx runtime.RenderContext) {
 		// Shortcut (right-aligned)
 		if item.Shortcut != "" {
 			shortcutX := b.X + b.Width - 2 - len(item.Shortcut)
-			shortcutStyle := p.shortcutStyle
+			itemShortcutStyle := shortcutStyle
 			if i == p.selected {
-				shortcutStyle = style
+				itemShortcutStyle = style
 			}
-			ctx.Buffer.SetString(shortcutX, y, item.Shortcut, shortcutStyle)
+			ctx.Buffer.SetString(shortcutX, y, item.Shortcut, itemShortcutStyle)
 		}
 
 		y++
@@ -390,7 +411,7 @@ func (p *PaletteWidget) Render(ctx runtime.RenderContext) {
 	// Draw item count if more items than visible
 	if len(p.filtered) > maxItems {
 		countStr := strconv.Itoa(len(p.filtered)) + " results"
-		ctx.Buffer.SetString(b.X+b.Width-2-len(countStr), b.Y+b.Height-1, countStr, p.borderStyle)
+		ctx.Buffer.SetString(b.X+b.Width-2-len(countStr), b.Y+b.Height-1, countStr, borderStyle)
 	}
 }
 
@@ -419,23 +440,23 @@ func (p *PaletteWidget) syncA11y() {
 }
 
 // drawBorder draws the palette border.
-func (p *PaletteWidget) drawBorder(buf *runtime.Buffer, b runtime.Rect) {
+func (p *PaletteWidget) drawBorder(buf *runtime.Buffer, b runtime.Rect, style backend.Style) {
 	// Corners
-	buf.Set(b.X, b.Y, '╭', p.borderStyle)
-	buf.Set(b.X+b.Width-1, b.Y, '╮', p.borderStyle)
-	buf.Set(b.X, b.Y+b.Height-1, '╰', p.borderStyle)
-	buf.Set(b.X+b.Width-1, b.Y+b.Height-1, '╯', p.borderStyle)
+	buf.Set(b.X, b.Y, '╭', style)
+	buf.Set(b.X+b.Width-1, b.Y, '╮', style)
+	buf.Set(b.X, b.Y+b.Height-1, '╰', style)
+	buf.Set(b.X+b.Width-1, b.Y+b.Height-1, '╯', style)
 
 	// Horizontal edges
 	for x := b.X + 1; x < b.X+b.Width-1; x++ {
-		buf.Set(x, b.Y, '─', p.borderStyle)
-		buf.Set(x, b.Y+b.Height-1, '─', p.borderStyle)
+		buf.Set(x, b.Y, '─', style)
+		buf.Set(x, b.Y+b.Height-1, '─', style)
 	}
 
 	// Vertical edges
 	for y := b.Y + 1; y < b.Y+b.Height-1; y++ {
-		buf.Set(b.X, y, '│', p.borderStyle)
-		buf.Set(b.X+b.Width-1, y, '│', p.borderStyle)
+		buf.Set(b.X, y, '│', style)
+		buf.Set(b.X+b.Width-1, y, '│', style)
 	}
 }
 

@@ -5,6 +5,7 @@ import (
 	"github.com/odvcencio/fluffy-ui/backend"
 	"github.com/odvcencio/fluffy-ui/runtime"
 	"github.com/odvcencio/fluffy-ui/state"
+	uistyle "github.com/odvcencio/fluffy-ui/style"
 	"github.com/odvcencio/fluffy-ui/terminal"
 )
 
@@ -57,6 +58,8 @@ type Radio struct {
 	disabled   bool
 	style      backend.Style
 	focusStyle backend.Style
+	styleSet   bool
+	focusSet   bool
 }
 
 // NewRadio creates a radio option and registers it with the group.
@@ -95,17 +98,42 @@ func (r *Radio) SetDisabled(disabled bool) {
 	r.Base.State.Disabled = disabled
 }
 
+// SetStyle sets the normal style.
+func (r *Radio) SetStyle(style backend.Style) {
+	if r == nil {
+		return
+	}
+	r.style = style
+	r.styleSet = true
+}
+
+// SetFocusStyle sets the focused style.
+func (r *Radio) SetFocusStyle(style backend.Style) {
+	if r == nil {
+		return
+	}
+	r.focusStyle = style
+	r.focusSet = true
+}
+
+// StyleType returns the selector type name.
+func (r *Radio) StyleType() string {
+	return "Radio"
+}
+
 // Measure returns the desired size.
 func (r *Radio) Measure(constraints runtime.Constraints) runtime.Size {
-	label := ""
-	if r.label != nil {
-		label = r.label.Get()
-	}
-	width := 4 + len(label)
-	if width < 4 {
-		width = 4
-	}
-	return constraints.Constrain(runtime.Size{Width: width, Height: 1})
+	return r.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {
+		label := ""
+		if r.label != nil {
+			label = r.label.Get()
+		}
+		width := 4 + len(label)
+		if width < 4 {
+			width = 4
+		}
+		return contentConstraints.Constrain(runtime.Size{Width: width, Height: 1})
+	})
 }
 
 // Render draws the radio.
@@ -114,8 +142,9 @@ func (r *Radio) Render(ctx runtime.RenderContext) {
 		return
 	}
 	r.syncState()
-	bounds := r.bounds
-	if bounds.Width <= 0 || bounds.Height <= 0 {
+	outer := r.bounds
+	content := r.ContentBounds()
+	if outer.Width <= 0 || outer.Height <= 0 {
 		return
 	}
 	selected := r.isSelected()
@@ -127,15 +156,32 @@ func (r *Radio) Render(ctx runtime.RenderContext) {
 	if r.label != nil {
 		label = r.label.Get()
 	}
-	text := marker + " " + truncateString(label, bounds.Width-4)
+	available := max(0, content.Width-4)
+	text := marker + " " + truncateString(label, available)
 	style := r.style
-	if r.focused {
-		style = r.focusStyle
+	resolved := ctx.ResolveStyle(r)
+		if !resolved.IsZero() {
+			final := resolved
+			if r.styleSet {
+				final = final.Merge(uistyle.FromBackend(r.style))
+			}
+			if r.focused && r.focusSet {
+				final = final.Merge(uistyle.FromBackend(r.focusStyle))
+			}
+			style = final.ToBackend()
+	} else {
+		if r.focused {
+			style = r.focusStyle
+		}
+		if r.disabled {
+			style = style.Dim(true)
+		}
 	}
-	if r.disabled {
-		style = style.Dim(true)
+	ctx.Buffer.Fill(outer, ' ', style)
+	if content.Width <= 0 || content.Height <= 0 {
+		return
 	}
-	writePadded(ctx.Buffer, bounds.X, bounds.Y, bounds.Width, text, style)
+	writePadded(ctx.Buffer, content.X, content.Y, content.Width, text, style)
 }
 
 // HandleMessage handles selection.

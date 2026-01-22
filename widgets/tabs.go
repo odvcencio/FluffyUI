@@ -39,21 +39,50 @@ func NewTabs(tabs ...Tab) *Tabs {
 	return w
 }
 
+// SetStyle updates the base tab style.
+func (t *Tabs) SetStyle(style backend.Style) {
+	if t == nil {
+		return
+	}
+	t.style = style
+}
+
+// SetSelectedStyle updates the selected tab style.
+func (t *Tabs) SetSelectedStyle(style backend.Style) {
+	if t == nil {
+		return
+	}
+	t.selectedStyle = style
+}
+
+// StyleType returns the selector type name.
+func (t *Tabs) StyleType() string {
+	return "Tabs"
+}
+
 // Measure returns the size of the selected tab.
 func (t *Tabs) Measure(constraints runtime.Constraints) runtime.Size {
-	if t == nil || len(t.Tabs) == 0 {
-		return constraints.MinSize()
-	}
-	selected := t.selectedTab()
-	if selected == nil || selected.Content == nil {
-		return constraints.MinSize()
-	}
-	size := selected.Content.Measure(constraints)
-	if size.Height < 1 {
-		size.Height = 1
-	}
-	size.Height += 1
-	return constraints.Constrain(size)
+	return t.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {
+		if t == nil || len(t.Tabs) == 0 {
+			return contentConstraints.MinSize()
+		}
+		selected := t.selectedTab()
+		if selected == nil || selected.Content == nil {
+			return contentConstraints.MinSize()
+		}
+		childConstraints := runtime.Constraints{
+			MinWidth:  contentConstraints.MinWidth,
+			MaxWidth:  contentConstraints.MaxWidth,
+			MinHeight: max(0, contentConstraints.MinHeight-1),
+			MaxHeight: max(0, contentConstraints.MaxHeight-1),
+		}
+		size := selected.Content.Measure(childConstraints)
+		if size.Height < 1 {
+			size.Height = 1
+		}
+		size.Height += 1
+		return contentConstraints.Constrain(size)
+	})
 }
 
 // Layout positions the selected tab content.
@@ -68,21 +97,27 @@ func (t *Tabs) Render(ctx runtime.RenderContext) {
 		return
 	}
 	t.syncA11y()
-	bounds := t.bounds
-	if bounds.Width <= 0 || bounds.Height <= 0 {
+	outer := t.bounds
+	content := t.ContentBounds()
+	if outer.Width <= 0 || outer.Height <= 0 {
 		return
 	}
-	x := bounds.X
+	baseStyle := mergeBackendStyles(resolveBaseStyle(ctx, t, backend.DefaultStyle(), false), t.style)
+	ctx.Buffer.Fill(outer, ' ', baseStyle)
+	if content.Width <= 0 || content.Height <= 0 {
+		return
+	}
+	x := content.X
 	for i, tab := range t.Tabs {
 		label := " " + tab.Title + " "
-		style := t.style
+		style := baseStyle
 		if i == t.selected {
-			style = t.selectedStyle
+			style = mergeBackendStyles(baseStyle, t.selectedStyle)
 		}
-		if x < bounds.X+bounds.Width {
-			available := bounds.Width - (x - bounds.X)
+		if x < content.X+content.Width {
+			available := content.Width - (x - content.X)
 			label = truncateString(label, available)
-			ctx.Buffer.SetString(x, bounds.Y, label, style)
+			ctx.Buffer.SetString(x, content.Y, label, style)
 			x += len(label)
 		}
 	}
@@ -183,15 +218,15 @@ func (t *Tabs) layoutSelected() {
 	if selected == nil || selected.Content == nil {
 		return
 	}
-	bounds := t.bounds
-	if bounds.Width <= 0 || bounds.Height <= 0 {
+	content := t.ContentBounds()
+	if content.Width <= 0 || content.Height <= 0 {
 		return
 	}
 	contentBounds := runtime.Rect{
-		X:      bounds.X,
-		Y:      bounds.Y + 1,
-		Width:  bounds.Width,
-		Height: max(0, bounds.Height-1),
+		X:      content.X,
+		Y:      content.Y + 1,
+		Width:  content.Width,
+		Height: max(0, content.Height-1),
 	}
 	selected.Content.Layout(contentBounds)
 }

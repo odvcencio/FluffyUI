@@ -58,6 +58,14 @@ func NewScrollView(content runtime.Widget) *ScrollView {
 	return view
 }
 
+// SetStyle updates the scroll view background style.
+func (s *ScrollView) SetStyle(style backend.Style) {
+	if s == nil {
+		return
+	}
+	s.style = style
+}
+
 // SetContent updates the scroll content.
 func (s *ScrollView) SetContent(content runtime.Widget) {
 	if s == nil {
@@ -103,30 +111,32 @@ func (s *ScrollView) Unbind() {
 
 // Measure returns the desired size.
 func (s *ScrollView) Measure(constraints runtime.Constraints) runtime.Size {
-	if s == nil {
-		return constraints.MinSize()
-	}
-	if s.virtual != nil {
-		contentSize := s.virtualContentSize(constraints)
+	return s.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {
+		if s == nil {
+			return contentConstraints.MinSize()
+		}
+		if s.virtual != nil {
+			contentSize := s.virtualContentSize(contentConstraints)
+			if s.viewport != nil {
+				s.viewport.SetContentSize(contentSize)
+			}
+			return contentConstraints.Constrain(runtime.Size{Width: contentConstraints.MaxWidth, Height: contentConstraints.MaxHeight})
+		}
+		if s.content == nil {
+			return contentConstraints.MinSize()
+		}
+		maxInt := int(^uint(0) >> 1)
+		contentSize := s.content.Measure(runtime.Constraints{
+			MinWidth:  contentConstraints.MinWidth,
+			MaxWidth:  contentConstraints.MaxWidth,
+			MinHeight: 0,
+			MaxHeight: maxInt,
+		})
 		if s.viewport != nil {
 			s.viewport.SetContentSize(contentSize)
 		}
-		return constraints.Constrain(runtime.Size{Width: constraints.MaxWidth, Height: constraints.MaxHeight})
-	}
-	if s.content == nil {
-		return constraints.MinSize()
-	}
-	maxInt := int(^uint(0) >> 1)
-	contentSize := s.content.Measure(runtime.Constraints{
-		MinWidth:  constraints.MinWidth,
-		MaxWidth:  constraints.MaxWidth,
-		MinHeight: 0,
-		MaxHeight: maxInt,
+		return contentConstraints.Constrain(runtime.Size{Width: contentConstraints.MaxWidth, Height: contentConstraints.MaxHeight})
 	})
-	if s.viewport != nil {
-		s.viewport.SetContentSize(contentSize)
-	}
-	return constraints.Constrain(runtime.Size{Width: constraints.MaxWidth, Height: constraints.MaxHeight})
 }
 
 // Layout positions the content.
@@ -135,13 +145,14 @@ func (s *ScrollView) Layout(bounds runtime.Rect) {
 	if s.viewport == nil {
 		return
 	}
-	s.viewport.SetViewSize(bounds.Size())
+	content := s.ContentBounds()
+	s.viewport.SetViewSize(content.Size())
 	if s.virtual != nil {
 		contentSize := s.viewport.ContentSize()
 		if contentSize.Width <= 0 || contentSize.Height <= 0 {
 			contentSize = s.virtualContentSize(runtime.Constraints{
-				MinWidth:  bounds.Width,
-				MaxWidth:  bounds.Width,
+				MinWidth:  content.Width,
+				MaxWidth:  content.Width,
 				MinHeight: 0,
 				MaxHeight: int(^uint(0) >> 1),
 			})
@@ -154,10 +165,10 @@ func (s *ScrollView) Layout(bounds runtime.Rect) {
 	}
 	contentSize := s.viewport.ContentSize()
 	if contentSize.Width <= 0 {
-		contentSize.Width = bounds.Width
+		contentSize.Width = content.Width
 	}
 	if contentSize.Height <= 0 {
-		contentSize.Height = bounds.Height
+		contentSize.Height = content.Height
 	}
 	s.content.Layout(runtime.Rect{X: 0, Y: 0, Width: contentSize.Width, Height: contentSize.Height})
 }
@@ -168,11 +179,16 @@ func (s *ScrollView) Render(ctx runtime.RenderContext) {
 		return
 	}
 	s.syncA11y()
-	bounds := s.bounds
-	if bounds.Width <= 0 || bounds.Height <= 0 {
+	outer := s.bounds
+	contentBounds := s.ContentBounds()
+	if outer.Width <= 0 || outer.Height <= 0 {
 		return
 	}
-	ctx.Buffer.Fill(bounds, ' ', s.style)
+	baseStyle := mergeBackendStyles(resolveBaseStyle(ctx, s, backend.DefaultStyle(), false), s.style)
+	ctx.Buffer.Fill(outer, ' ', baseStyle)
+	if contentBounds.Width <= 0 || contentBounds.Height <= 0 {
+		return
+	}
 	if s.viewport == nil {
 		return
 	}
@@ -194,25 +210,22 @@ func (s *ScrollView) Render(ctx runtime.RenderContext) {
 		s.childBuf.Resize(contentSize.Width, contentSize.Height)
 	}
 	s.childBuf.Clear()
-	childCtx := runtime.RenderContext{
-		Buffer: s.childBuf,
-		Bounds: runtime.Rect{Width: contentSize.Width, Height: contentSize.Height},
-	}
+	childCtx := ctx.WithBuffer(s.childBuf, runtime.Rect{Width: contentSize.Width, Height: contentSize.Height})
 	s.content.Render(childCtx)
 
 	offset := s.viewport.Offset()
-	for y := 0; y < bounds.Height; y++ {
+	for y := 0; y < contentBounds.Height; y++ {
 		srcY := y + offset.Y
 		if srcY < 0 || srcY >= contentSize.Height {
 			continue
 		}
-		for x := 0; x < bounds.Width; x++ {
+		for x := 0; x < contentBounds.Width; x++ {
 			srcX := x + offset.X
 			if srcX < 0 || srcX >= contentSize.Width {
 				continue
 			}
 			cell := s.childBuf.Get(srcX, srcY)
-			ctx.Buffer.Set(bounds.X+x, bounds.Y+y, cell.Rune, cell.Style)
+			ctx.Buffer.Set(contentBounds.X+x, contentBounds.Y+y, cell.Rune, cell.Style)
 		}
 	}
 	s.drawScrollbars(ctx)
@@ -341,11 +354,12 @@ func (s *ScrollView) pageSize() int {
 	if s == nil {
 		return 1
 	}
+	view := s.ContentBounds()
 	if s.behavior.PageSize > 0 {
-		return int(float64(s.bounds.Height) * s.behavior.PageSize)
+		return int(float64(view.Height) * s.behavior.PageSize)
 	}
-	if s.bounds.Height > 0 {
-		return s.bounds.Height
+	if view.Height > 0 {
+		return view.Height
 	}
 	return 1
 }
@@ -391,28 +405,34 @@ func (s *ScrollView) drawScrollbars(ctx runtime.RenderContext) {
 	if s == nil || s.viewport == nil {
 		return
 	}
-	bounds := s.bounds
+	bounds := s.ContentBounds()
 	if bounds.Width <= 0 || bounds.Height <= 0 {
 		return
 	}
 	content := s.viewport.ContentSize()
 	view := s.viewport.ViewSize()
 	offset := s.viewport.Offset()
+	baseStyle := mergeBackendStyles(resolveBaseStyle(ctx, s, backend.DefaultStyle(), false), s.style)
+	vTrack := mergeBackendStyles(baseStyle, s.vScrollbar.Track)
+	vThumb := mergeBackendStyles(baseStyle, s.vScrollbar.Thumb)
+	hTrack := mergeBackendStyles(baseStyle, s.hScrollbar.Track)
+	hThumb := mergeBackendStyles(baseStyle, s.hScrollbar.Thumb)
+
 	if s.behavior.Vertical != scroll.ScrollNever {
 		shouldDraw := s.behavior.Vertical == scroll.ScrollAlways || content.Height > view.Height
 		if shouldDraw {
-			s.drawVerticalScrollbar(ctx, bounds, content, view, offset)
+			s.drawVerticalScrollbar(ctx, bounds, content, view, offset, vTrack, vThumb)
 		}
 	}
 	if s.behavior.Horizontal != scroll.ScrollNever {
 		shouldDraw := s.behavior.Horizontal == scroll.ScrollAlways || content.Width > view.Width
 		if shouldDraw {
-			s.drawHorizontalScrollbar(ctx, bounds, content, view, offset)
+			s.drawHorizontalScrollbar(ctx, bounds, content, view, offset, hTrack, hThumb)
 		}
 	}
 }
 
-func (s *ScrollView) drawVerticalScrollbar(ctx runtime.RenderContext, bounds runtime.Rect, content runtime.Size, view runtime.Size, offset image.Point) {
+func (s *ScrollView) drawVerticalScrollbar(ctx runtime.RenderContext, bounds runtime.Rect, content runtime.Size, view runtime.Size, offset image.Point, trackStyle backend.Style, thumbStyle backend.Style) {
 	if bounds.Width <= 0 || bounds.Height <= 0 {
 		return
 	}
@@ -429,7 +449,7 @@ func (s *ScrollView) drawVerticalScrollbar(ctx runtime.RenderContext, bounds run
 		thumbChar = '#'
 	}
 	for y := bounds.Y; y < bounds.Y+bounds.Height; y++ {
-		ctx.Buffer.Set(x, y, trackChar, s.vScrollbar.Track)
+		ctx.Buffer.Set(x, y, trackChar, trackStyle)
 	}
 	if content.Height <= 0 || view.Height <= 0 {
 		return
@@ -452,12 +472,12 @@ func (s *ScrollView) drawVerticalScrollbar(ctx runtime.RenderContext, bounds run
 	for i := 0; i < thumbSize; i++ {
 		y := bounds.Y + thumbStart + i
 		if y >= bounds.Y && y < bounds.Y+bounds.Height {
-			ctx.Buffer.Set(x, y, thumbChar, s.vScrollbar.Thumb)
+			ctx.Buffer.Set(x, y, thumbChar, thumbStyle)
 		}
 	}
 }
 
-func (s *ScrollView) drawHorizontalScrollbar(ctx runtime.RenderContext, bounds runtime.Rect, content runtime.Size, view runtime.Size, offset image.Point) {
+func (s *ScrollView) drawHorizontalScrollbar(ctx runtime.RenderContext, bounds runtime.Rect, content runtime.Size, view runtime.Size, offset image.Point, trackStyle backend.Style, thumbStyle backend.Style) {
 	if bounds.Width <= 0 || bounds.Height <= 0 {
 		return
 	}
@@ -474,7 +494,7 @@ func (s *ScrollView) drawHorizontalScrollbar(ctx runtime.RenderContext, bounds r
 		thumbChar = '#'
 	}
 	for x := bounds.X; x < bounds.X+bounds.Width; x++ {
-		ctx.Buffer.Set(x, y, trackChar, s.hScrollbar.Track)
+		ctx.Buffer.Set(x, y, trackChar, trackStyle)
 	}
 	if content.Width <= 0 || view.Width <= 0 {
 		return
@@ -497,7 +517,7 @@ func (s *ScrollView) drawHorizontalScrollbar(ctx runtime.RenderContext, bounds r
 	for i := 0; i < thumbSize; i++ {
 		x := bounds.X + thumbStart + i
 		if x >= bounds.X && x < bounds.X+bounds.Width {
-			ctx.Buffer.Set(x, y, thumbChar, s.hScrollbar.Thumb)
+			ctx.Buffer.Set(x, y, thumbChar, thumbStyle)
 		}
 	}
 }
@@ -506,7 +526,10 @@ func (s *ScrollView) renderVirtual(ctx runtime.RenderContext) {
 	if s == nil || s.viewport == nil || s.virtual == nil {
 		return
 	}
-	bounds := s.bounds
+	bounds := s.ContentBounds()
+	if bounds.Width <= 0 || bounds.Height <= 0 {
+		return
+	}
 	contentSize := s.viewport.ContentSize()
 	if contentSize.Height <= 0 {
 		contentSize = s.virtualContentSize(runtime.Constraints{

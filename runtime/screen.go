@@ -82,13 +82,7 @@ func (s *Screen) Resize(w, h int) {
 	}
 	s.hitGridDirty = true
 
-	// Re-layout all layers
-	bounds := Rect{0, 0, w, h}
-	for _, layer := range s.layers {
-		if layer.Root != nil {
-			layer.Root.Layout(bounds)
-		}
-	}
+	s.relayout()
 }
 
 // Buffer returns the screen's render buffer.
@@ -121,7 +115,7 @@ func (s *Screen) SetRoot(root Widget) {
 	// Layout the root widget
 	if root != nil {
 		BindTree(root, s.services)
-		root.Layout(Rect{0, 0, s.width, s.height})
+		s.relayout()
 		MountTree(root)
 	}
 	if s.autoRegisterFocus {
@@ -152,7 +146,7 @@ func (s *Screen) PushLayer(root Widget, modal bool) {
 	// Layout the new layer
 	if root != nil {
 		BindTree(root, s.services)
-		root.Layout(Rect{0, 0, s.width, s.height})
+		s.relayout()
 		MountTree(root)
 	}
 	if s.autoRegisterFocus {
@@ -177,6 +171,7 @@ func (s *Screen) PopLayer() bool {
 
 	s.layers = s.layers[:len(s.layers)-1]
 	s.hitGridDirty = true
+	s.relayout()
 	return true
 }
 
@@ -200,6 +195,29 @@ func (s *Screen) Layer(i int) *Layer {
 		return nil
 	}
 	return s.layers[i]
+}
+
+func (s *Screen) relayout() {
+	if s == nil || len(s.layers) == 0 {
+		return
+	}
+	roots := make([]Widget, 0, len(s.layers))
+	for _, layer := range s.layers {
+		if layer != nil && layer.Root != nil {
+			roots = append(roots, layer.Root)
+		}
+	}
+	resolver := newStyleResolver(s.services.Stylesheet(), roots)
+	bounds := Rect{0, 0, s.width, s.height}
+	for i, layer := range s.layers {
+		if layer == nil || layer.Root == nil {
+			continue
+		}
+		focused := i == len(s.layers)-1
+		applyLayoutStyles(layer.Root, resolver, focused)
+		layer.Root.Layout(bounds)
+	}
+	s.hitGridDirty = true
 }
 
 // WidgetAt returns the widget at the given screen position.
@@ -244,10 +262,18 @@ func (s *Screen) BaseFocusScope() *FocusScope {
 
 // Render draws all layers to the buffer.
 func (s *Screen) Render() {
+	roots := make([]Widget, 0, len(s.layers))
+	for _, layer := range s.layers {
+		if layer != nil && layer.Root != nil {
+			roots = append(roots, layer.Root)
+		}
+	}
+	resolver := newStyleResolver(s.services.Stylesheet(), roots)
 	ctx := RenderContext{
-		Buffer:  s.buffer,
-		Focused: false,
-		Bounds:  Rect{0, 0, s.width, s.height},
+		Buffer:        s.buffer,
+		Focused:       false,
+		Bounds:        Rect{0, 0, s.width, s.height},
+		styleResolver: resolver,
 	}
 
 	// Render layers from bottom to top
@@ -455,17 +481,19 @@ func (s *Screen) addHitWidgets(widget Widget) {
 
 // RenderContext provides context to widgets during rendering.
 type RenderContext struct {
-	Buffer  *Buffer
-	Focused bool // Is the containing layer focused?
-	Bounds  Rect // Widget's allocated bounds
+	Buffer        *Buffer
+	Focused       bool // Is the containing layer focused?
+	Bounds        Rect // Widget's allocated bounds
+	styleResolver *StyleResolver
 }
 
 // Sub creates a new context for a child widget with adjusted bounds.
 func (ctx RenderContext) Sub(bounds Rect) RenderContext {
 	return RenderContext{
-		Buffer:  ctx.Buffer,
-		Focused: ctx.Focused,
-		Bounds:  bounds,
+		Buffer:        ctx.Buffer,
+		Focused:       ctx.Focused,
+		Bounds:        bounds,
+		styleResolver: ctx.styleResolver,
 	}
 }
 

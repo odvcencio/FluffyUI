@@ -31,6 +31,7 @@ type Stepper struct {
 	Steps []Step
 	style backend.Style
 	label string
+	styleSet bool
 }
 
 // NewStepper creates a stepper.
@@ -41,19 +42,35 @@ func NewStepper(steps ...Step) *Stepper {
 	return stepper
 }
 
+// SetStyle updates the stepper style.
+func (s *Stepper) SetStyle(style backend.Style) {
+	if s == nil {
+		return
+	}
+	s.style = style
+	s.styleSet = true
+}
+
+// StyleType returns the selector type name.
+func (s *Stepper) StyleType() string {
+	return "Stepper"
+}
+
 // Measure returns desired size.
 func (s *Stepper) Measure(constraints runtime.Constraints) runtime.Size {
-	width := 0
-	for i, step := range s.Steps {
-		width += len(step.Title) + 4
-		if i < len(s.Steps)-1 {
-			width += 3
+	return s.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {
+		width := 0
+		for i, step := range s.Steps {
+			width += len(step.Title) + 4
+			if i < len(s.Steps)-1 {
+				width += 3
+			}
 		}
-	}
-	if width < 1 {
-		width = 1
-	}
-	return constraints.Constrain(runtime.Size{Width: width, Height: 1})
+		if width < 1 {
+			width = 1
+		}
+		return contentConstraints.Constrain(runtime.Size{Width: width, Height: 1})
+	})
 }
 
 // Render draws the stepper.
@@ -62,10 +79,12 @@ func (s *Stepper) Render(ctx runtime.RenderContext) {
 		return
 	}
 	s.syncA11y()
-	bounds := s.bounds
-	if bounds.Width <= 0 || bounds.Height <= 0 {
+	outer := s.bounds
+	content := s.ContentBounds()
+	if outer.Width <= 0 || outer.Height <= 0 {
 		return
 	}
+	style := resolveBaseStyle(ctx, s, s.style, s.styleSet)
 	text := ""
 	for i, step := range s.Steps {
 		prefix := "[ ]"
@@ -82,8 +101,12 @@ func (s *Stepper) Render(ctx runtime.RenderContext) {
 		}
 		text += prefix + " " + step.Title
 	}
-	text = truncateString(text, bounds.Width)
-	writePadded(ctx.Buffer, bounds.X, bounds.Y, bounds.Width, text, s.style)
+	ctx.Buffer.Fill(outer, ' ', style)
+	if content.Width <= 0 || content.Height <= 0 {
+		return
+	}
+	text = truncateString(text, content.Width)
+	writePadded(ctx.Buffer, content.X, content.Y, content.Width, text, style)
 }
 
 // HandleMessage returns unhandled.
