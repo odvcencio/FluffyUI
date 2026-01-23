@@ -6,6 +6,10 @@ A batteries-included Terminal User Interface (TUI) framework for Go. Build inter
   <img src="docs/demos/hero.gif" alt="FluffyUI Demo" width="640">
 </p>
 
+<p align="center">
+  <img src="docs/demos/fireworks.gif" alt="Fireworks Demo - 3D Particle Effects" width="640">
+</p>
+
 **Reactive. Accessible. Testable. Terminal UI for Go.**
 
 ```bash
@@ -15,6 +19,7 @@ go get github.com/odvcencio/fluffy-ui@latest
 ## Features
 
 - **35+ Ready-to-Use Widgets** - Buttons, forms, tables, trees, dialogs, charts, and more
+- **Sub-Cell Graphics** - Canvas API with shapes, curves, images, and effects using Braille/Unicode
 - **Reactive State Management** - Signals and computed values with automatic UI updates
 - **Flexible Keybindings** - Registry-based commands with modes, stacking, and conditions
 - **Accessibility Built-In** - Screen reader support, focus management, ARIA-like roles
@@ -46,6 +51,7 @@ import (
     "github.com/odvcencio/fluffy-ui/clipboard"
     "github.com/odvcencio/fluffy-ui/keybind"
     "github.com/odvcencio/fluffy-ui/runtime"
+    "github.com/odvcencio/fluffy-ui/theme"
     "github.com/odvcencio/fluffy-ui/widgets"
 )
 
@@ -68,6 +74,7 @@ func main() {
         KeyHandler: &keybind.RuntimeHandler{Router: router},
         Announcer:  &accessibility.SimpleAnnouncer{},
         Clipboard:  &clipboard.MemoryClipboard{},
+        Stylesheet: theme.DefaultStylesheet(),
         FocusStyle: &accessibility.FocusStyle{
             Indicator: "> ",
             Style:     backend.DefaultStyle().Bold(true),
@@ -402,6 +409,7 @@ Run any example with `go run`:
 | `examples/counter` | State management with signals |
 | `examples/todo-app` | Full CRUD application |
 | `examples/candy-wars` | **Showcase game** - Trading game demonstrating all features |
+| `examples/fireworks-demo` | **3D particle effects** - Fireworks with perspective projection |
 | `examples/command-palette` | Keybind registry and command palette |
 | `examples/file-browser` | Tree navigation and file system |
 | `examples/dashboard` | Data visualization with charts |
@@ -520,6 +528,8 @@ Comprehensive documentation is available in the `docs/` directory:
 fluffy-ui/
 ├── runtime/        Core app loop, rendering, message handling
 ├── widgets/        Complete widget library (35+ components)
+├── graphics/       Sub-cell canvas with shapes, curves, images
+├── effects/        Visual effects (gradients, glow, particles)
 ├── keybind/        Keyboard routing and command registry
 ├── state/          Reactive signals and computed values
 ├── forms/          Form validation and coordination
