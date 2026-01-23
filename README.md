@@ -7,6 +7,10 @@ A batteries-included Terminal User Interface (TUI) framework for Go. Build inter
 </p>
 
 <p align="center">
+  <img src="docs/demos/graphics.gif" alt="Canvas Graphics - Shapes, Curves, Transforms" width="640">
+</p>
+
+<p align="center">
   <img src="docs/demos/fireworks.gif" alt="Fireworks Demo - 3D Particle Effects" width="640">
 </p>
 
@@ -37,6 +41,10 @@ go get github.com/odvcencio/fluffy-ui@latest
 **Requirements:** Go 1.25.1 or later
 
 ## Quick Start
+
+<p align="center">
+  <img src="docs/demos/quickstart.gif" alt="Hello from FluffyUI!" width="400">
+</p>
 
 ```go
 package main
@@ -155,8 +163,13 @@ go run ./scripts/agent-runner \
 ## Widget Catalog
 
 <p align="center">
-  <img src="docs/demos/buttons.gif" alt="Buttons Demo" width="320">
-  <img src="docs/demos/table.gif" alt="Table Demo" width="320">
+  <img src="docs/demos/buttons.gif" alt="Buttons Demo" width="400">
+  <img src="docs/demos/table.gif" alt="Table Demo" width="400">
+</p>
+
+<p align="center">
+  <img src="docs/demos/list.gif" alt="List Demo" width="400">
+  <img src="docs/demos/tabs.gif" alt="Tabs Demo" width="400">
 </p>
 
 ### Layout Widgets
@@ -171,6 +184,11 @@ go run ./scripts/agent-runner \
 | `Box` | Simple container with padding/margin |
 
 ### Input Widgets
+
+<p align="center">
+  <img src="docs/demos/input.gif" alt="Form Input Demo" width="400">
+  <img src="docs/demos/dialog.gif" alt="Dialog Demo" width="300">
+</p>
 
 | Widget | Description |
 |--------|-------------|
@@ -257,8 +275,12 @@ func (w *MyWidget) HandleMessage(msg runtime.Message) runtime.HandleResult {
 ## State Management
 
 <p align="center">
-  <img src="docs/demos/counter.gif" alt="Counter Demo" width="320">
-  <img src="docs/demos/progress.gif" alt="Progress Demo" width="320">
+  <img src="docs/demos/counter.gif" alt="Counter Demo" width="400">
+  <img src="docs/demos/progress.gif" alt="Progress Demo" width="400">
+</p>
+
+<p align="center">
+  <img src="docs/demos/sparkline.gif" alt="Sparkline Chart - Live Data Visualization" width="400">
 </p>
 
 FluffyUI provides reactive state primitives for automatic UI updates:
@@ -291,6 +313,25 @@ func (c *MyWidget) Mount() {
     c.Observe(c.count, c.refresh)
 }
 ```
+
+## Graphics & Animation
+
+FluffyUI includes a powerful sub-cell graphics system and animation framework:
+
+<p align="center">
+  <img src="docs/demos/easing.gif" alt="Easing Functions Visualization" width="640">
+</p>
+
+The graphics package provides:
+- **Canvas API** - Draw shapes, curves, and images at sub-character resolution
+- **Multiple Blitters** - Braille (2x4), Sextant (2x3), Quadrant (2x2), ASCII fallback
+- **Transforms** - Translate, rotate, scale operations with save/restore
+- **Path Operations** - BeginPath, MoveTo, LineTo, BezierCurveTo, ArcTo, Fill, Stroke
+
+The animation package provides:
+- **Tweens** - Interpolate any value with configurable easing (linear, quad, cubic, elastic, bounce)
+- **Springs** - Physics-based spring animations with stiffness and damping
+- **Particle Systems** - Emitters with physics (gravity, air resistance), color gradients
 
 ## Keybindings
 
