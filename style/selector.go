@@ -32,13 +32,26 @@ type Node interface {
 	StyleState() WidgetState
 }
 
+// StyleAttributeProvider optionally exposes attributes for selector matching.
+type StyleAttributeProvider interface {
+	StyleAttribute(name string) (string, bool)
+}
+
+// AttributeSelector represents an attribute selector.
+type AttributeSelector struct {
+	Name     string
+	Value    string
+	HasValue bool
+}
+
 // Selector defines a CSS-like selector.
 type Selector struct {
-	Type    string
-	ID      string
-	Classes []string
-	Pseudo  []PseudoClass
-	Parent  *Selector
+	Type       string
+	ID         string
+	Classes    []string
+	Pseudo     []PseudoClass
+	Attributes []AttributeSelector
+	Parent     *Selector
 }
 
 // SelectorBuilder builds selectors fluently.
@@ -94,6 +107,23 @@ func (b *SelectorBuilder) Pseudo(pseudos ...PseudoClass) *SelectorBuilder {
 	return b
 }
 
+// Attr adds an attribute selector.
+func (b *SelectorBuilder) Attr(name string, value ...string) *SelectorBuilder {
+	if b == nil {
+		return b
+	}
+	attr := AttributeSelector{Name: strings.TrimSpace(name)}
+	if attr.Name == "" {
+		return b
+	}
+	if len(value) > 0 {
+		attr.Value = value[0]
+		attr.HasValue = true
+	}
+	b.sel.Attributes = append(b.sel.Attributes, attr)
+	return b
+}
+
 // Inside adds a descendant selector.
 func (b *SelectorBuilder) Inside(parentType string) *SelectorBuilder {
 	if b == nil {
@@ -137,6 +167,9 @@ func (s Selector) specificity() specificity {
 	if len(s.Pseudo) > 0 {
 		spec.classes += len(s.Pseudo)
 	}
+	if len(s.Attributes) > 0 {
+		spec.classes += len(s.Attributes)
+	}
 	if s.Type != "" && s.Type != "*" {
 		spec.types++
 	}
@@ -170,12 +203,22 @@ func (s Selector) Matches(node Node, ancestors []Node) bool {
 	if s.Parent == nil {
 		return true
 	}
-	for i := len(ancestors) - 1; i >= 0; i-- {
-		if s.Parent.Matches(ancestors[i], ancestors[:i]) {
-			return true
+	idx := len(ancestors) - 1
+	for parent := s.Parent; parent != nil; parent = parent.Parent {
+		matched := false
+		for idx >= 0 {
+			if parent.matchesSelf(ancestors[idx]) {
+				matched = true
+				idx--
+				break
+			}
+			idx--
+		}
+		if !matched {
+			return false
 		}
 	}
-	return false
+	return true
 }
 
 func (s Selector) matchesSelf(node Node) bool {
@@ -198,6 +241,21 @@ func (s Selector) matchesSelf(node Node) bool {
 			return false
 		}
 	}
+	if len(s.Attributes) > 0 {
+		provider, ok := node.(StyleAttributeProvider)
+		if !ok {
+			return false
+		}
+		for _, attr := range s.Attributes {
+			value, ok := provider.StyleAttribute(attr.Name)
+			if !ok {
+				return false
+			}
+			if attr.HasValue && value != attr.Value {
+				return false
+			}
+		}
+	}
 	return true
 }
 
@@ -205,18 +263,30 @@ func hasAllClasses(nodeClasses, selectorClasses []string) bool {
 	if len(selectorClasses) == 0 {
 		return true
 	}
-	if len(nodeClasses) == 0 {
+	if len(nodeClasses) == 0 || len(nodeClasses) < len(selectorClasses) {
 		return false
 	}
-	for _, sel := range selectorClasses {
-		found := false
-		for _, cls := range nodeClasses {
-			if cls == sel {
-				found = true
-				break
+	if len(nodeClasses) <= 4 {
+		for _, sel := range selectorClasses {
+			found := false
+			for _, cls := range nodeClasses {
+				if cls == sel {
+					found = true
+					break
+				}
+			}
+			if !found {
+				return false
 			}
 		}
-		if !found {
+		return true
+	}
+	classSet := make(map[string]struct{}, len(nodeClasses))
+	for _, cls := range nodeClasses {
+		classSet[cls] = struct{}{}
+	}
+	for _, sel := range selectorClasses {
+		if _, ok := classSet[sel]; !ok {
 			return false
 		}
 	}

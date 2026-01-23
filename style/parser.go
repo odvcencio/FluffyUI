@@ -1,6 +1,7 @@
 package style
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -11,6 +12,7 @@ import (
 func Parse(data string) (*Stylesheet, error) {
 	parser := fssParser{src: stripComments(data)}
 	sheet := NewStylesheet()
+	var errs []error
 
 	for {
 		parser.skipWhitespace()
@@ -19,35 +21,42 @@ func Parse(data string) (*Stylesheet, error) {
 		}
 		selectors, err := parser.readUntil('{')
 		if err != nil {
-			return nil, err
+			errs = append(errs, err)
+			break
 		}
 		selectorText := strings.TrimSpace(selectors)
 		if selectorText == "" {
-			return nil, fmt.Errorf("style: empty selector")
+			errs = append(errs, fmt.Errorf("style: empty selector"))
 		}
 		block, err := parser.readUntil('}')
 		if err != nil {
-			return nil, err
+			errs = append(errs, err)
+			break
 		}
-		styleBlock, err := parseStyleBlock(block)
-		if err != nil {
-			return nil, err
+		styleBlock, importantBlock, blockErrs := parseStyleBlock(block)
+		if len(blockErrs) > 0 {
+			errs = append(errs, blockErrs...)
 		}
 		selectorList := strings.Split(selectorText, ",")
 		for _, rawSel := range selectorList {
 			selText := strings.TrimSpace(rawSel)
 			if selText == "" {
-				return nil, fmt.Errorf("style: empty selector entry")
+				errs = append(errs, fmt.Errorf("style: empty selector entry"))
+				continue
 			}
 			sel, err := parseSelectorChain(selText)
 			if err != nil {
-				return nil, err
+				errs = append(errs, err)
+				continue
 			}
-			sheet.Add(&SelectorBuilder{sel: *sel}, styleBlock)
+			if styleBlock.IsZero() && importantBlock.IsZero() {
+				continue
+			}
+			sheet.addRule(*sel, styleBlock, importantBlock)
 		}
 	}
 
-	return sheet, nil
+	return sheet, errors.Join(errs...)
 }
 
 // ParseFile parses a FSS file from disk.
@@ -98,8 +107,10 @@ func (p *fssParser) readUntil(delim byte) (string, error) {
 	return p.src[start : start+idx], nil
 }
 
-func parseStyleBlock(block string) (Style, error) {
+func parseStyleBlock(block string) (Style, Style, []error) {
 	var out Style
+	var important Style
+	var errs []error
 	entries := strings.Split(block, ";")
 	for _, entry := range entries {
 		entry = strings.TrimSpace(entry)
@@ -108,109 +119,171 @@ func parseStyleBlock(block string) (Style, error) {
 		}
 		name, value, ok := strings.Cut(entry, ":")
 		if !ok {
-			return Style{}, fmt.Errorf("style: expected ':' in declaration %q", entry)
+			errs = append(errs, fmt.Errorf("style: expected ':' in declaration %q", entry))
+			continue
 		}
 		name = strings.ToLower(strings.TrimSpace(name))
 		value = strings.TrimSpace(value)
 		if name == "" {
-			return Style{}, fmt.Errorf("style: missing property name")
+			errs = append(errs, fmt.Errorf("style: missing property name"))
+			continue
+		}
+		value, isImportant := splitImportant(value)
+		target := &out
+		if isImportant {
+			target = &important
 		}
 		switch name {
 		case "foreground", "color", "fg":
 			color, err := parseColor(value)
 			if err != nil {
-				return Style{}, err
+				errs = append(errs, err)
+				continue
 			}
-			out.Foreground = color
+			target.Foreground = color
 		case "background", "bg":
 			color, err := parseColor(value)
 			if err != nil {
-				return Style{}, err
+				errs = append(errs, err)
+				continue
 			}
-			out.Background = color
+			target.Background = color
 		case "bold":
 			value, err := parseBool(value)
 			if err != nil {
-				return Style{}, err
+				errs = append(errs, err)
+				continue
 			}
-			out.Bold = Bool(value)
+			target.Bold = Bool(value)
 		case "italic":
 			value, err := parseBool(value)
 			if err != nil {
-				return Style{}, err
+				errs = append(errs, err)
+				continue
 			}
-			out.Italic = Bool(value)
+			target.Italic = Bool(value)
 		case "underline":
 			value, err := parseBool(value)
 			if err != nil {
-				return Style{}, err
+				errs = append(errs, err)
+				continue
 			}
-			out.Underline = Bool(value)
+			target.Underline = Bool(value)
 		case "dim":
 			value, err := parseBool(value)
 			if err != nil {
-				return Style{}, err
+				errs = append(errs, err)
+				continue
 			}
-			out.Dim = Bool(value)
+			target.Dim = Bool(value)
 		case "blink":
 			value, err := parseBool(value)
 			if err != nil {
-				return Style{}, err
+				errs = append(errs, err)
+				continue
 			}
-			out.Blink = Bool(value)
+			target.Blink = Bool(value)
 		case "reverse":
 			value, err := parseBool(value)
 			if err != nil {
-				return Style{}, err
+				errs = append(errs, err)
+				continue
 			}
-			out.Reverse = Bool(value)
+			target.Reverse = Bool(value)
 		case "strikethrough":
 			value, err := parseBool(value)
 			if err != nil {
-				return Style{}, err
+				errs = append(errs, err)
+				continue
 			}
-			out.Strikethrough = Bool(value)
+			target.Strikethrough = Bool(value)
 		case "padding":
 			spacing, err := parseSpacing(value)
 			if err != nil {
-				return Style{}, err
+				errs = append(errs, err)
+				continue
 			}
-			out.Padding = spacing
+			target.Padding = spacing
 		case "margin":
 			spacing, err := parseSpacing(value)
 			if err != nil {
-				return Style{}, err
+				errs = append(errs, err)
+				continue
 			}
-			out.Margin = spacing
+			target.Margin = spacing
 		case "width":
 			size, err := parseSize(value)
 			if err != nil {
-				return Style{}, err
+				errs = append(errs, err)
+				continue
 			}
-			out.Width = size
+			target.Width = size
 		case "height":
 			size, err := parseSize(value)
 			if err != nil {
-				return Style{}, err
+				errs = append(errs, err)
+				continue
 			}
-			out.Height = size
+			target.Height = size
 		case "border":
 			border, err := parseBorder(value)
 			if err != nil {
-				return Style{}, err
+				errs = append(errs, err)
+				continue
 			}
-			out.Border = border
+			target.Border = border
+		case "border-style":
+			borderStyle, err := parseBorderStyle(value)
+			if err != nil {
+				errs = append(errs, err)
+				continue
+			}
+			applyBorderStyle(target, borderStyle)
+		case "border-color":
+			color, err := parseColor(value)
+			if err != nil {
+				errs = append(errs, err)
+				continue
+			}
+			applyBorderColor(target, color)
 		case "border-radius":
 			value, err := parseBool(value)
 			if err != nil {
-				return Style{}, err
+				errs = append(errs, err)
+				continue
 			}
-			out.BorderRadius = Bool(value)
+			target.BorderRadius = Bool(value)
 		default:
-			return Style{}, fmt.Errorf("style: unknown property %q", name)
+			errs = append(errs, fmt.Errorf("style: unknown property %q", name))
 		}
 	}
-	return out, nil
+	return out, important, errs
+}
+
+func splitImportant(value string) (string, bool) {
+	trimmed := strings.TrimSpace(value)
+	lower := strings.ToLower(trimmed)
+	if strings.HasSuffix(lower, "!important") {
+		base := strings.TrimSpace(trimmed[:len(trimmed)-len("!important")])
+		return base, true
+	}
+	return value, false
+}
+
+func applyBorderStyle(target *Style, borderStyle BorderStyle) {
+	if target.Border == nil {
+		target.Border = &Border{}
+	}
+	target.Border.Style = borderStyle
+	target.Border.StyleSet = true
+}
+
+func applyBorderColor(target *Style, color Color) {
+	if target.Border == nil {
+		target.Border = &Border{}
+	}
+	target.Border.Color = color
+	target.Border.ColorSet = true
 }
 
 func parseSelectorChain(text string) (*Selector, error) {
@@ -276,11 +349,81 @@ func parseSelectorPart(part string) (*Selector, error) {
 			}
 			out.Pseudo = append(out.Pseudo, pseudo)
 			idx = next
+		case '[':
+			attr, next, err := parseAttributeSelector(part, idx)
+			if err != nil {
+				return nil, err
+			}
+			out.Attributes = append(out.Attributes, attr)
+			idx = next
 		default:
 			return nil, fmt.Errorf("style: invalid selector %q", part)
 		}
 	}
 	return out, nil
+}
+
+func parseAttributeSelector(part string, start int) (AttributeSelector, int, error) {
+	if start >= len(part) || part[start] != '[' {
+		return AttributeSelector{}, 0, fmt.Errorf("style: invalid attribute selector %q", part)
+	}
+	offset := strings.IndexByte(part[start:], ']')
+	if offset == -1 {
+		return AttributeSelector{}, 0, fmt.Errorf("style: invalid attribute selector %q", part)
+	}
+	end := start + offset
+	content := part[start+1 : end]
+	attr, err := parseAttributeContent(content)
+	if err != nil {
+		return AttributeSelector{}, 0, err
+	}
+	return attr, end + 1, nil
+}
+
+func parseAttributeContent(content string) (AttributeSelector, error) {
+	content = strings.TrimSpace(content)
+	if content == "" {
+		return AttributeSelector{}, fmt.Errorf("style: empty attribute selector")
+	}
+	name := content
+	value := ""
+	hasValue := false
+	if strings.Contains(content, "=") {
+		parts := strings.SplitN(content, "=", 2)
+		name = strings.TrimSpace(parts[0])
+		value = strings.TrimSpace(parts[1])
+		if value == "" {
+			return AttributeSelector{}, fmt.Errorf("style: missing attribute value")
+		}
+		if len(value) >= 2 {
+			if (value[0] == '"' && value[len(value)-1] == '"') ||
+				(value[0] == '\'' && value[len(value)-1] == '\'') {
+				value = value[1 : len(value)-1]
+			} else if value[0] == '"' || value[0] == '\'' {
+				return AttributeSelector{}, fmt.Errorf("style: invalid attribute value %q", value)
+			}
+		}
+		hasValue = true
+	}
+	if !isValidIdent(name) {
+		return AttributeSelector{}, fmt.Errorf("style: invalid attribute name %q", name)
+	}
+	return AttributeSelector{Name: name, Value: value, HasValue: hasValue}, nil
+}
+
+func isValidIdent(value string) bool {
+	if value == "" {
+		return false
+	}
+	if !isIdentStart(value[0]) {
+		return false
+	}
+	for i := 1; i < len(value); i++ {
+		if !isIdentChar(value[i]) {
+			return false
+		}
+	}
+	return true
 }
 
 func parsePseudo(name string) (PseudoClass, bool) {
@@ -401,11 +544,28 @@ func parseBorder(value string) (*Border, error) {
 	if !styleSet {
 		return nil, fmt.Errorf("style: missing border style")
 	}
-	border := &Border{Style: borderStyle}
+	border := &Border{Style: borderStyle, StyleSet: true}
 	if colorSet {
 		border.Color = borderColor
+		border.ColorSet = true
 	}
 	return border, nil
+}
+
+func parseBorderStyle(value string) (BorderStyle, error) {
+	value = strings.ToLower(strings.TrimSpace(value))
+	switch value {
+	case "none":
+		return BorderNone, nil
+	case "single":
+		return BorderSingle, nil
+	case "double":
+		return BorderDouble, nil
+	case "rounded":
+		return BorderRounded, nil
+	default:
+		return BorderNone, fmt.Errorf("style: invalid border style %q", value)
+	}
 }
 
 func parseColor(value string) (Color, error) {
@@ -480,24 +640,24 @@ func parseColorChannel(value string) (uint8, error) {
 }
 
 var namedColors = map[string]Color{
-	"none":       ColorNone,
-	"default":    ColorDefault,
-	"black":      ColorBlack,
-	"red":        ColorRed,
-	"green":      ColorGreen,
-	"yellow":     ColorYellow,
-	"blue":       ColorBlue,
-	"magenta":    ColorMagenta,
-	"cyan":       ColorCyan,
-	"white":      ColorWhite,
-	"brightblack":   ColorBrightBlack,
-	"brightred":     ColorBrightRed,
-	"brightgreen":   ColorBrightGreen,
-	"brightyellow":  ColorBrightYellow,
-	"brightblue":    ColorBrightBlue,
-	"brightmagenta": ColorBrightMagenta,
-	"brightcyan":    ColorBrightCyan,
-	"brightwhite":   ColorBrightWhite,
+	"none":           ColorNone,
+	"default":        ColorDefault,
+	"black":          ColorBlack,
+	"red":            ColorRed,
+	"green":          ColorGreen,
+	"yellow":         ColorYellow,
+	"blue":           ColorBlue,
+	"magenta":        ColorMagenta,
+	"cyan":           ColorCyan,
+	"white":          ColorWhite,
+	"brightblack":    ColorBrightBlack,
+	"brightred":      ColorBrightRed,
+	"brightgreen":    ColorBrightGreen,
+	"brightyellow":   ColorBrightYellow,
+	"brightblue":     ColorBrightBlue,
+	"brightmagenta":  ColorBrightMagenta,
+	"brightcyan":     ColorBrightCyan,
+	"brightwhite":    ColorBrightWhite,
 	"bright-black":   ColorBrightBlack,
 	"bright-red":     ColorBrightRed,
 	"bright-green":   ColorBrightGreen,

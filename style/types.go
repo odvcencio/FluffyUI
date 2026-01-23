@@ -122,9 +122,9 @@ const (
 
 // BorderChars defines custom border glyphs.
 type BorderChars struct {
-	TopLeft, TopRight     rune
+	TopLeft, TopRight       rune
 	BottomLeft, BottomRight rune
-	Horizontal, Vertical  rune
+	Horizontal, Vertical    rune
 }
 
 // Border defines border styling.
@@ -132,6 +132,9 @@ type Border struct {
 	Style BorderStyle
 	Color Color
 	Chars *BorderChars
+	// StyleSet/ColorSet distinguish explicit "none" from unset values.
+	StyleSet bool
+	ColorSet bool
 }
 
 // Style defines visual attributes and layout hints.
@@ -221,7 +224,7 @@ func (s Style) Merge(override Style) Style {
 		s.Height = override.Height
 	}
 	if override.Border != nil {
-		s.Border = override.Border
+		s.Border = mergeBorder(s.Border, override.Border)
 	}
 	if override.BorderRadius != nil {
 		s.BorderRadius = override.BorderRadius
@@ -259,6 +262,37 @@ func (s Style) Inherit(parent Style) Style {
 		s.Strikethrough = parent.Strikethrough
 	}
 	return s
+}
+
+func mergeBorder(base *Border, override *Border) *Border {
+	if override == nil {
+		return base
+	}
+	if base == nil {
+		clone := *override
+		return &clone
+	}
+	merged := *base
+	if borderStyleSpecified(*override) {
+		merged.Style = override.Style
+		merged.StyleSet = override.StyleSet || override.Style != BorderNone
+	}
+	if borderColorSpecified(*override) {
+		merged.Color = override.Color
+		merged.ColorSet = override.ColorSet || override.Color.Mode != ColorNone.Mode
+	}
+	if override.Chars != nil {
+		merged.Chars = override.Chars
+	}
+	return &merged
+}
+
+func borderStyleSpecified(border Border) bool {
+	return border.StyleSet || border.Style != BorderNone
+}
+
+func borderColorSpecified(border Border) bool {
+	return border.ColorSet || border.Color.Mode != ColorNone.Mode
 }
 
 // ToCompositor converts a Style to a compositor.Style.

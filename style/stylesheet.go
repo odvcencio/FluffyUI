@@ -4,8 +4,9 @@ import "sort"
 
 // Rule binds a selector to a style.
 type Rule struct {
-	Selector Selector
-	Style    Style
+	Selector  Selector
+	Style     Style
+	Important Style
 
 	order       int
 	specificity specificity
@@ -31,15 +32,20 @@ func (s *Stylesheet) Add(selector *SelectorBuilder, style Style) *Stylesheet {
 		return s
 	}
 	sel := selector.Selector()
+	s.addRule(sel, style, Style{})
+	return s
+}
+
+func (s *Stylesheet) addRule(selector Selector, style Style, important Style) {
 	rule := Rule{
-		Selector:    sel,
+		Selector:    selector,
 		Style:       style,
+		Important:   important,
 		order:       s.nextOrder,
-		specificity: sel.specificity(),
+		specificity: selector.specificity(),
 	}
 	s.nextOrder++
 	s.rules = append(s.rules, rule)
-	return s
 }
 
 // Resolve returns the merged style for the given node.
@@ -65,6 +71,9 @@ func (s *Stylesheet) Resolve(node Node, ancestors []Node) Style {
 	var resolved Style
 	for _, rule := range matches {
 		resolved = resolved.Merge(rule.Style)
+	}
+	for _, rule := range matches {
+		resolved = resolved.Merge(rule.Important)
 	}
 	return resolved
 }

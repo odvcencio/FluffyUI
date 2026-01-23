@@ -56,6 +56,8 @@ type Radio struct {
 	group      *RadioGroup
 	index      int
 	disabled   bool
+	services   runtime.Services
+	subs       state.Subscriptions
 	style      backend.Style
 	focusStyle backend.Style
 	styleSet   bool
@@ -80,6 +82,32 @@ func NewRadio(label string, group *RadioGroup) *Radio {
 	return r
 }
 
+// Bind attaches app services.
+func (r *Radio) Bind(services runtime.Services) {
+	if r == nil {
+		return
+	}
+	r.services = services
+	r.subs.SetScheduler(services.Scheduler())
+	r.subs.Observe(r.label, func() {
+		r.services.Invalidate()
+	})
+	if r.group != nil && r.group.selected != nil {
+		r.subs.Observe(r.group.selected, func() {
+			r.services.Invalidate()
+		})
+	}
+}
+
+// Unbind releases app services.
+func (r *Radio) Unbind() {
+	if r == nil {
+		return
+	}
+	r.subs.Clear()
+	r.services = runtime.Services{}
+}
+
 // SetLabel updates the radio label.
 func (r *Radio) SetLabel(label string) {
 	if r == nil || r.label == nil {
@@ -96,6 +124,7 @@ func (r *Radio) SetDisabled(disabled bool) {
 	}
 	r.disabled = disabled
 	r.Base.State.Disabled = disabled
+	r.services.Relayout()
 }
 
 // SetStyle sets the normal style.
@@ -160,15 +189,15 @@ func (r *Radio) Render(ctx runtime.RenderContext) {
 	text := marker + " " + truncateString(label, available)
 	style := r.style
 	resolved := ctx.ResolveStyle(r)
-		if !resolved.IsZero() {
-			final := resolved
-			if r.styleSet {
-				final = final.Merge(uistyle.FromBackend(r.style))
-			}
-			if r.focused && r.focusSet {
-				final = final.Merge(uistyle.FromBackend(r.focusStyle))
-			}
-			style = final.ToBackend()
+	if !resolved.IsZero() {
+		final := resolved
+		if r.styleSet {
+			final = final.Merge(uistyle.FromBackend(r.style))
+		}
+		if r.focused && r.focusSet {
+			final = final.Merge(uistyle.FromBackend(r.focusStyle))
+		}
+		style = final.ToBackend()
 	} else {
 		if r.focused {
 			style = r.focusStyle

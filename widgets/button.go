@@ -29,6 +29,8 @@ type Button struct {
 	disabled *state.Signal[bool]
 	loading  *state.Signal[bool]
 	onClick  func()
+	services runtime.Services
+	subs     state.Subscriptions
 
 	style       backend.Style
 	focusStyle  backend.Style
@@ -60,6 +62,33 @@ func NewButton(label string, opts ...ButtonOption) *Button {
 	}
 	btn.syncA11y()
 	return btn
+}
+
+// Bind attaches app services.
+func (b *Button) Bind(services runtime.Services) {
+	if b == nil {
+		return
+	}
+	b.services = services
+	b.subs.SetScheduler(services.Scheduler())
+	b.subs.Observe(b.label, func() {
+		b.services.Invalidate()
+	})
+	b.subs.Observe(b.loading, func() {
+		b.services.Invalidate()
+	})
+	b.subs.Observe(b.disabled, func() {
+		b.services.Relayout()
+	})
+}
+
+// Unbind releases app services.
+func (b *Button) Unbind() {
+	if b == nil {
+		return
+	}
+	b.subs.Clear()
+	b.services = runtime.Services{}
 }
 
 // WithVariant sets the button variant.
@@ -216,19 +245,19 @@ func (b *Button) Render(ctx runtime.RenderContext) {
 	case VariantDanger:
 		style = style.Bold(true).Underline(true)
 	}
-		resolved := ctx.ResolveStyle(b)
-		if !resolved.IsZero() {
-			final := resolved
-			if b.styleSet {
-				final = final.Merge(uistyle.FromBackend(b.style))
-			}
-			if b.focused && b.focusStyleSet {
-				final = final.Merge(uistyle.FromBackend(b.focusStyle))
-			}
-			if disabled && b.disabledStyleSet {
-				final = final.Merge(uistyle.FromBackend(b.disabledSty))
-			}
-			style = final.ToBackend()
+	resolved := ctx.ResolveStyle(b)
+	if !resolved.IsZero() {
+		final := resolved
+		if b.styleSet {
+			final = final.Merge(uistyle.FromBackend(b.style))
+		}
+		if b.focused && b.focusStyleSet {
+			final = final.Merge(uistyle.FromBackend(b.focusStyle))
+		}
+		if disabled && b.disabledStyleSet {
+			final = final.Merge(uistyle.FromBackend(b.disabledSty))
+		}
+		style = final.ToBackend()
 	} else {
 		if b.focused {
 			style = b.focusStyle

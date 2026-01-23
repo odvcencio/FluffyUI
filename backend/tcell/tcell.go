@@ -12,6 +12,7 @@ import (
 // Backend implements backend.Backend using tcell.
 type Backend struct {
 	screen tcell.Screen
+	raw    *rawTty
 
 	// Bracketed paste state
 	inPaste     bool
@@ -23,6 +24,14 @@ type Backend struct {
 
 // New creates a new tcell backend.
 func New() (*Backend, error) {
+	tty, ttyErr := tcell.NewDevTty()
+	if ttyErr == nil {
+		raw := &rawTty{inner: tty}
+		screen, err := tcell.NewTerminfoScreenFromTty(raw)
+		if err == nil {
+			return &Backend{screen: screen, raw: raw}, nil
+		}
+	}
 	screen, err := tcell.NewScreen()
 	if err != nil {
 		return nil, err

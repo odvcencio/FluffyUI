@@ -25,6 +25,19 @@ func (n *testNode) StyleState() WidgetState {
 	return n.state
 }
 
+type attrNode struct {
+	testNode
+	attrs map[string]string
+}
+
+func (n *attrNode) StyleAttribute(name string) (string, bool) {
+	if n == nil || n.attrs == nil {
+		return "", false
+	}
+	value, ok := n.attrs[name]
+	return value, ok
+}
+
 func TestResolveSpecificity(t *testing.T) {
 	sheet := NewStylesheet().
 		Add(Select("Button"), Style{Foreground: RGB(10, 20, 30)}).
@@ -70,5 +83,25 @@ func TestResolveDescendantAndPseudo(t *testing.T) {
 	resolved := sheet.Resolve(input, []Node{dialog})
 	if resolved.Underline == nil || !*resolved.Underline {
 		t.Fatalf("underline = %v, want true", resolved.Underline)
+	}
+}
+
+func TestResolveAttributeSelector(t *testing.T) {
+	sheet := NewStylesheet().
+		Add(Select("Input").Attr("type", "password"), Style{Bold: Bool(true)}).
+		Add(Select("Input").Attr("disabled"), Style{Dim: Bool(true)})
+
+	node := &attrNode{
+		testNode: testNode{typ: "Input"},
+		attrs: map[string]string{
+			"type": "password",
+		},
+	}
+	resolved := sheet.Resolve(node, nil)
+	if resolved.Bold == nil || !*resolved.Bold {
+		t.Fatalf("bold = %v, want true", resolved.Bold)
+	}
+	if resolved.Dim != nil {
+		t.Fatalf("dim = %v, want nil", resolved.Dim)
 	}
 }

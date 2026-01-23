@@ -52,3 +52,27 @@ func TestSextantBlitterSpecialPatterns(t *testing.T) {
 		t.Fatalf("full = %U, want %U", full, '\u2588')
 	}
 }
+
+func TestBestBlitterSelection(t *testing.T) {
+	tests := []struct {
+		name string
+		caps Capabilities
+		want string
+	}{
+		{name: "kitty", caps: Capabilities{Kitty: true, Unicode: true}, want: "kitty"},
+		{name: "sixel", caps: Capabilities{Sixel: true, Unicode: true}, want: "sixel"},
+		{name: "unicode", caps: Capabilities{Unicode: true}, want: "sextant"},
+		{name: "ascii", caps: Capabilities{Unicode: false}, want: "ascii"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			blitter := BestBlitter(&tt.caps)
+			if blitter == nil {
+				t.Fatalf("BestBlitter returned nil")
+			}
+			if got := blitter.Name(); got != tt.want {
+				t.Fatalf("BestBlitter name = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}

@@ -31,6 +31,14 @@ type Buffer struct {
 	dirtyIndices     []int // Sparse dirty list for fast iteration
 	dirtyListCap     int   // Max indices to collect before disabling list
 	dirtyListEnabled bool
+
+	images []imageOp
+}
+
+type imageOp struct {
+	x   int
+	y   int
+	img backend.Image
 }
 
 // NewBuffer creates a buffer with the given dimensions.
@@ -77,6 +85,7 @@ func (b *Buffer) Resize(w, h int) {
 	b.dirtyListCap = calcDirtyListCap(w * h)
 	b.dirtyListEnabled = true
 	b.dirtyIndices = b.dirtyIndices[:0]
+	b.images = b.images[:0]
 	if cap(b.dirtyIndices) < min(w*h, b.dirtyListCap) {
 		b.dirtyIndices = make([]int, 0, min(w*h, b.dirtyListCap))
 	}
@@ -87,6 +96,7 @@ func (b *Buffer) Resize(w, h int) {
 // Clear fills the buffer with spaces and default style.
 func (b *Buffer) Clear() {
 	b.Fill(Rect{0, 0, b.width, b.height}, ' ', backend.DefaultStyle())
+	b.ClearImageOps()
 }
 
 // ClearRect fills a rectangular region with spaces and default style.
@@ -121,6 +131,34 @@ func (b *Buffer) Set(x, y int, r rune, s backend.Style) {
 // SetContent implements backend.RenderTarget.
 func (b *Buffer) SetContent(x, y int, mainc rune, _ []rune, style backend.Style) {
 	b.Set(x, y, mainc, style)
+}
+
+// SetImage queues an image render and clears its cell region.
+func (b *Buffer) SetImage(x, y int, img backend.Image) {
+	if b == nil || img.Width <= 0 || img.Height <= 0 {
+		return
+	}
+	if img.CellWidth <= 0 || img.CellHeight <= 0 {
+		return
+	}
+	b.images = append(b.images, imageOp{x: x, y: y, img: img})
+	b.Fill(Rect{X: x, Y: y, Width: img.CellWidth, Height: img.CellHeight}, ' ', backend.DefaultStyle())
+}
+
+// ImageOps returns queued image operations.
+func (b *Buffer) ImageOps() []imageOp {
+	if b == nil {
+		return nil
+	}
+	return b.images
+}
+
+// ClearImageOps clears queued image operations.
+func (b *Buffer) ClearImageOps() {
+	if b == nil {
+		return
+	}
+	b.images = b.images[:0]
 }
 
 // SetString writes a string starting at (x, y).

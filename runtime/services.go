@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/odvcencio/fluffy-ui/accessibility"
+	"github.com/odvcencio/fluffy-ui/animation"
 	"github.com/odvcencio/fluffy-ui/audio"
 	"github.com/odvcencio/fluffy-ui/clipboard"
 	"github.com/odvcencio/fluffy-ui/state"
@@ -64,6 +65,14 @@ func (s Services) Stylesheet() *style.Stylesheet {
 	return s.app.stylesheet
 }
 
+// Animator returns the app animator.
+func (s Services) Animator() *animation.Animator {
+	if s.app == nil {
+		return nil
+	}
+	return s.app.animator
+}
+
 // Scheduler returns the app state scheduler.
 func (s Services) Scheduler() state.Scheduler {
 	if s.app == nil {
@@ -86,6 +95,14 @@ func (s Services) Invalidate() {
 		return
 	}
 	s.app.Invalidate()
+}
+
+// Relayout requests a layout pass followed by a render.
+func (s Services) Relayout() {
+	if s.app == nil {
+		return
+	}
+	s.app.Relayout()
 }
 
 // Post sends a message into the app loop.

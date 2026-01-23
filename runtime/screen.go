@@ -301,6 +301,8 @@ func (s *Screen) configureFocusScope(scope *FocusScope) {
 	}
 	scope.SetOnChange(func(prev Focusable, next Focusable) {
 		s.announceFocus(next)
+		s.relayout()
+		s.services.Invalidate()
 	})
 }
 

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/odvcencio/fluffy-ui/accessibility"
+	"github.com/odvcencio/fluffy-ui/animation"
 	"github.com/odvcencio/fluffy-ui/audio"
 	"github.com/odvcencio/fluffy-ui/backend"
 	"github.com/odvcencio/fluffy-ui/clipboard"
@@ -44,6 +45,7 @@ type AppConfig struct {
 	FocusRegistration FocusRegistrationMode
 	Audio             audio.Service
 	Stylesheet        *style.Stylesheet
+	Animator          *animation.Animator
 }
 
 // App runs a widget tree against a terminal backend.
@@ -68,6 +70,7 @@ type App struct {
 	focusRegistration FocusRegistrationMode
 	audio             audio.Service
 	stylesheet        *style.Stylesheet
+	animator          *animation.Animator
 	taskCtx           context.Context
 	taskCancel        context.CancelFunc
 	pendingMu         sync.Mutex
@@ -109,6 +112,7 @@ func NewApp(cfg AppConfig) *App {
 		focusRegistration: cfg.FocusRegistration,
 		audio:             cfg.Audio,
 		stylesheet:        cfg.Stylesheet,
+		animator:          cfg.Animator,
 	}
 	if app.flushPolicy == 0 {
 		app.flushPolicy = FlushOnMessageAndTick
@@ -139,6 +143,14 @@ func (a *App) Stylesheet() *style.Stylesheet {
 	return a.stylesheet
 }
 
+// Animator returns the app animator.
+func (a *App) Animator() *animation.Animator {
+	if a == nil {
+		return nil
+	}
+	return a.animator
+}
+
 // SetStylesheet replaces the active stylesheet and invalidates the render pass.
 func (a *App) SetStylesheet(sheet *style.Stylesheet) {
 	if a == nil {
@@ -148,6 +160,15 @@ func (a *App) SetStylesheet(sheet *style.Stylesheet) {
 	if a.screen != nil {
 		a.screen.relayout()
 	}
+	a.Invalidate()
+}
+
+// Relayout recomputes layout and invalidates the render pass.
+func (a *App) Relayout() {
+	if a == nil || a.screen == nil {
+		return
+	}
+	a.screen.relayout()
 	a.Invalidate()
 }
 
@@ -321,6 +342,12 @@ func (a *App) Run(ctx context.Context) error {
 			}
 		case now := <-ticks:
 			msg = TickMsg{Time: now}
+			if a.animator != nil {
+				dt := a.tickRate.Seconds()
+				if a.animator.Update(dt) {
+					a.dirty = true
+				}
+			}
 			if a.update(a, msg) {
 				a.dirty = true
 			}
@@ -493,6 +520,10 @@ func (a *App) render() {
 		w, h := buf.Size()
 		stats.TotalCells = w * h
 	}
+	var imageOps []imageOp
+	if buf != nil {
+		imageOps = buf.ImageOps()
+	}
 
 	if buf.IsDirty() {
 		dirtyCount := buf.DirtyCount()
@@ -568,6 +599,16 @@ func (a *App) render() {
 	}
 
 	a.backend.Show()
+	if len(imageOps) > 0 {
+		if imageWriter, ok := a.backend.(backend.ImageWriter); ok {
+			for _, op := range imageOps {
+				imageWriter.DrawImage(op.x, op.y, op.img)
+			}
+		}
+		if buf != nil {
+			buf.ClearImageOps()
+		}
+	}
 	if observer != nil {
 		stats.Ended = time.Now()
 		stats.TotalDuration = stats.Ended.Sub(stats.Started)

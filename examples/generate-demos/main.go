@@ -12,12 +12,16 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"math"
+	"math/rand"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/odvcencio/fluffy-ui/backend"
 	"github.com/odvcencio/fluffy-ui/backend/sim"
+	"github.com/odvcencio/fluffy-ui/graphics"
 	"github.com/odvcencio/fluffy-ui/recording"
 	"github.com/odvcencio/fluffy-ui/runtime"
 	"github.com/odvcencio/fluffy-ui/state"
@@ -25,13 +29,16 @@ import (
 )
 
 var (
-	outDir = flag.String("out", "docs/demos", "output directory for recordings")
-	width  = flag.Int("width", 80, "recording width")
-	height = flag.Int("height", 24, "recording height")
+	outDir     = flag.String("out", "docs/demos", "output directory for recordings")
+	width      = flag.Int("width", 80, "recording width")
+	height     = flag.Int("height", 24, "recording height")
+	demoFilter = flag.String("demo", "", "comma-separated list of demos to record")
 )
 
 func main() {
 	flag.Parse()
+
+	selected := parseDemoFilter(*demoFilter)
 
 	if err := os.MkdirAll(*outDir, 0o755); err != nil {
 		fmt.Fprintf(os.Stderr, "failed to create output directory: %v\n", err)
@@ -51,9 +58,13 @@ func main() {
 		{"sparkline", demoSparkline},
 		{"tabs", demoTabs},
 		{"hero", demoHero},
+		{"fireworks", demoFireworks},
 	}
 
 	for _, demo := range demos {
+		if len(selected) > 0 && !selected[demo.name] {
+			continue
+		}
 		outPath := filepath.Join(*outDir, demo.name+".cast")
 		fmt.Printf("Recording: %s -> %s\n", demo.name, outPath)
 
@@ -69,6 +80,21 @@ func main() {
 	fmt.Printf("  asciinema play %s/hero.cast\n", *outDir)
 	fmt.Println("\nTo convert to GIF (requires agg):")
 	fmt.Printf("  agg --theme monokai --last-frame-duration 0.001 %s/hero.cast %s/hero.gif\n", *outDir, *outDir)
+}
+
+func parseDemoFilter(input string) map[string]bool {
+	if strings.TrimSpace(input) == "" {
+		return nil
+	}
+	selected := make(map[string]bool)
+	for _, name := range strings.Split(input, ",") {
+		trimmed := strings.TrimSpace(name)
+		if trimmed == "" {
+			continue
+		}
+		selected[trimmed] = true
+	}
+	return selected
 }
 
 func recordDemo(path string, root runtime.Widget) error {
@@ -631,8 +657,6 @@ func (h *heroDemo) Render(ctx runtime.RenderContext) {
 	}
 
 	featureY := startY + 10
-	// Features appear quickly one by one and stay visible
-	// At 30fps: frame 0-9 = 0, 10-19 = 1, 20-29 = 2, 30-39 = 3, 40+ = all 4
 	visibleFeatures := h.frame / 10
 	if visibleFeatures > len(features) {
 		visibleFeatures = len(features)
@@ -712,6 +736,269 @@ func (h *heroDemo) HandleMessage(msg runtime.Message) runtime.HandleResult {
 	if _, ok := msg.(runtime.TickMsg); ok {
 		h.frame++
 		h.Invalidate()
+		return runtime.Handled()
+	}
+	return runtime.Unhandled()
+}
+
+func minInt(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func maxInt(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+// =============================================================================
+// Fireworks Demo - 3D particle effects with perspective projection
+// =============================================================================
+
+func demoFireworks() runtime.Widget {
+	return &fireworksDemo{
+		blitter:    &graphics.BrailleBlitter{},
+		spawnDelay: 500 * time.Millisecond,
+	}
+}
+
+type fireworksDemo struct {
+	widgets.Component
+	canvas     *graphics.Canvas
+	blitter    graphics.Blitter
+	fireworks  []*firework3D
+	cameraZ    float64
+	frame      int
+	lastSpawn  time.Time
+	spawnDelay time.Duration
+}
+
+type particle3D struct {
+	x, y, z       float64
+	vx, vy, vz    float64
+	r, g, b       uint8
+	life, maxLife float64
+}
+
+func (p *particle3D) update(dt, gravity, airResistance float64) {
+	p.vy += gravity * dt
+	p.vx *= airResistance
+	p.vy *= airResistance
+	p.vz *= airResistance
+	p.x += p.vx * dt
+	p.y += p.vy * dt
+	p.z += p.vz * dt
+	p.life += dt
+}
+
+func (p *particle3D) isAlive() bool { return p.life < p.maxLife }
+
+func (p *particle3D) alpha() float32 {
+	return float32(1.0 - p.life/p.maxLife)
+}
+
+func (p *particle3D) project(cameraZ, cameraDist, centerX, centerY float64) (int, int, bool) {
+	zRel := p.z - cameraZ
+	zOffset := zRel + cameraDist
+	if zOffset <= 0 {
+		return 0, 0, false
+	}
+	scale := cameraDist / zOffset
+	return int(centerX + (p.x-centerX)*scale), int(centerY + (p.y-centerY)*scale), true
+}
+
+type firework3D struct {
+	x, y, z       float64
+	vx, vy, vz    float64
+	r, g, b       uint8
+	exploded      bool
+	particles     []particle3D
+	trail         [][2]float64
+	apexTime      float64
+}
+
+func newFirework3D(canvasW, canvasH int, cameraZ float64) *firework3D {
+	colors := [][3]uint8{
+		{255, 50, 50}, {255, 140, 0}, {255, 215, 0}, {50, 255, 50},
+		{100, 150, 255}, {200, 100, 255}, {255, 192, 203}, {0, 255, 255}, {255, 255, 255},
+	}
+	c := colors[rand.Intn(len(colors))]
+	x := float64(canvasW)*0.2 + rand.Float64()*float64(canvasW)*0.6
+	y := float64(canvasH) - 1
+	z := cameraZ + 50 + rand.Float64()*250
+	targetY := float64(canvasH)*0.1 + rand.Float64()*float64(canvasH)*0.23
+	gravity := 100.0
+	dist := targetY - y
+	requiredV := math.Sqrt(-2 * gravity * dist)
+	return &firework3D{
+		x: x, y: y, z: z,
+		vx: rand.Float64()*40 - 20, vy: -requiredV, vz: 0,
+		r: c[0], g: c[1], b: c[2],
+	}
+}
+
+func (f *firework3D) update(dt float64) {
+	if !f.exploded {
+		gravity := 100.0
+		f.vy += gravity * dt
+		f.x += f.vx * dt
+		f.y += f.vy * dt
+		f.trail = append(f.trail, [2]float64{f.x, f.y})
+		if len(f.trail) > 15 {
+			f.trail = f.trail[1:]
+		}
+		if f.vy > 0 {
+			f.apexTime += dt
+			if f.apexTime >= 0.3 {
+				f.explode()
+			}
+		}
+	} else {
+		alive := f.particles[:0]
+		for i := range f.particles {
+			f.particles[i].update(dt, 50.0, 0.97)
+			if f.particles[i].isAlive() {
+				alive = append(alive, f.particles[i])
+			}
+		}
+		f.particles = alive
+	}
+}
+
+func (f *firework3D) explode() {
+	f.exploded = true
+	numParticles := 300 + rand.Intn(200)
+	speed := 100.0 + rand.Float64()*80
+	for i := 0; i < numParticles; i++ {
+		theta := rand.Float64() * 2 * math.Pi
+		phi := rand.Float64() * math.Pi
+		vx := speed * math.Sin(phi) * math.Cos(theta)
+		vy := speed * math.Cos(phi)
+		vz := speed * math.Sin(phi) * math.Sin(theta)
+		life := 1.5 + rand.Float64()*1.0
+		f.particles = append(f.particles, particle3D{
+			x: f.x, y: f.y, z: f.z,
+			vx: vx, vy: vy, vz: vz,
+			r: f.r, g: f.g, b: f.b,
+			maxLife: life,
+		})
+	}
+}
+
+func (f *firework3D) isFinished() bool {
+	return f.exploded && len(f.particles) == 0
+}
+
+func (d *fireworksDemo) Measure(constraints runtime.Constraints) runtime.Size {
+	return constraints.MaxSize()
+}
+
+func (d *fireworksDemo) Layout(bounds runtime.Rect) {
+	d.Component.Layout(bounds)
+	d.ensureCanvas(bounds)
+}
+
+func (d *fireworksDemo) ensureCanvas(bounds runtime.Rect) {
+	if bounds.Width <= 0 || bounds.Height <= 0 {
+		return
+	}
+	if d.blitter == nil {
+		d.blitter = &graphics.BrailleBlitter{}
+	}
+	if d.canvas == nil {
+		d.canvas = graphics.NewCanvasWithBlitter(bounds.Width, bounds.Height, d.blitter)
+		return
+	}
+	cellW, cellH := d.canvas.CellSize()
+	if cellW != bounds.Width || cellH != bounds.Height {
+		d.canvas = graphics.NewCanvasWithBlitter(bounds.Width, bounds.Height, d.blitter)
+	}
+}
+
+func (d *fireworksDemo) Render(ctx runtime.RenderContext) {
+	bounds := d.Bounds()
+	ctx.Clear(backend.DefaultStyle())
+	d.ensureCanvas(bounds)
+	canvas := d.canvas
+	if canvas == nil {
+		return
+	}
+	canvas.Clear()
+
+	w, h := canvas.Size()
+	if w == 0 || h == 0 {
+		return
+	}
+
+	cameraDist := 200.0
+	centerX := float64(w) / 2
+	centerY := float64(h) / 2
+
+	for _, fw := range d.fireworks {
+		color := backend.ColorRGB(fw.r, fw.g, fw.b)
+		if !fw.exploded {
+			for _, pt := range fw.trail {
+				zRel := fw.z - d.cameraZ
+				zOffset := zRel + cameraDist
+				if zOffset > 0 {
+					scale := cameraDist / zOffset
+					sx := int(centerX + (pt[0]-centerX)*scale)
+					sy := int(centerY + (pt[1]-centerY)*scale)
+					if sx >= 0 && sx < w && sy >= 0 && sy < h {
+						canvas.Blend(sx, sy, color, 0.8)
+					}
+				}
+			}
+		} else {
+			for i := range fw.particles {
+				p := &fw.particles[i]
+				sx, sy, visible := p.project(d.cameraZ, cameraDist, centerX, centerY)
+				if visible && sx >= 0 && sx < w && sy >= 0 && sy < h {
+					pcolor := backend.ColorRGB(p.r, p.g, p.b)
+					canvas.Blend(sx, sy, pcolor, p.alpha())
+				}
+			}
+		}
+	}
+
+	canvas.SetStrokeColor(backend.ColorRGB(180, 180, 180))
+	canvas.DrawText(2, 2, "FIREWORKS", graphics.DefaultFont)
+
+	canvas.Render(ctx.Buffer, bounds.X, bounds.Y)
+}
+
+func (d *fireworksDemo) HandleMessage(msg runtime.Message) runtime.HandleResult {
+	if tick, ok := msg.(runtime.TickMsg); ok {
+		d.frame++
+		dt := 1.0 / 30.0
+
+		bounds := d.Bounds()
+		px, py := d.blitter.PixelsPerCell()
+		canvasW := bounds.Width * px
+		canvasH := bounds.Height * py
+
+		d.cameraZ += 15.0 * dt
+
+		if tick.Time.Sub(d.lastSpawn) > d.spawnDelay && canvasW > 0 && canvasH > 0 {
+			d.fireworks = append(d.fireworks, newFirework3D(canvasW, canvasH, d.cameraZ))
+			d.lastSpawn = tick.Time
+			d.spawnDelay = time.Duration(300+rand.Intn(400)) * time.Millisecond
+		}
+
+		alive := d.fireworks[:0]
+		for _, fw := range d.fireworks {
+			fw.update(dt)
+			if !fw.isFinished() && fw.z-d.cameraZ > -50 {
+				alive = append(alive, fw)
+			}
+		}
+		d.fireworks = alive
+
+		d.Invalidate()
 		return runtime.Handled()
 	}
 	return runtime.Unhandled()

@@ -62,8 +62,77 @@ Dialog Input {
 }
 
 func TestParseUnknownProperty(t *testing.T) {
-	data := `Button { nope: 1; }`
-	if _, err := Parse(data); err == nil {
+	data := `Button { nope: 1; padding: 2; }`
+	sheet, err := Parse(data)
+	if err == nil {
 		t.Fatalf("expected error for unknown property")
+	}
+	btn := &testNode{typ: "Button"}
+	resolved := sheet.Resolve(btn, nil)
+	if resolved.Padding == nil || resolved.Padding.Top != 2 {
+		t.Fatalf("padding = %#v, want 2", resolved.Padding)
+	}
+}
+
+func TestParseImportantOverrides(t *testing.T) {
+	data := `
+Button.primary {
+  foreground: #00ff00;
+}
+
+Button {
+  foreground: #ff0000 !important;
+}
+`
+	sheet, err := Parse(data)
+	if err != nil {
+		t.Fatalf("parse error: %v", err)
+	}
+	node := &testNode{typ: "Button", classes: []string{"primary"}}
+	resolved := sheet.Resolve(node, nil)
+	if resolved.Foreground != RGB(255, 0, 0) {
+		t.Fatalf("foreground = %#v, want #ff0000", resolved.Foreground)
+	}
+}
+
+func TestParseBorderSubproperties(t *testing.T) {
+	data := `
+Button {
+  border-style: single;
+}
+
+Button.primary {
+  border-color: #ffb74d;
+}
+`
+	sheet, err := Parse(data)
+	if err != nil {
+		t.Fatalf("parse error: %v", err)
+	}
+	node := &testNode{typ: "Button", classes: []string{"primary"}}
+	resolved := sheet.Resolve(node, nil)
+	if resolved.Border == nil || resolved.Border.Style != BorderSingle {
+		t.Fatalf("border style = %#v, want single", resolved.Border)
+	}
+	if resolved.Border.Color != RGB(255, 183, 77) {
+		t.Fatalf("border color = %#v, want #ffb74d", resolved.Border.Color)
+	}
+}
+
+func TestParseAttributeSelector(t *testing.T) {
+	data := `Input[type="password"] { bold: true; }`
+	sheet, err := Parse(data)
+	if err != nil {
+		t.Fatalf("parse error: %v", err)
+	}
+	node := &attrNode{
+		testNode: testNode{typ: "Input"},
+		attrs: map[string]string{
+			"type": "password",
+		},
+	}
+	resolved := sheet.Resolve(node, nil)
+	if resolved.Bold == nil || !*resolved.Bold {
+		t.Fatalf("bold = %v, want true", resolved.Bold)
 	}
 }

@@ -1,6 +1,9 @@
 package graphics
 
-import "github.com/odvcencio/fluffy-ui/backend"
+import (
+	"github.com/odvcencio/fluffy-ui/backend"
+	"github.com/odvcencio/fluffy-ui/terminal"
+)
 
 // Blitter converts pixel data to terminal cells.
 type Blitter interface {
@@ -20,6 +23,12 @@ type Blitter interface {
 	Name() string
 }
 
+// ImageBlitter can emit a full image for a canvas.
+type ImageBlitter interface {
+	Blitter
+	BuildImage(pixels *PixelBuffer, cellWidth, cellHeight int) backend.Image
+}
+
 // BlitterType identifies a blitter configuration.
 type BlitterType int
 
@@ -35,7 +44,7 @@ const (
 )
 
 // Capabilities describes terminal graphics support.
-type Capabilities struct{}
+type Capabilities = terminal.Capabilities
 
 // NewBlitter creates a blitter by type.
 func NewBlitter(typ BlitterType) Blitter {
@@ -48,6 +57,12 @@ func NewBlitter(typ BlitterType) Blitter {
 		return &SextantBlitter{}
 	case BlitterBraille:
 		return &BrailleBlitter{}
+	case BlitterKitty:
+		return &KittyBlitter{}
+	case BlitterSixel:
+		return &SixelBlitter{}
+	case BlitterASCII:
+		return &ASCIIBlitter{}
 	case BlitterAuto:
 		return BestBlitter(nil)
 	default:
@@ -56,8 +71,21 @@ func NewBlitter(typ BlitterType) Blitter {
 }
 
 // BestBlitter returns the best blitter for the current terminal.
-func BestBlitter(_ *Capabilities) Blitter {
-	return &SextantBlitter{}
+func BestBlitter(caps *Capabilities) Blitter {
+	if caps == nil {
+		detected := terminal.DetectCapabilities()
+		caps = &detected
+	}
+	if caps.Kitty {
+		return &KittyBlitter{}
+	}
+	if caps.Sixel {
+		return &SixelBlitter{}
+	}
+	if caps.Unicode {
+		return &SextantBlitter{}
+	}
+	return &ASCIIBlitter{}
 }
 
 func dominantColor(colors []Color) Color {

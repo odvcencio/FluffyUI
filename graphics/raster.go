@@ -187,6 +187,61 @@ func fillEllipse(cx, cy, rx, ry int, plot func(x, y int)) {
 	}
 }
 
+func drawArc(cx, cy, radius int, startAngle, endAngle float64, plot func(x, y int)) {
+	if radius <= 0 {
+		return
+	}
+	points := arcSamplePoints(float64(cx), float64(cy), float64(radius), startAngle, endAngle)
+	if len(points) == 0 {
+		return
+	}
+	prev := points[0]
+	for i := 1; i < len(points); i++ {
+		curr := points[i]
+		bresenhamLine(prev.X, prev.Y, curr.X, curr.Y, plot)
+		prev = curr
+	}
+}
+
+func arcSamplePoints(cx, cy, radius float64, startAngle, endAngle float64) []Point {
+	delta := endAngle - startAngle
+	if delta == 0 {
+		return nil
+	}
+	steps := int(math.Ceil(math.Abs(delta) * radius))
+	if steps < 1 {
+		steps = 1
+	}
+	points := make([]Point, 0, steps+1)
+	for i := 0; i <= steps; i++ {
+		t := float64(i) / float64(steps)
+		angle := startAngle + delta*t
+		x := round(cx + radius*math.Cos(angle))
+		y := round(cy + radius*math.Sin(angle))
+		points = appendPoint(points, Point{X: x, Y: y})
+	}
+	return points
+}
+
+func circleOffset(radius int, dy float64) int {
+	term := float64(radius*radius) - dy*dy
+	if term < 0 {
+		term = 0
+	}
+	return int(math.Round(math.Sqrt(term)))
+}
+
+func clampRadius(radius, w, h int) int {
+	if radius <= 0 {
+		return 0
+	}
+	maxRadius := min(w, h) / 2
+	if radius > maxRadius {
+		return maxRadius
+	}
+	return radius
+}
+
 func plotEllipsePoints(cx, cy, x, y int, plot func(x, y int)) {
 	plot(cx+x, cy+y)
 	plot(cx-x, cy+y)
@@ -280,11 +335,11 @@ func drawSpline(points []Point, plot func(x, y int)) {
 func catmullRom(p0, p1, p2, p3 Point, t float64) (float64, float64) {
 	t2 := t * t
 	t3 := t2 * t
-	x := 0.5 * ((2*float64(p1.X)) +
+	x := 0.5 * ((2 * float64(p1.X)) +
 		(-float64(p0.X)+float64(p2.X))*t +
 		(2*float64(p0.X)-5*float64(p1.X)+4*float64(p2.X)-float64(p3.X))*t2 +
 		(-float64(p0.X)+3*float64(p1.X)-3*float64(p2.X)+float64(p3.X))*t3)
-	y := 0.5 * ((2*float64(p1.Y)) +
+	y := 0.5 * ((2 * float64(p1.Y)) +
 		(-float64(p0.Y)+float64(p2.Y))*t +
 		(2*float64(p0.Y)-5*float64(p1.Y)+4*float64(p2.Y)-float64(p3.Y))*t2 +
 		(-float64(p0.Y)+3*float64(p1.Y)-3*float64(p2.Y)+float64(p3.Y))*t3)

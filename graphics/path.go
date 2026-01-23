@@ -13,7 +13,7 @@ const (
 )
 
 type pathOp struct {
-	kind     pathOpKind
+	kind       pathOpKind
 	p1, p2, p3 Point
 }
 
