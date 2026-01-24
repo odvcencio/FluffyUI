@@ -68,6 +68,7 @@ func main() {
 		{"easing", demoEasing, 120, 40, 0},
 		{"hero", demoHero, 80, 24, 0},
 		{"fireworks", demoFireworks, 100, 36, 0},
+		{"video", demoVideo, 80, 24, 90}, // 3 seconds at 30fps
 	}
 
 	for _, demo := range demos {
@@ -2311,6 +2312,139 @@ func (d *fireworksDemo) HandleMessage(msg runtime.Message) runtime.HandleResult 
 		d.fireworks = alive
 
 		d.Invalidate()
+		return runtime.Handled()
+	}
+	return runtime.Unhandled()
+}
+
+// =============================================================================
+// Video Demo - Shows VideoPlayer widget playing a sample video
+// =============================================================================
+
+func demoVideo() runtime.Widget {
+	// Try to find sample video in testdata
+	videoPath := "testdata/sample.mp4"
+	player, err := widgets.NewVideoPlayer(videoPath)
+	if err != nil {
+		// Fallback to a placeholder if video not found
+		return &videoFallbackDemo{err: err}
+	}
+	// Force SextantBlitter for better video rendering in recordings
+	player.WithBlitter(&graphics.SextantBlitter{})
+	player.Play()
+	return &videoDemo{player: player}
+}
+
+type videoDemo struct {
+	widgets.Component
+	player *widgets.VideoPlayer
+	frame  int
+}
+
+func (v *videoDemo) Measure(constraints runtime.Constraints) runtime.Size {
+	return constraints.MaxSize()
+}
+
+func (v *videoDemo) Layout(bounds runtime.Rect) {
+	v.Component.Layout(bounds)
+	if v.player != nil {
+		// Leave space for title and status
+		contentBounds := runtime.Rect{
+			X:      bounds.X + 1,
+			Y:      bounds.Y + 3,
+			Width:  bounds.Width - 2,
+			Height: bounds.Height - 5,
+		}
+		v.player.Layout(contentBounds)
+	}
+}
+
+func (v *videoDemo) Render(ctx runtime.RenderContext) {
+	bounds := v.Bounds()
+	ctx.Clear(backend.DefaultStyle())
+
+	// Title
+	titleStyle := backend.DefaultStyle().Bold(true).Foreground(backend.ColorBrightCyan)
+	ctx.Buffer.SetString(bounds.X+2, bounds.Y+1, "Video Player Demo", titleStyle)
+
+	// Player status
+	statusStr := "Playing"
+	statusColor := backend.ColorBrightGreen
+	if v.player != nil && !v.player.IsPlaying() {
+		statusStr = "Paused"
+		statusColor = backend.ColorYellow
+	}
+	ctx.Buffer.SetString(bounds.X+bounds.Width-12, bounds.Y+1, statusStr, backend.DefaultStyle().Foreground(statusColor))
+
+	// Render video player
+	if v.player != nil {
+		v.player.Render(ctx)
+	}
+
+	// Controls hint
+	y := bounds.Y + bounds.Height - 2
+	ctx.Buffer.SetString(bounds.X+2, y, "Space", backend.DefaultStyle().Foreground(backend.ColorBrightYellow))
+	ctx.Buffer.SetString(bounds.X+8, y, "Play/Pause", backend.DefaultStyle().Dim(true))
+
+	// Frame counter
+	frameStr := fmt.Sprintf("Frame: %d", v.frame)
+	ctx.Buffer.SetString(bounds.X+bounds.Width-len(frameStr)-2, y, frameStr, backend.DefaultStyle().Dim(true))
+
+	ctx.Buffer.DrawBox(bounds, backend.DefaultStyle())
+}
+
+func (v *videoDemo) HandleMessage(msg runtime.Message) runtime.HandleResult {
+	if _, ok := msg.(runtime.TickMsg); ok {
+		v.frame++
+		if v.player != nil {
+			v.player.HandleMessage(msg)
+		}
+		v.Invalidate()
+		return runtime.Handled()
+	}
+	return runtime.Unhandled()
+}
+
+// videoFallbackDemo shows an error message if video can't be loaded
+type videoFallbackDemo struct {
+	widgets.Component
+	err   error
+	frame int
+}
+
+func (v *videoFallbackDemo) Measure(constraints runtime.Constraints) runtime.Size {
+	return constraints.MaxSize()
+}
+
+func (v *videoFallbackDemo) Layout(bounds runtime.Rect) {
+	v.Component.Layout(bounds)
+}
+
+func (v *videoFallbackDemo) Render(ctx runtime.RenderContext) {
+	bounds := v.Bounds()
+	ctx.Clear(backend.DefaultStyle())
+
+	// Title
+	titleStyle := backend.DefaultStyle().Bold(true).Foreground(backend.ColorBrightCyan)
+	ctx.Buffer.SetString(bounds.X+2, bounds.Y+1, "Video Player Demo", titleStyle)
+
+	// Error message
+	centerY := bounds.Y + bounds.Height/2
+	errStyle := backend.DefaultStyle().Foreground(backend.ColorBrightRed)
+	ctx.Buffer.SetString(bounds.X+4, centerY-1, "Video file not found", errStyle)
+
+	// Show spinning indicator to prove animation works
+	spinChars := []string{"◐", "◓", "◑", "◒"}
+	spinner := spinChars[v.frame%len(spinChars)]
+	ctx.Buffer.SetString(bounds.X+4, centerY+1, spinner+" Create testdata/sample.mp4 to see video", backend.DefaultStyle().Dim(true))
+
+	ctx.Buffer.DrawBox(bounds, backend.DefaultStyle())
+}
+
+func (v *videoFallbackDemo) HandleMessage(msg runtime.Message) runtime.HandleResult {
+	if _, ok := msg.(runtime.TickMsg); ok {
+		v.frame++
+		v.Invalidate()
 		return runtime.Handled()
 	}
 	return runtime.Unhandled()

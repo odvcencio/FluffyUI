@@ -10,6 +10,7 @@ type WidgetState struct {
 	Active     bool
 	FirstChild bool
 	LastChild  bool
+	Root       bool
 }
 
 // PseudoClass identifies a widget pseudo-class.
@@ -22,6 +23,15 @@ const (
 	PseudoActive   PseudoClass = "active"
 	PseudoFirst    PseudoClass = "first-child"
 	PseudoLast     PseudoClass = "last-child"
+	PseudoRoot     PseudoClass = "root"
+)
+
+// Combinator identifies the relationship between selector parts.
+type Combinator int
+
+const (
+	CombinatorDescendant Combinator = iota
+	CombinatorChild
 )
 
 // Node exposes style metadata for selector matching.
@@ -52,6 +62,7 @@ type Selector struct {
 	Pseudo     []PseudoClass
 	Attributes []AttributeSelector
 	Parent     *Selector
+	Combinator Combinator
 }
 
 // SelectorBuilder builds selectors fluently.
@@ -132,6 +143,7 @@ func (b *SelectorBuilder) Inside(parentType string) *SelectorBuilder {
 	parent := &Selector{Type: strings.TrimSpace(parentType)}
 	if b.sel.Parent == nil {
 		b.sel.Parent = parent
+		b.sel.Combinator = CombinatorDescendant
 		return b
 	}
 	cursor := b.sel.Parent
@@ -139,6 +151,27 @@ func (b *SelectorBuilder) Inside(parentType string) *SelectorBuilder {
 		cursor = cursor.Parent
 	}
 	cursor.Parent = parent
+	cursor.Combinator = CombinatorDescendant
+	return b
+}
+
+// ChildOf adds a direct-child selector.
+func (b *SelectorBuilder) ChildOf(parentType string) *SelectorBuilder {
+	if b == nil {
+		return b
+	}
+	parent := &Selector{Type: strings.TrimSpace(parentType)}
+	if b.sel.Parent == nil {
+		b.sel.Parent = parent
+		b.sel.Combinator = CombinatorChild
+		return b
+	}
+	cursor := b.sel.Parent
+	for cursor.Parent != nil {
+		cursor = cursor.Parent
+	}
+	cursor.Parent = parent
+	cursor.Combinator = CombinatorChild
 	return b
 }
 
@@ -204,19 +237,34 @@ func (s Selector) Matches(node Node, ancestors []Node) bool {
 		return true
 	}
 	idx := len(ancestors) - 1
-	for parent := s.Parent; parent != nil; parent = parent.Parent {
-		matched := false
-		for idx >= 0 {
-			if parent.matchesSelf(ancestors[idx]) {
-				matched = true
-				idx--
-				break
-			}
-			idx--
-		}
-		if !matched {
+	current := &s
+	parent := current.Parent
+	for parent != nil {
+		if idx < 0 {
 			return false
 		}
+		switch current.Combinator {
+		case CombinatorChild:
+			if !parent.matchesSelf(ancestors[idx]) {
+				return false
+			}
+			idx--
+		default:
+			matched := false
+			for idx >= 0 {
+				if parent.matchesSelf(ancestors[idx]) {
+					matched = true
+					idx--
+					break
+				}
+				idx--
+			}
+			if !matched {
+				return false
+			}
+		}
+		current = parent
+		parent = current.Parent
 	}
 	return true
 }
@@ -307,6 +355,8 @@ func stateHasPseudo(state WidgetState, pseudo PseudoClass) bool {
 		return state.FirstChild
 	case PseudoLast:
 		return state.LastChild
+	case PseudoRoot:
+		return state.Root
 	default:
 		return false
 	}

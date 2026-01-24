@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"os"
 	"time"
 
@@ -38,6 +39,7 @@ type DashboardView struct {
 	progress *widgets.Progress
 	alert    *widgets.Alert
 	spark    *widgets.Sparkline
+	latency  *widgets.BarChart
 	table    *widgets.Table
 
 	metricsGrid *widgets.Grid
@@ -45,7 +47,8 @@ type DashboardView struct {
 	leftPanel   *widgets.Panel
 	rightPanel  *widgets.Panel
 
-	sparkData *state.Signal[[]float64]
+	sparkData   *state.Signal[[]float64]
+	latencyData *state.Signal[[]widgets.BarData]
 
 	requests int
 	errors   int
@@ -78,6 +81,14 @@ func NewDashboardView() *DashboardView {
 
 	view.sparkData = state.NewSignal([]float64{12, 18, 14, 22, 16, 24, 19})
 	view.spark = widgets.NewSparkline(view.sparkData)
+	view.latencyData = state.NewSignal([]widgets.BarData{
+		{Label: "Auth", Value: 32},
+		{Label: "Billing", Value: 45},
+		{Label: "Search", Value: 57},
+	})
+	view.latency = widgets.NewBarChart(view.latencyData)
+	view.latency.ShowLabels = true
+	view.latency.ShowValues = true
 
 	view.table = widgets.NewTable(
 		widgets.TableColumn{Title: "Service"},
@@ -90,7 +101,7 @@ func NewDashboardView() *DashboardView {
 		{"Search", "OK", "57ms"},
 	})
 
-	rightColumn := demo.NewVBox(view.alert, view.progress, view.spark)
+	rightColumn := demo.NewVBox(view.alert, view.progress, view.spark, view.latency)
 	rightColumn.Gap = 1
 
 	view.leftPanel = widgets.NewPanel(view.table).WithBorder(backend.DefaultStyle())
@@ -199,6 +210,23 @@ func (d *DashboardView) onTick(now time.Time) {
 		values = append(values[1:], float64(d.requests%100))
 		return values
 	})
+	if d.latencyData != nil {
+		d.latencyData.Update(func(values []widgets.BarData) []widgets.BarData {
+			if len(values) == 0 {
+				return values
+			}
+			updated := make([]widgets.BarData, len(values))
+			for i, entry := range values {
+				delta := float64(rand.Intn(9) - 4)
+				value := entry.Value + delta
+				if value < 5 {
+					value = 5
+				}
+				updated[i] = widgets.BarData{Label: entry.Label, Value: value}
+			}
+			return updated
+		})
+	}
 	d.updateMetrics()
 	d.Invalidate()
 }

@@ -18,6 +18,7 @@ import (
 	"github.com/odvcencio/fluffy-ui/runtime"
 	"github.com/odvcencio/fluffy-ui/scroll"
 	"github.com/odvcencio/fluffy-ui/terminal"
+	"github.com/odvcencio/fluffy-ui/widgets"
 )
 
 func registerTools(s *Server) {
@@ -1671,35 +1672,116 @@ func (s *Server) handleClipboardWritePrimary(ctx context.Context, req mcp.CallTo
 }
 
 func (s *Server) handleSelectAll(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	return s.toolError("select_all", errors.New("selection not supported")), nil
+	widget, err := s.focusedWidget(ctx)
+	if err != nil {
+		return s.toolError("select_all", err), nil
+	}
+	selectable, ok := widget.(widgets.Selectable)
+	if !ok {
+		return s.toolError("select_all", errors.New("focused widget does not support selection")), nil
+	}
+	selectable.SelectAll()
+	return s.toolResult("select_all", true), nil
 }
 
 func (s *Server) handleSelectRange(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	return s.toolError("select_range", errors.New("selection not supported")), nil
+	var args struct {
+		Start int `json:"start"`
+		End   int `json:"end"`
+	}
+	if err := req.BindArguments(&args); err != nil {
+		return nil, newMCPError(mcp.INVALID_PARAMS, err.Error(), nil)
+	}
+	widget, err := s.focusedWidget(ctx)
+	if err != nil {
+		return s.toolError("select_range", err), nil
+	}
+	selectable, ok := widget.(widgets.Selectable)
+	if !ok {
+		return s.toolError("select_range", errors.New("focused widget does not support selection")), nil
+	}
+	selectable.SetSelection(widgets.Selection{Start: args.Start, End: args.End})
+	return s.toolResult("select_range", true), nil
 }
 
 func (s *Server) handleSelectWord(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	return s.toolError("select_word", errors.New("selection not supported")), nil
+	widget, err := s.focusedWidget(ctx)
+	if err != nil {
+		return s.toolError("select_word", err), nil
+	}
+	selectable, ok := widget.(widgets.Selectable)
+	if !ok {
+		return s.toolError("select_word", errors.New("focused widget does not support selection")), nil
+	}
+	selectable.SelectWord()
+	return s.toolResult("select_word", true), nil
 }
 
 func (s *Server) handleSelectLine(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	return s.toolError("select_line", errors.New("selection not supported")), nil
+	widget, err := s.focusedWidget(ctx)
+	if err != nil {
+		return s.toolError("select_line", err), nil
+	}
+	selectable, ok := widget.(widgets.Selectable)
+	if !ok {
+		return s.toolError("select_line", errors.New("focused widget does not support selection")), nil
+	}
+	selectable.SelectLine()
+	return s.toolResult("select_line", true), nil
 }
 
 func (s *Server) handleSelectNone(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	return s.toolError("select_none", errors.New("selection not supported")), nil
+	widget, err := s.focusedWidget(ctx)
+	if err != nil {
+		return s.toolError("select_none", err), nil
+	}
+	selectable, ok := widget.(widgets.Selectable)
+	if !ok {
+		return s.toolError("select_none", errors.New("focused widget does not support selection")), nil
+	}
+	selectable.SelectNone()
+	return s.toolResult("select_none", true), nil
 }
 
 func (s *Server) handleGetSelection(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	return s.toolError("get_selection", errors.New("selection not supported")), nil
+	widget, err := s.focusedWidget(ctx)
+	if err != nil {
+		return s.toolError("get_selection", err), nil
+	}
+	selectable, ok := widget.(widgets.Selectable)
+	if !ok {
+		return s.toolError("get_selection", errors.New("focused widget does not support selection")), nil
+	}
+	text := selectable.GetSelectedText()
+	return s.toolResult("get_selection", map[string]any{"text": text}), nil
 }
 
 func (s *Server) handleGetSelectionBounds(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	return s.toolError("get_selection_bounds", errors.New("selection not supported")), nil
+	widget, err := s.focusedWidget(ctx)
+	if err != nil {
+		return s.toolError("get_selection_bounds", err), nil
+	}
+	selectable, ok := widget.(widgets.Selectable)
+	if !ok {
+		return s.toolError("get_selection_bounds", errors.New("focused widget does not support selection")), nil
+	}
+	sel := selectable.GetSelection()
+	return s.toolResult("get_selection_bounds", map[string]any{
+		"start": sel.Start,
+		"end":   sel.End,
+	}), nil
 }
 
 func (s *Server) handleHasSelection(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	return s.toolError("has_selection", errors.New("selection not supported")), nil
+	widget, err := s.focusedWidget(ctx)
+	if err != nil {
+		return s.toolError("has_selection", err), nil
+	}
+	selectable, ok := widget.(widgets.Selectable)
+	if !ok {
+		return s.toolError("has_selection", errors.New("focused widget does not support selection")), nil
+	}
+	return s.toolResult("has_selection", selectable.HasSelection()), nil
 }
 
 func (s *Server) handleCopy(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {

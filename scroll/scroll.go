@@ -154,6 +154,37 @@ func (v *Viewport) ScrollTo(x, y int) {
 	v.SetOffset(x, y)
 }
 
+// PageBy scrolls by a number of pages.
+func (v *Viewport) PageBy(pages int) {
+	if v == nil {
+		return
+	}
+	pageHeight := v.viewSize.Height
+	if pageHeight < 1 {
+		pageHeight = 1
+	}
+	v.SetOffset(v.offset.X, v.offset.Y+pages*pageHeight)
+}
+
+// ScrollToStart scrolls to the beginning of the content.
+func (v *Viewport) ScrollToStart() {
+	if v == nil {
+		return
+	}
+	v.SetOffset(0, 0)
+}
+
+// ScrollToEnd scrolls to the end of the content.
+func (v *Viewport) ScrollToEnd() {
+	if v == nil {
+		return
+	}
+	maxOffset := v.MaxOffset()
+	v.SetOffset(maxOffset.X, maxOffset.Y)
+}
+
+var _ Controller = (*Viewport)(nil)
+
 // MaxOffset returns the maximum scrollable offset.
 func (v *Viewport) MaxOffset() image.Point {
 	if v == nil {

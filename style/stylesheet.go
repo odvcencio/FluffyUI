@@ -1,6 +1,9 @@
 package style
 
-import "sort"
+import (
+	"sort"
+	"strings"
+)
 
 // Rule binds a selector to a style.
 type Rule struct {
@@ -16,11 +19,41 @@ type Rule struct {
 type Stylesheet struct {
 	rules     []Rule
 	nextOrder int
+	variables map[string]string
 }
 
 // NewStylesheet creates an empty stylesheet.
 func NewStylesheet() *Stylesheet {
 	return &Stylesheet{}
+}
+
+// SetVariable defines a stylesheet variable.
+func (s *Stylesheet) SetVariable(name, value string) *Stylesheet {
+	if s == nil {
+		return s
+	}
+	key := strings.ToLower(strings.TrimSpace(name))
+	if key == "" {
+		return s
+	}
+	if s.variables == nil {
+		s.variables = make(map[string]string)
+	}
+	s.variables[key] = value
+	return s
+}
+
+// GetVariable returns a variable value if set.
+func (s *Stylesheet) GetVariable(name string) (string, bool) {
+	if s == nil || s.variables == nil {
+		return "", false
+	}
+	key := strings.ToLower(strings.TrimSpace(name))
+	if key == "" {
+		return "", false
+	}
+	value, ok := s.variables[key]
+	return value, ok
 }
 
 // Add appends a rule to the stylesheet.
@@ -89,6 +122,14 @@ func Merge(sheets ...*Stylesheet) *Stylesheet {
 			rule.order = merged.nextOrder
 			merged.nextOrder++
 			merged.rules = append(merged.rules, rule)
+		}
+		if len(sheet.variables) > 0 {
+			if merged.variables == nil {
+				merged.variables = make(map[string]string)
+			}
+			for key, value := range sheet.variables {
+				merged.variables[key] = value
+			}
 		}
 	}
 	return merged

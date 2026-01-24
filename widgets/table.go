@@ -110,6 +110,53 @@ func (t *Table) SetSelected(index int) {
 	t.setSelected(index)
 }
 
+// RowCount returns the number of rows.
+func (t *Table) RowCount() int {
+	if t == nil {
+		return 0
+	}
+	return len(t.Rows)
+}
+
+// ColumnCount returns the number of columns.
+func (t *Table) ColumnCount() int {
+	if t == nil {
+		return 0
+	}
+	return len(t.Columns)
+}
+
+// SelectedRow returns the currently selected row data, or nil if no selection.
+func (t *Table) SelectedRow() []string {
+	if t == nil || t.selected < 0 || t.selected >= len(t.Rows) {
+		return nil
+	}
+	return t.Rows[t.selected]
+}
+
+// GetCell returns the cell value at the given row and column.
+func (t *Table) GetCell(row, col int) string {
+	if t == nil || row < 0 || row >= len(t.Rows) {
+		return ""
+	}
+	if col < 0 || col >= len(t.Rows[row]) {
+		return ""
+	}
+	return t.Rows[row][col]
+}
+
+// SetCell updates a cell value at the given row and column.
+func (t *Table) SetCell(row, col int, value string) {
+	if t == nil || row < 0 || row >= len(t.Rows) {
+		return
+	}
+	// Expand row if needed
+	for len(t.Rows[row]) <= col {
+		t.Rows[row] = append(t.Rows[row], "")
+	}
+	t.Rows[row][col] = value
+}
+
 // Measure returns the desired size.
 func (t *Table) Measure(constraints runtime.Constraints) runtime.Size {
 	return t.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {

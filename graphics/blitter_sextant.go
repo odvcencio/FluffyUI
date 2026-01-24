@@ -54,7 +54,7 @@ func (s *SextantBlitter) BlitCell(pixels *PixelBuffer, cx, cy int) (rune, backen
 			pattern |= 1 << i
 			fgColors = append(fgColors, p.Color)
 		} else {
-			bgColors = append(bgColors, backend.ColorDefault)
+			bgColors = append(bgColors, backend.ColorBlack)
 		}
 	}
 	char := sextantTable[pattern]
@@ -64,8 +64,10 @@ func (s *SextantBlitter) BlitCell(pixels *PixelBuffer, cx, cy int) (rune, backen
 	if fg != backend.ColorDefault {
 		style = style.Foreground(fg)
 	}
-	if bg != backend.ColorDefault {
-		style = style.Background(bg)
+	// Always set background to ensure proper rendering in recordings/GIFs
+	if bg == backend.ColorDefault {
+		bg = backend.ColorBlack
 	}
+	style = style.Background(bg)
 	return char, style
 }

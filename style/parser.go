@@ -33,7 +33,7 @@ func Parse(data string) (*Stylesheet, error) {
 			errs = append(errs, err)
 			break
 		}
-		styleBlock, importantBlock, blockErrs := parseStyleBlock(block)
+		styleBlock, importantBlock, blockErrs := parseStyleBlock(block, sheet)
 		if len(blockErrs) > 0 {
 			errs = append(errs, blockErrs...)
 		}
@@ -107,7 +107,7 @@ func (p *fssParser) readUntil(delim byte) (string, error) {
 	return p.src[start : start+idx], nil
 }
 
-func parseStyleBlock(block string) (Style, Style, []error) {
+func parseStyleBlock(block string, sheet *Stylesheet) (Style, Style, []error) {
 	var out Style
 	var important Style
 	var errs []error
@@ -129,6 +129,13 @@ func parseStyleBlock(block string) (Style, Style, []error) {
 			continue
 		}
 		value, isImportant := splitImportant(value)
+		if strings.HasPrefix(name, "--") {
+			if sheet != nil {
+				sheet.SetVariable(strings.TrimPrefix(name, "--"), value)
+			}
+			continue
+		}
+		value = resolveVariableValue(value, sheet)
 		target := &out
 		if isImportant {
 			target = &important
@@ -260,6 +267,32 @@ func parseStyleBlock(block string) (Style, Style, []error) {
 	return out, important, errs
 }
 
+func resolveVariableValue(value string, sheet *Stylesheet) string {
+	trimmed := strings.TrimSpace(value)
+	if !strings.HasPrefix(trimmed, "var(") || !strings.HasSuffix(trimmed, ")") {
+		return value
+	}
+	inner := strings.TrimSpace(trimmed[len("var(") : len(trimmed)-1])
+	if inner == "" {
+		return value
+	}
+	fallback := ""
+	if idx := strings.Index(inner, ","); idx >= 0 {
+		fallback = strings.TrimSpace(inner[idx+1:])
+		inner = strings.TrimSpace(inner[:idx])
+	}
+	name := strings.TrimPrefix(strings.ToLower(inner), "--")
+	if sheet != nil {
+		if resolved, ok := sheet.GetVariable(name); ok {
+			return resolved
+		}
+	}
+	if fallback != "" {
+		return fallback
+	}
+	return value
+}
+
 func splitImportant(value string) (string, bool) {
 	trimmed := strings.TrimSpace(value)
 	lower := strings.ToLower(trimmed)
@@ -287,22 +320,64 @@ func applyBorderColor(target *Style, color Color) {
 }
 
 func parseSelectorChain(text string) (*Selector, error) {
-	parts := strings.Fields(text)
-	if len(parts) == 0 {
+	tokens := tokenizeSelectorChain(text)
+	if len(tokens) == 0 {
 		return nil, fmt.Errorf("style: empty selector")
 	}
 	var current *Selector
-	for _, part := range parts {
-		sel, err := parseSelectorPart(part)
+	pending := CombinatorDescendant
+	expectSelector := true
+	for _, token := range tokens {
+		if token == ">" {
+			if expectSelector {
+				return nil, fmt.Errorf("style: unexpected '>' in selector %q", text)
+			}
+			pending = CombinatorChild
+			expectSelector = true
+			continue
+		}
+		sel, err := parseSelectorPart(token)
 		if err != nil {
 			return nil, err
 		}
 		if current != nil {
 			sel.Parent = current
+			sel.Combinator = pending
 		}
 		current = sel
+		pending = CombinatorDescendant
+		expectSelector = false
+	}
+	if expectSelector {
+		return nil, fmt.Errorf("style: dangling combinator in selector %q", text)
 	}
 	return current, nil
+}
+
+func tokenizeSelectorChain(text string) []string {
+	var tokens []string
+	var buf strings.Builder
+	for i := 0; i < len(text); i++ {
+		switch text[i] {
+		case ' ', '\t', '\n', '\r':
+			if buf.Len() > 0 {
+				tokens = append(tokens, buf.String())
+				buf.Reset()
+			}
+		case '>':
+			if buf.Len() > 0 {
+				tokens = append(tokens, buf.String())
+				buf.Reset()
+			}
+			tokens = append(tokens, ">")
+		default:
+			buf.WriteByte(text[i])
+		}
+	}
+	if buf.Len() > 0 {
+		tokens = append(tokens, buf.String())
+	}
+	return tokens
 }
 
 func parseSelectorPart(part string) (*Selector, error) {
@@ -440,6 +515,8 @@ func parsePseudo(name string) (PseudoClass, bool) {
 		return PseudoFirst, true
 	case string(PseudoLast):
 		return PseudoLast, true
+	case string(PseudoRoot):
+		return PseudoRoot, true
 	default:
 		return "", false
 	}

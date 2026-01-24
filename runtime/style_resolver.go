@@ -193,6 +193,8 @@ func (r *StyleResolver) stateFor(widget Widget, focused bool) style.WidgetState 
 		state.Focused = false
 	}
 	state.FirstChild, state.LastChild = r.childPosition(widget)
+	_, hasParent := r.parents[widget]
+	state.Root = !hasParent
 	return state
 }
 

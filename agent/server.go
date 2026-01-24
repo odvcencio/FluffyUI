@@ -49,20 +49,27 @@ func NewServer(opts ServerOptions) (*Server, error) {
 	if strings.TrimSpace(opts.Addr) == "" {
 		return nil, errors.New("agent server address is required")
 	}
+	normalized, agent, err := normalizeServerOptions(opts)
+	if err != nil {
+		return nil, err
+	}
+	return &Server{
+		opts:  normalized,
+		agent: agent,
+	}, nil
+}
+
+func normalizeServerOptions(opts ServerOptions) (ServerOptions, *Agent, error) {
 	if opts.Agent == nil {
 		if opts.App == nil {
-			return nil, errors.New("agent server requires App or Agent")
+			return opts, nil, errors.New("agent server requires App or Agent")
 		}
 		opts.Agent = New(Config{App: opts.App})
 	}
 	if opts.SnapshotTimeout <= 0 {
 		opts.SnapshotTimeout = 2 * time.Second
 	}
-
-	return &Server{
-		opts:  opts,
-		agent: opts.Agent,
-	}, nil
+	return opts, opts.Agent, nil
 }
 
 // Serve starts listening and blocks until the context is done or the listener closes.

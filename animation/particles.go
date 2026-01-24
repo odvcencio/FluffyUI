@@ -72,6 +72,7 @@ type ParticleSystem struct {
 	particles    []Particle
 	emitters     []*Emitter
 	maxParticles int
+	forceFields  []ForceField
 }
 
 // NewParticleSystem creates a particle system.
@@ -91,6 +92,14 @@ func (ps *ParticleSystem) AddEmitter(e *Emitter) {
 		return
 	}
 	ps.emitters = append(ps.emitters, e)
+}
+
+// AddForceField registers a force field.
+func (ps *ParticleSystem) AddForceField(f ForceField) {
+	if ps == nil || f == nil {
+		return
+	}
+	ps.forceFields = append(ps.forceFields, f)
 }
 
 // Emit spawns a single particle.
@@ -152,6 +161,11 @@ func (ps *ParticleSystem) Update(dt float64) {
 	alive := ps.particles[:0]
 	for i := range ps.particles {
 		p := ps.particles[i]
+		for _, field := range ps.forceFields {
+			force := field.Apply(p.Position)
+			p.Velocity.X += force.X * dt
+			p.Velocity.Y += force.Y * dt
+		}
 		p.Velocity.X += p.Gravity.X * dt
 		p.Velocity.Y += p.Gravity.Y * dt
 
@@ -194,6 +208,76 @@ func (ps *ParticleSystem) Clear() {
 		return
 	}
 	ps.particles = ps.particles[:0]
+}
+
+// ParticleCount returns the current number of live particles.
+func (ps *ParticleSystem) ParticleCount() int {
+	if ps == nil {
+		return 0
+	}
+	return len(ps.particles)
+}
+
+// MaxParticles returns the particle limit.
+func (ps *ParticleSystem) MaxParticles() int {
+	if ps == nil {
+		return 0
+	}
+	return ps.maxParticles
+}
+
+// SetMaxParticles adjusts the particle limit. Existing particles are preserved
+// up to the new limit.
+func (ps *ParticleSystem) SetMaxParticles(max int) {
+	if ps == nil || max <= 0 {
+		return
+	}
+	ps.maxParticles = max
+	if len(ps.particles) > max {
+		ps.particles = ps.particles[:max]
+	}
+}
+
+// RemoveEmitter removes an emitter from the system.
+func (ps *ParticleSystem) RemoveEmitter(e *Emitter) {
+	if ps == nil || e == nil {
+		return
+	}
+	for i, em := range ps.emitters {
+		if em == e {
+			ps.emitters = append(ps.emitters[:i], ps.emitters[i+1:]...)
+			return
+		}
+	}
+}
+
+// ClearEmitters removes all emitters.
+func (ps *ParticleSystem) ClearEmitters() {
+	if ps == nil {
+		return
+	}
+	ps.emitters = ps.emitters[:0]
+}
+
+// RemoveForceField removes a force field from the system.
+func (ps *ParticleSystem) RemoveForceField(f ForceField) {
+	if ps == nil || f == nil {
+		return
+	}
+	for i, field := range ps.forceFields {
+		if field == f {
+			ps.forceFields = append(ps.forceFields[:i], ps.forceFields[i+1:]...)
+			return
+		}
+	}
+}
+
+// ClearForceFields removes all force fields.
+func (ps *ParticleSystem) ClearForceFields() {
+	if ps == nil {
+		return
+	}
+	ps.forceFields = ps.forceFields[:0]
 }
 
 func (ps *ParticleSystem) emitFromEmitter(e *Emitter) {

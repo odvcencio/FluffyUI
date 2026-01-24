@@ -184,3 +184,78 @@ func (tm *ToastManager) snapshotLocked() []*Toast {
 	copy(out, tm.toasts)
 	return out
 }
+
+// Count returns the current number of active toasts.
+func (tm *ToastManager) Count() int {
+	if tm == nil {
+		return 0
+	}
+	tm.mu.RLock()
+	defer tm.mu.RUnlock()
+	return len(tm.toasts)
+}
+
+// List returns a snapshot of all active toasts.
+func (tm *ToastManager) List() []*Toast {
+	if tm == nil {
+		return nil
+	}
+	tm.mu.RLock()
+	defer tm.mu.RUnlock()
+	return tm.snapshotLocked()
+}
+
+// Get returns a toast by ID, or nil if not found.
+func (tm *ToastManager) Get(id string) *Toast {
+	if tm == nil || strings.TrimSpace(id) == "" {
+		return nil
+	}
+	tm.mu.RLock()
+	defer tm.mu.RUnlock()
+	for _, t := range tm.toasts {
+		if t.ID == id {
+			return t
+		}
+	}
+	return nil
+}
+
+// SetMaxCount configures the maximum number of active toasts.
+func (tm *ToastManager) SetMaxCount(max int) {
+	if tm == nil || max <= 0 {
+		return
+	}
+	tm.mu.Lock()
+	tm.maxCount = max
+	// Trim excess toasts
+	if overflow := len(tm.toasts) - max; overflow > 0 {
+		for i := 0; i < overflow; i++ {
+			removed := tm.toasts[0]
+			tm.toasts = tm.toasts[1:]
+			tm.stopTimerLocked(removed.ID)
+		}
+	}
+	snapshot := tm.snapshotLocked()
+	cb := tm.onChange
+	tm.mu.Unlock()
+	if cb != nil {
+		cb(snapshot)
+	}
+}
+
+// Clear removes all active toasts.
+func (tm *ToastManager) Clear() {
+	if tm == nil {
+		return
+	}
+	tm.mu.Lock()
+	for _, t := range tm.toasts {
+		tm.stopTimerLocked(t.ID)
+	}
+	tm.toasts = tm.toasts[:0]
+	cb := tm.onChange
+	tm.mu.Unlock()
+	if cb != nil {
+		cb(nil)
+	}
+}

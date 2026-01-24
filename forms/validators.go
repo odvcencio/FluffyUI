@@ -137,6 +137,83 @@ func Email(msg string) Validator {
 	})
 }
 
+// URL validates a basic URL format.
+func URL(msg string) Validator {
+	re := regexp.MustCompile(`^https?://[^\s]+$`)
+	message := fallbackMessage(msg, "Invalid URL.")
+	return validatorFunc(func(value any) *ValidationError {
+		text, ok := value.(string)
+		if !ok || strings.TrimSpace(text) == "" {
+			return nil
+		}
+		if !re.MatchString(text) {
+			return &ValidationError{Message: message}
+		}
+		return nil
+	})
+}
+
+// Numeric ensures the value contains only digits.
+func Numeric(msg string) Validator {
+	re := regexp.MustCompile(`^\d+$`)
+	message := fallbackMessage(msg, "Value must be numeric.")
+	return validatorFunc(func(value any) *ValidationError {
+		text, ok := value.(string)
+		if !ok || text == "" {
+			return nil
+		}
+		if !re.MatchString(text) {
+			return &ValidationError{Message: message}
+		}
+		return nil
+	})
+}
+
+// AlphaNumeric ensures the value contains only letters and digits.
+func AlphaNumeric(msg string) Validator {
+	re := regexp.MustCompile(`^[a-zA-Z0-9]+$`)
+	message := fallbackMessage(msg, "Value must be alphanumeric.")
+	return validatorFunc(func(value any) *ValidationError {
+		text, ok := value.(string)
+		if !ok || text == "" {
+			return nil
+		}
+		if !re.MatchString(text) {
+			return &ValidationError{Message: message}
+		}
+		return nil
+	})
+}
+
+// Range enforces a numeric value within min and max (inclusive).
+func Range(min, max float64, msg string) Validator {
+	message := fallbackMessage(msg, fmt.Sprintf("Value must be between %.2f and %.2f.", min, max))
+	return validatorFunc(func(value any) *ValidationError {
+		num, ok := toFloat(value)
+		if !ok {
+			return nil
+		}
+		if num < min || num > max {
+			return &ValidationError{Message: message}
+		}
+		return nil
+	})
+}
+
+// Length enforces an exact length.
+func Length(n int, msg string) Validator {
+	message := fallbackMessage(msg, fmt.Sprintf("Length must be exactly %d.", n))
+	return validatorFunc(func(value any) *ValidationError {
+		if n < 0 {
+			return nil
+		}
+		if length, ok := lengthOf(value); ok && length != n {
+			return &ValidationError{Message: message}
+		}
+		return nil
+	})
+}
+
 // Custom wraps a validator function.
 func Custom(fn func(any) *ValidationError) Validator {
 	if fn == nil {

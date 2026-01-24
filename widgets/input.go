@@ -17,6 +17,7 @@ type Input struct {
 
 	text        strings.Builder
 	cursorPos   int
+	selection   Selection
 	label       string
 	style       backend.Style
 	focusStyle  backend.Style
@@ -241,8 +242,23 @@ func (i *Input) Render(ctx runtime.RenderContext) {
 		visible = text[visibleStart:visibleEnd]
 	}
 
-	// Draw text
-	ctx.Buffer.SetString(content.X, content.Y, visible, style)
+	// Draw text with selection highlighting
+	selectionStyle := style.Reverse(true)
+	sel := i.selection.Normalize()
+	hasSelection := !i.selection.IsEmpty()
+
+	for idx, ch := range visible {
+		textIdx := visibleStart + idx
+		screenX := content.X + idx
+		charStyle := style
+
+		// Highlight if within selection
+		if hasSelection && textIdx >= sel.Start && textIdx < sel.End {
+			charStyle = selectionStyle
+		}
+
+		ctx.Buffer.Set(screenX, content.Y, ch, charStyle)
+	}
 
 	// Draw cursor if focused (by inverting the cell)
 	if i.focused {
@@ -386,23 +402,52 @@ func (i *Input) syncA11y() {
 	i.Base.Value = &accessibility.ValueInfo{Text: i.Text()}
 }
 
-// ClipboardCopy returns the current text.
+// ClipboardCopy returns selected text, or all text if no selection.
 func (i *Input) ClipboardCopy() (string, bool) {
 	if i == nil {
 		return "", false
 	}
+	if i.HasSelection() {
+		return i.GetSelectedText(), true
+	}
 	return i.text.String(), true
 }
 
-// ClipboardCut returns the current text and clears the input.
+// ClipboardCut returns selected text and deletes it, or all text if no selection.
 func (i *Input) ClipboardCut() (string, bool) {
 	if i == nil {
 		return "", false
+	}
+	if i.HasSelection() {
+		text := i.GetSelectedText()
+		i.deleteSelection()
+		return text, true
 	}
 	text := i.text.String()
 	i.Clear()
 	i.notifyChange()
 	return text, true
+}
+
+// deleteSelection removes the selected text and clears the selection.
+func (i *Input) deleteSelection() {
+	if i == nil || i.selection.IsEmpty() {
+		return
+	}
+	sel := i.selection.Normalize()
+	text := i.text.String()
+	if sel.End > len(text) {
+		sel.End = len(text)
+	}
+	if sel.Start > len(text) {
+		sel.Start = len(text)
+	}
+	i.text.Reset()
+	i.text.WriteString(text[:sel.Start])
+	i.text.WriteString(text[sel.End:])
+	i.cursorPos = sel.Start
+	i.selection = Selection{}
+	i.notifyChange()
 }
 
 // ClipboardPaste inserts text at the cursor.
@@ -466,6 +511,129 @@ func (i *Input) insertText(text string) {
 }
 
 var _ clipboard.Target = (*Input)(nil)
+
+// Selection methods - implements Selectable interface
+
+// GetSelection returns the current selection range.
+func (i *Input) GetSelection() Selection {
+	if i == nil {
+		return Selection{}
+	}
+	return i.selection
+}
+
+// SetSelection sets the selection range.
+func (i *Input) SetSelection(sel Selection) {
+	if i == nil {
+		return
+	}
+	textLen := i.text.Len()
+	// Clamp to valid range
+	if sel.Start < 0 {
+		sel.Start = 0
+	}
+	if sel.End < 0 {
+		sel.End = 0
+	}
+	if sel.Start > textLen {
+		sel.Start = textLen
+	}
+	if sel.End > textLen {
+		sel.End = textLen
+	}
+	i.selection = sel
+	i.services.Invalidate()
+}
+
+// SelectAll selects all text.
+func (i *Input) SelectAll() {
+	if i == nil {
+		return
+	}
+	i.selection = Selection{Start: 0, End: i.text.Len()}
+	i.services.Invalidate()
+}
+
+// SelectNone clears the selection.
+func (i *Input) SelectNone() {
+	if i == nil {
+		return
+	}
+	i.selection = Selection{}
+	i.services.Invalidate()
+}
+
+// SelectWord selects the word at the cursor position.
+func (i *Input) SelectWord() {
+	if i == nil {
+		return
+	}
+	text := i.text.String()
+	if len(text) == 0 {
+		return
+	}
+	start, end := findWordBoundaries(text, i.cursorPos)
+	i.selection = Selection{Start: start, End: end}
+	i.services.Invalidate()
+}
+
+// SelectLine selects the entire line (all text for single-line input).
+func (i *Input) SelectLine() {
+	i.SelectAll() // Single-line input has only one line
+}
+
+// HasSelection returns true if text is selected.
+func (i *Input) HasSelection() bool {
+	if i == nil {
+		return false
+	}
+	return !i.selection.IsEmpty()
+}
+
+// GetSelectedText returns the currently selected text.
+func (i *Input) GetSelectedText() string {
+	if i == nil || i.selection.IsEmpty() {
+		return ""
+	}
+	sel := i.selection.Normalize()
+	text := i.text.String()
+	if sel.End > len(text) {
+		sel.End = len(text)
+	}
+	if sel.Start > len(text) {
+		return ""
+	}
+	return text[sel.Start:sel.End]
+}
+
+var _ Selectable = (*Input)(nil)
+
+// findWordBoundaries returns the start and end positions of the word at pos.
+func findWordBoundaries(text string, pos int) (start, end int) {
+	if len(text) == 0 {
+		return 0, 0
+	}
+	if pos < 0 {
+		pos = 0
+	}
+	if pos > len(text) {
+		pos = len(text)
+	}
+
+	// Find start of word
+	start = pos
+	for start > 0 && !isWordSeparator(text[start-1]) {
+		start--
+	}
+
+	// Find end of word
+	end = pos
+	for end < len(text) && !isWordSeparator(text[end]) {
+		end++
+	}
+
+	return start, end
+}
 
 func (i *Input) wordBoundaryLeft() int {
 	text := i.text.String()
@@ -548,6 +716,7 @@ type MultilineInput struct {
 	cursorX    int
 	cursorY    int
 	scrollY    int // First visible line
+	selection  Selection
 	label      string
 	style      backend.Style
 	focusStyle backend.Style
@@ -966,23 +1135,51 @@ func (m *MultilineInput) syncA11y() {
 	m.Base.Value = &accessibility.ValueInfo{Text: m.Text()}
 }
 
-// ClipboardCopy returns the current text.
+// ClipboardCopy returns selected text, or all text if no selection.
 func (m *MultilineInput) ClipboardCopy() (string, bool) {
 	if m == nil {
 		return "", false
 	}
+	if m.HasSelection() {
+		return m.GetSelectedText(), true
+	}
 	return m.Text(), true
 }
 
-// ClipboardCut returns the current text and clears the input.
+// ClipboardCut returns selected text and deletes it, or all text if no selection.
 func (m *MultilineInput) ClipboardCut() (string, bool) {
 	if m == nil {
 		return "", false
+	}
+	if m.HasSelection() {
+		text := m.GetSelectedText()
+		m.deleteSelection()
+		return text, true
 	}
 	text := m.Text()
 	m.Clear()
 	m.notifyChange()
 	return text, true
+}
+
+// deleteSelection removes the selected text and clears the selection.
+func (m *MultilineInput) deleteSelection() {
+	if m == nil || m.selection.IsEmpty() {
+		return
+	}
+	sel := m.selection.Normalize()
+	text := m.Text()
+	if sel.End > len(text) {
+		sel.End = len(text)
+	}
+	if sel.Start > len(text) {
+		sel.Start = len(text)
+	}
+	newText := text[:sel.Start] + text[sel.End:]
+	m.SetText(newText)
+	m.SetCursorOffset(sel.Start)
+	m.selection = Selection{}
+	m.notifyChange()
 }
 
 // ClipboardPaste inserts text at the cursor.
@@ -1073,3 +1270,111 @@ func (m *MultilineInput) insertText(text string) {
 }
 
 var _ clipboard.Target = (*MultilineInput)(nil)
+
+// Selection methods - implements Selectable interface
+
+// GetSelection returns the current selection range (character offsets).
+func (m *MultilineInput) GetSelection() Selection {
+	if m == nil {
+		return Selection{}
+	}
+	return m.selection
+}
+
+// SetSelection sets the selection range (character offsets).
+func (m *MultilineInput) SetSelection(sel Selection) {
+	if m == nil {
+		return
+	}
+	textLen := len(m.Text())
+	// Clamp to valid range
+	if sel.Start < 0 {
+		sel.Start = 0
+	}
+	if sel.End < 0 {
+		sel.End = 0
+	}
+	if sel.Start > textLen {
+		sel.Start = textLen
+	}
+	if sel.End > textLen {
+		sel.End = textLen
+	}
+	m.selection = sel
+	m.services.Invalidate()
+}
+
+// SelectAll selects all text.
+func (m *MultilineInput) SelectAll() {
+	if m == nil {
+		return
+	}
+	m.selection = Selection{Start: 0, End: len(m.Text())}
+	m.services.Invalidate()
+}
+
+// SelectNone clears the selection.
+func (m *MultilineInput) SelectNone() {
+	if m == nil {
+		return
+	}
+	m.selection = Selection{}
+	m.services.Invalidate()
+}
+
+// SelectWord selects the word at the cursor position.
+func (m *MultilineInput) SelectWord() {
+	if m == nil {
+		return
+	}
+	text := m.Text()
+	if len(text) == 0 {
+		return
+	}
+	offset := m.CursorOffset()
+	start, end := findWordBoundaries(text, offset)
+	m.selection = Selection{Start: start, End: end}
+	m.services.Invalidate()
+}
+
+// SelectLine selects the current line.
+func (m *MultilineInput) SelectLine() {
+	if m == nil || len(m.lines) == 0 {
+		return
+	}
+	// Calculate start offset (beginning of current line)
+	start := 0
+	for i := 0; i < m.cursorY && i < len(m.lines); i++ {
+		start += len(m.lines[i]) + 1 // +1 for newline
+	}
+	// Calculate end offset (end of current line)
+	end := start + len(m.lines[m.cursorY])
+	m.selection = Selection{Start: start, End: end}
+	m.services.Invalidate()
+}
+
+// HasSelection returns true if text is selected.
+func (m *MultilineInput) HasSelection() bool {
+	if m == nil {
+		return false
+	}
+	return !m.selection.IsEmpty()
+}
+
+// GetSelectedText returns the currently selected text.
+func (m *MultilineInput) GetSelectedText() string {
+	if m == nil || m.selection.IsEmpty() {
+		return ""
+	}
+	sel := m.selection.Normalize()
+	text := m.Text()
+	if sel.End > len(text) {
+		sel.End = len(text)
+	}
+	if sel.Start > len(text) {
+		return ""
+	}
+	return text[sel.Start:sel.End]
+}
+
+var _ Selectable = (*MultilineInput)(nil)

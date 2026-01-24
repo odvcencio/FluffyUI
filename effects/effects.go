@@ -217,10 +217,3 @@ func lerpColor(a, b backend.Color, t float64) backend.Color {
 	bval := uint8(float64(ab) + (float64(bb)-float64(ab))*t)
 	return backend.ColorRGB(r, g, bval)
 }
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}

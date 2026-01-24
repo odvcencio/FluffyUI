@@ -65,3 +65,38 @@ func TestResizeEvent(t *testing.T) {
 		t.Errorf("expected Height=40, got %d", ev.Height)
 	}
 }
+
+func TestDetectCapabilities(t *testing.T) {
+	// Test that DetectCapabilities returns a valid struct
+	// (actual values depend on environment)
+	caps := DetectCapabilities()
+
+	// All fields should be boolean, this verifies the struct
+	_ = caps.TrueColor
+	_ = caps.Sixel
+	_ = caps.Kitty
+	_ = caps.Unicode
+}
+
+func TestCapabilitiesStruct(t *testing.T) {
+	// Test that we can create and use Capabilities struct
+	caps := Capabilities{
+		TrueColor: true,
+		Sixel:     true,
+		Kitty:     true,
+		Unicode:   true,
+	}
+
+	if !caps.TrueColor {
+		t.Error("TrueColor should be true")
+	}
+	if !caps.Sixel {
+		t.Error("Sixel should be true")
+	}
+	if !caps.Kitty {
+		t.Error("Kitty should be true")
+	}
+	if !caps.Unicode {
+		t.Error("Unicode should be true")
+	}
+}
