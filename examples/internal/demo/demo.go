@@ -9,6 +9,7 @@ import (
 
 	"github.com/odvcencio/fluffy-ui/accessibility"
 	"github.com/odvcencio/fluffy-ui/backend"
+	"github.com/odvcencio/fluffy-ui/backend/ghostty"
 	"github.com/odvcencio/fluffy-ui/backend/sim"
 	backendtcell "github.com/odvcencio/fluffy-ui/backend/tcell"
 	"github.com/odvcencio/fluffy-ui/clipboard"
@@ -112,10 +113,13 @@ func NewApp(root runtime.Widget, opts Options) (*Bundle, error) {
 
 func buildBackendFromEnv() (backend.Backend, error) {
 	backendName := strings.ToLower(strings.TrimSpace(os.Getenv("FLUFFYUI_BACKEND")))
-	if backendName == "sim" || backendName == "simulation" {
+	switch backendName {
+	case "sim", "simulation":
 		width := envInt("FLUFFYUI_WIDTH", 80)
 		height := envInt("FLUFFYUI_HEIGHT", 24)
 		return sim.New(width, height), nil
+	case "ghostty":
+		return ghostty.New()
 	}
 	return backendtcell.New()
 }

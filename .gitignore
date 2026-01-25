@@ -1,1 +1,6 @@
 docs/demos/candy-wars.cast
+
+# Pre-built native libraries (too large for git)
+backend/ghostty/libs/**/*.so
+backend/ghostty/libs/**/*.dylib
+backend/ghostty/libs/**/*.dll

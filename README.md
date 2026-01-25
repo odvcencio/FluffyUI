@@ -576,6 +576,7 @@ fluffy-ui/
 ├── forms/          Form validation and coordination
 ├── backend/        Terminal abstraction
 │   ├── tcell/      Real terminal backend (tcell)
+│   ├── ghostty/    libghostty backend (GPU surface)
 │   └── sim/        Simulation backend for testing
 ├── accessibility/  Screen reader support, focus management
 ├── recording/      Asciicast capture and video export

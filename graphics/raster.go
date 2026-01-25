@@ -416,20 +416,6 @@ func rfpart(x float64) float64 {
 	return 1 - fpart(x)
 }
 
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
-
 func pointsEqual(a, b Point) bool {
 	return a.X == b.X && a.Y == b.Y
 }

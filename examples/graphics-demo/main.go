@@ -45,7 +45,7 @@ func main() {
 }
 
 type GraphicsDemo struct {
-	widgets.CanvasWidget
+	*widgets.CanvasWidget
 	particles *animation.ParticleSystem
 	phase     float64
 	lastBurst time.Time
@@ -63,7 +63,7 @@ func NewGraphicsDemo() *GraphicsDemo {
 	}
 	widget := widgets.NewCanvasWidget(demo.draw)
 	widget.WithBlitter(graphics.BestBlitter(nil))
-	demo.CanvasWidget = *widget
+	demo.CanvasWidget = widget
 	return demo
 }
 
@@ -307,18 +307,4 @@ func buildDemoImage() image.Image {
 		}
 	}
 	return img
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
 }
