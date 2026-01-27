@@ -29,28 +29,20 @@ func newOpenGLDriver() (Driver, error) {
 	driver.worker = newGLWorker()
 	var initErr error
 	driver.run(func() {
-		if runtime.GOOS == "windows" {
-			ctx, err := newOSMesaContext(1, 1)
-			if err != nil {
-				initErr = ErrUnsupported
-				return
-			}
-			driver.ctx = ctx
-			if err := gl.Init(); err != nil {
-				initErr = err
-				return
-			}
-		} else {
-			if err := gl.Init(); err != nil {
-				initErr = err
-				return
-			}
-			ctx, err := newOSMesaContext(1, 1)
-			if err != nil {
-				initErr = ErrUnsupported
-				return
-			}
-			driver.ctx = ctx
+		// Create OSMesa context first to ensure the library is available
+		// before initializing GL function pointers. This prevents segfaults
+		// when OSMesa is not installed.
+		ctx, err := newOSMesaContext(1, 1)
+		if err != nil {
+			initErr = ErrUnsupported
+			return
+		}
+		driver.ctx = ctx
+		if err := gl.Init(); err != nil {
+			driver.ctx.Destroy()
+			driver.ctx = nil
+			initErr = err
+			return
 		}
 		gl.Viewport(0, 0, 1, 1)
 		gl.GenVertexArrays(1, &driver.vao)
