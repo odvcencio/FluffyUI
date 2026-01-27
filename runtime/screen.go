@@ -3,6 +3,7 @@ package runtime
 import (
 	"github.com/odvcencio/fluffy-ui/accessibility"
 	"github.com/odvcencio/fluffy-ui/backend"
+	"github.com/odvcencio/fluffy-ui/style"
 )
 
 // Layer represents a layer in the modal stack.
@@ -207,7 +208,12 @@ func (s *Screen) relayout() {
 			roots = append(roots, layer.Root)
 		}
 	}
-	resolver := newStyleResolver(s.services.Stylesheet(), roots)
+	media := style.MediaContext{
+		Width:         s.width,
+		Height:        s.height,
+		ReducedMotion: s.services.ReducedMotion(),
+	}
+	resolver := newStyleResolver(s.services.Stylesheet(), roots, media)
 	bounds := Rect{0, 0, s.width, s.height}
 	for i, layer := range s.layers {
 		if layer == nil || layer.Root == nil {
@@ -268,7 +274,12 @@ func (s *Screen) Render() {
 			roots = append(roots, layer.Root)
 		}
 	}
-	resolver := newStyleResolver(s.services.Stylesheet(), roots)
+	media := style.MediaContext{
+		Width:         s.width,
+		Height:        s.height,
+		ReducedMotion: s.services.ReducedMotion(),
+	}
+	resolver := newStyleResolver(s.services.Stylesheet(), roots, media)
 	ctx := RenderContext{
 		Buffer:        s.buffer,
 		Focused:       false,

@@ -333,6 +333,42 @@ func TestVBox_AllFlexibleNegativeAvailable(t *testing.T) {
 	}
 }
 
+func TestVBox_ShrinkDistribution(t *testing.T) {
+	w1 := newTestWidget(100, 40)
+	w2 := newTestWidget(100, 60)
+
+	vbox := VBox(
+		FlexChild{Widget: w1, Grow: 0, Shrink: 1, Basis: -1},
+		FlexChild{Widget: w2, Grow: 0, Shrink: 2, Basis: -1},
+	)
+	vbox.Layout(Rect{0, 0, 100, 60}) // total base 100, need shrink 40
+
+	// shrink weights: w1=40, w2=120 -> w1 gets 1/4 shrink (10), w2 gets 30
+	if w1.bounds.Height != 30 {
+		t.Errorf("w1 height = %d, want 30", w1.bounds.Height)
+	}
+	if w2.bounds.Height != 30 {
+		t.Errorf("w2 height = %d, want 30", w2.bounds.Height)
+	}
+}
+
+func TestHBox_ShrinkWithFixed(t *testing.T) {
+	fixed := newTestWidget(20, 10)
+	flex := newTestWidget(80, 10)
+	hbox := HBox(
+		Fixed(fixed),
+		FlexChild{Widget: flex, Grow: 0, Shrink: 1, Basis: -1},
+	)
+	hbox.Layout(Rect{0, 0, 60, 10}) // base total 100, need shrink 40, only flex shrinks
+
+	if fixed.bounds.Width != 20 {
+		t.Errorf("fixed width = %d, want 20", fixed.bounds.Width)
+	}
+	if flex.bounds.Width != 40 {
+		t.Errorf("flex width = %d, want 40", flex.bounds.Width)
+	}
+}
+
 func TestFlex_Render(t *testing.T) {
 	w1 := newTestWidget(100, 20)
 	w2 := newTestWidget(100, 20)

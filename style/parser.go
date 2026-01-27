@@ -12,50 +12,7 @@ import (
 func Parse(data string) (*Stylesheet, error) {
 	parser := fssParser{src: stripComments(data)}
 	sheet := NewStylesheet()
-	var errs []error
-
-	for {
-		parser.skipWhitespace()
-		if parser.eof() {
-			break
-		}
-		selectors, err := parser.readUntil('{')
-		if err != nil {
-			errs = append(errs, err)
-			break
-		}
-		selectorText := strings.TrimSpace(selectors)
-		if selectorText == "" {
-			errs = append(errs, fmt.Errorf("style: empty selector"))
-		}
-		block, err := parser.readUntil('}')
-		if err != nil {
-			errs = append(errs, err)
-			break
-		}
-		styleBlock, importantBlock, blockErrs := parseStyleBlock(block, sheet)
-		if len(blockErrs) > 0 {
-			errs = append(errs, blockErrs...)
-		}
-		selectorList := strings.Split(selectorText, ",")
-		for _, rawSel := range selectorList {
-			selText := strings.TrimSpace(rawSel)
-			if selText == "" {
-				errs = append(errs, fmt.Errorf("style: empty selector entry"))
-				continue
-			}
-			sel, err := parseSelectorChain(selText)
-			if err != nil {
-				errs = append(errs, err)
-				continue
-			}
-			if styleBlock.IsZero() && importantBlock.IsZero() {
-				continue
-			}
-			sheet.addRule(*sel, styleBlock, importantBlock)
-		}
-	}
-
+	errs := parseRules(&parser, sheet, nil)
 	return sheet, errors.Join(errs...)
 }
 
@@ -105,6 +62,149 @@ func (p *fssParser) readUntil(delim byte) (string, error) {
 	}
 	p.pos += idx + 1
 	return p.src[start : start+idx], nil
+}
+
+func (p *fssParser) readBlock() (string, error) {
+	start := p.pos
+	depth := 1
+	for p.pos < len(p.src) {
+		ch := p.src[p.pos]
+		switch ch {
+		case '{':
+			depth++
+		case '}':
+			depth--
+			if depth == 0 {
+				block := p.src[start:p.pos]
+				p.pos++
+				return block, nil
+			}
+		}
+		p.pos++
+	}
+	return "", fmt.Errorf("style: expected '}'")
+}
+
+func parseRules(parser *fssParser, sheet *Stylesheet, media []MediaQuery) []error {
+	var errs []error
+	for {
+		parser.skipWhitespace()
+		if parser.eof() {
+			break
+		}
+		selectors, err := parser.readUntil('{')
+		if err != nil {
+			errs = append(errs, err)
+			break
+		}
+		selectorText := strings.TrimSpace(selectors)
+		if selectorText == "" {
+			errs = append(errs, fmt.Errorf("style: empty selector"))
+		}
+		block, err := parser.readBlock()
+		if err != nil {
+			errs = append(errs, err)
+			break
+		}
+		if strings.HasPrefix(strings.ToLower(selectorText), "@media") {
+			cond := strings.TrimSpace(selectorText[len("@media"):])
+			queries, err := parseMediaQueries(cond)
+			if err != nil {
+				errs = append(errs, err)
+				continue
+			}
+			childParser := fssParser{src: block}
+			errs = append(errs, parseRules(&childParser, sheet, appendMedia(media, queries))...)
+			continue
+		}
+		styleBlock, importantBlock, blockErrs := parseStyleBlock(block, sheet)
+		if len(blockErrs) > 0 {
+			errs = append(errs, blockErrs...)
+		}
+		selectorList := strings.Split(selectorText, ",")
+		for _, rawSel := range selectorList {
+			selText := strings.TrimSpace(rawSel)
+			if selText == "" {
+				errs = append(errs, fmt.Errorf("style: empty selector entry"))
+				continue
+			}
+			sel, err := parseSelectorChain(selText)
+			if err != nil {
+				errs = append(errs, err)
+				continue
+			}
+			if styleBlock.IsZero() && importantBlock.IsZero() {
+				continue
+			}
+			sheet.addRule(*sel, styleBlock, importantBlock, media)
+		}
+	}
+	return errs
+}
+
+func appendMedia(base []MediaQuery, extra []MediaQuery) []MediaQuery {
+	if len(base) == 0 {
+		return extra
+	}
+	if len(extra) == 0 {
+		return base
+	}
+	out := make([]MediaQuery, 0, len(base)*len(extra))
+	for _, b := range base {
+		for _, e := range extra {
+			out = append(out, mergeMedia(b, e))
+		}
+	}
+	return out
+}
+
+func mergeMedia(a, b MediaQuery) MediaQuery {
+	out := a
+	if out.Invalid || b.Invalid {
+		out.Invalid = true
+		return out
+	}
+	if b.MinWidth > 0 {
+		out.MinWidth = max(out.MinWidth, b.MinWidth)
+	}
+	if b.MaxWidth > 0 {
+		if out.MaxWidth == 0 {
+			out.MaxWidth = b.MaxWidth
+		} else {
+			out.MaxWidth = min(out.MaxWidth, b.MaxWidth)
+		}
+	}
+	if b.MinHeight > 0 {
+		out.MinHeight = max(out.MinHeight, b.MinHeight)
+	}
+	if b.MaxHeight > 0 {
+		if out.MaxHeight == 0 {
+			out.MaxHeight = b.MaxHeight
+		} else {
+			out.MaxHeight = min(out.MaxHeight, b.MaxHeight)
+		}
+	}
+	if b.Orientation != "" {
+		if out.Orientation == "" || out.Orientation == b.Orientation {
+			out.Orientation = b.Orientation
+		} else {
+			out.Invalid = true
+		}
+	}
+	if b.ReducedMotion != nil {
+		if out.ReducedMotion == nil || *out.ReducedMotion == *b.ReducedMotion {
+			out.ReducedMotion = b.ReducedMotion
+		} else {
+			out.Invalid = true
+		}
+	}
+	if out.MaxWidth > 0 && out.MinWidth > out.MaxWidth {
+		out.Invalid = true
+	}
+	if out.MaxHeight > 0 && out.MinHeight > out.MaxHeight {
+		out.Invalid = true
+	}
+	return out
 }
 
 func parseStyleBlock(block string, sheet *Stylesheet) (Style, Style, []error) {
@@ -800,4 +900,18 @@ func readIdent(s string, start int) (string, int) {
 		idx++
 	}
 	return s[start:idx], idx
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }

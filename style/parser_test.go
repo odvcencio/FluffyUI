@@ -136,3 +136,35 @@ func TestParseAttributeSelector(t *testing.T) {
 		t.Fatalf("bold = %v, want true", resolved.Bold)
 	}
 }
+
+func TestParseMediaQueries(t *testing.T) {
+	data := `
+Button { padding: 1; }
+@media (min-width: 80) and (orientation: landscape) {
+  Button { padding: 3; }
+}
+@media (prefers-reduced-motion: reduce) {
+  Button { padding: 5; }
+}
+`
+	sheet, err := Parse(data)
+	if err != nil {
+		t.Fatalf("parse error: %v", err)
+	}
+	node := &testNode{typ: "Button"}
+
+	resolved := sheet.ResolveWithContext(node, nil, MediaContext{Width: 60, Height: 100})
+	if resolved.Padding == nil || resolved.Padding.Top != 1 {
+		t.Fatalf("padding = %#v, want 1", resolved.Padding)
+	}
+
+	resolved = sheet.ResolveWithContext(node, nil, MediaContext{Width: 100, Height: 60})
+	if resolved.Padding == nil || resolved.Padding.Top != 3 {
+		t.Fatalf("padding = %#v, want 3", resolved.Padding)
+	}
+
+	resolved = sheet.ResolveWithContext(node, nil, MediaContext{Width: 100, Height: 60, ReducedMotion: true})
+	if resolved.Padding == nil || resolved.Padding.Top != 5 {
+		t.Fatalf("padding = %#v, want 5", resolved.Padding)
+	}
+}

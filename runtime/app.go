@@ -46,6 +46,7 @@ type AppConfig struct {
 	Audio             audio.Service
 	Stylesheet        *style.Stylesheet
 	Animator          *animation.Animator
+	ReducedMotion     bool
 }
 
 // App runs a widget tree against a terminal backend.
@@ -71,6 +72,7 @@ type App struct {
 	audio             audio.Service
 	stylesheet        *style.Stylesheet
 	animator          *animation.Animator
+	reducedMotion     bool
 	taskCtx           context.Context
 	taskCancel        context.CancelFunc
 	pendingMu         sync.Mutex
@@ -113,6 +115,7 @@ func NewApp(cfg AppConfig) *App {
 		audio:             cfg.Audio,
 		stylesheet:        cfg.Stylesheet,
 		animator:          cfg.Animator,
+		reducedMotion:     cfg.ReducedMotion,
 	}
 	if app.flushPolicy == 0 {
 		app.flushPolicy = FlushOnMessageAndTick

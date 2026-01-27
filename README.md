@@ -101,6 +101,12 @@ Run the quickstart example:
 go run ./examples/quickstart
 ```
 
+Dev loop (auto-restart on code/style changes):
+
+```bash
+go run ./cmd/fluffy dev -- go run ./examples/quickstart
+```
+
 Audio note: the quickstart ships with tiny WAVs in `examples/quickstart/assets/audio` and auto-detects a player. Override with `FLUFFYUI_AUDIO_ASSETS=/path` or disable via `FLUFFYUI_AUDIO_ASSETS=off`.
 
 ## Agent Interaction (Out-of-Process)
@@ -570,13 +576,13 @@ fluffy-ui/
 ├── runtime/        Core app loop, rendering, message handling
 ├── widgets/        Complete widget library (35+ components)
 ├── graphics/       Sub-cell canvas with shapes, curves, images
+├── gpu/            GPU canvas and drivers (software/OpenGL/Metal)
 ├── effects/        Visual effects (gradients, glow, particles)
 ├── keybind/        Keyboard routing and command registry
 ├── state/          Reactive signals and computed values
 ├── forms/          Form validation and coordination
 ├── backend/        Terminal abstraction
 │   ├── tcell/      Real terminal backend (tcell)
-│   ├── ghostty/    libghostty backend (GPU surface)
 │   └── sim/        Simulation backend for testing
 ├── accessibility/  Screen reader support, focus management
 ├── recording/      Asciicast capture and video export

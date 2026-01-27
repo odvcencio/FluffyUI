@@ -56,9 +56,10 @@ type StyleResolver struct {
 	sheet   *style.Stylesheet
 	parents map[Widget]Widget
 	cache   map[Widget]style.Style
+	media   style.MediaContext
 }
 
-func newStyleResolver(sheet *style.Stylesheet, roots []Widget) *StyleResolver {
+func newStyleResolver(sheet *style.Stylesheet, roots []Widget, media style.MediaContext) *StyleResolver {
 	if sheet == nil {
 		return nil
 	}
@@ -66,6 +67,7 @@ func newStyleResolver(sheet *style.Stylesheet, roots []Widget) *StyleResolver {
 		sheet:   sheet,
 		parents: buildParentMap(roots),
 		cache:   make(map[Widget]style.Style),
+		media:   media,
 	}
 }
 
@@ -105,7 +107,7 @@ func (r *StyleResolver) Resolve(widget Widget, focused bool) style.Style {
 	}
 	node := r.nodeFor(widget, focused)
 	ancestors := r.ancestors(widget, focused)
-	resolved := r.sheet.Resolve(node, ancestors)
+	resolved := r.sheet.ResolveWithContext(node, ancestors, r.media)
 	resolved = resolved.Inherit(parentStyle)
 	r.cache[widget] = resolved
 	return resolved

@@ -10,6 +10,7 @@ type Rule struct {
 	Selector  Selector
 	Style     Style
 	Important Style
+	Media     []MediaQuery
 
 	order       int
 	specificity specificity
@@ -65,15 +66,29 @@ func (s *Stylesheet) Add(selector *SelectorBuilder, style Style) *Stylesheet {
 		return s
 	}
 	sel := selector.Selector()
-	s.addRule(sel, style, Style{})
+	s.addRule(sel, style, Style{}, nil)
 	return s
 }
 
-func (s *Stylesheet) addRule(selector Selector, style Style, important Style) {
+// AddWithMedia appends a rule gated by media queries.
+func (s *Stylesheet) AddWithMedia(selector *SelectorBuilder, style Style, media []MediaQuery) *Stylesheet {
+	if s == nil {
+		return s
+	}
+	if selector == nil {
+		return s
+	}
+	sel := selector.Selector()
+	s.addRule(sel, style, Style{}, media)
+	return s
+}
+
+func (s *Stylesheet) addRule(selector Selector, style Style, important Style, media []MediaQuery) {
 	rule := Rule{
 		Selector:    selector,
 		Style:       style,
 		Important:   important,
+		Media:       media,
 		order:       s.nextOrder,
 		specificity: selector.specificity(),
 	}
@@ -83,12 +98,17 @@ func (s *Stylesheet) addRule(selector Selector, style Style, important Style) {
 
 // Resolve returns the merged style for the given node.
 func (s *Stylesheet) Resolve(node Node, ancestors []Node) Style {
+	return s.ResolveWithContext(node, ancestors, MediaContext{})
+}
+
+// ResolveWithContext returns the merged style for the given node and media context.
+func (s *Stylesheet) ResolveWithContext(node Node, ancestors []Node, ctx MediaContext) Style {
 	if s == nil || node == nil {
 		return Style{}
 	}
 	var matches []Rule
 	for _, rule := range s.rules {
-		if rule.Selector.Matches(node, ancestors) {
+		if rule.Selector.Matches(node, ancestors) && mediaMatches(rule.Media, ctx) {
 			matches = append(matches, rule)
 		}
 	}

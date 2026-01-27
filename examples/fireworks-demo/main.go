@@ -16,28 +16,22 @@ import (
 	"time"
 
 	"github.com/odvcencio/fluffy-ui/backend"
-	backendtcell "github.com/odvcencio/fluffy-ui/backend/tcell"
+	"github.com/odvcencio/fluffy-ui/examples/internal/demo"
 	"github.com/odvcencio/fluffy-ui/graphics"
 	"github.com/odvcencio/fluffy-ui/runtime"
 	"github.com/odvcencio/fluffy-ui/widgets"
 )
 
 func main() {
-	be, err := backendtcell.New()
+	root := NewFireworksDemo()
+	bundle, err := demo.NewApp(root, demo.Options{
+		TickRate: time.Second / 60,
+	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "backend init failed: %v\n", err)
 		os.Exit(1)
 	}
-
-	app := runtime.NewApp(runtime.AppConfig{
-		Backend:  be,
-		TickRate: time.Second / 60,
-	})
-
-	root := NewFireworksDemo()
-	app.SetRoot(root)
-
-	if err := app.Run(context.Background()); err != nil && err != context.Canceled {
+	if err := bundle.App.Run(context.Background()); err != nil && err != context.Canceled {
 		fmt.Fprintf(os.Stderr, "app run failed: %v\n", err)
 		os.Exit(1)
 	}

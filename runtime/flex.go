@@ -1,5 +1,7 @@
 package runtime
 
+import "math"
+
 // FlexDirection specifies the main axis of a flex container.
 type FlexDirection int
 
@@ -140,8 +142,12 @@ func (f *Flex) Layout(bounds Rect) {
 
 	// Measure children to get their preferred sizes
 	childSizes := make([]Size, len(f.Children))
-	totalFixed := 0
+	baseSizes := make([]int, len(f.Children))
+	growWeights := make([]float64, len(f.Children))
+	shrinkWeights := make([]float64, len(f.Children))
+	totalBase := 0
 	totalGrow := 0.0
+	totalShrink := 0.0
 
 	for i, child := range f.Children {
 		var childConstraints Constraints
@@ -158,10 +164,16 @@ func (f *Flex) Layout(bounds Rect) {
 		}
 
 		mainSize := f.mainSize(childSizes[i])
-		if child.Grow == 0 {
-			totalFixed += mainSize
+		baseSizes[i] = mainSize
+		totalBase += mainSize
+		if child.Grow > 0 {
+			growWeights[i] = child.Grow
+			totalGrow += child.Grow
 		}
-		totalGrow += child.Grow
+		if child.Shrink > 0 {
+			shrinkWeights[i] = child.Shrink * float64(mainSize)
+			totalShrink += shrinkWeights[i]
+		}
 	}
 
 	// Add gaps to fixed space
@@ -169,26 +181,31 @@ func (f *Flex) Layout(bounds Rect) {
 	if len(f.Children) > 1 {
 		gaps = f.Gap * (len(f.Children) - 1)
 	}
-	totalFixed += gaps
+	containerMain := f.mainSize(bounds.Size())
+	available := containerMain - gaps - totalBase
 
-	// Calculate available space for growing
-	available := f.mainSize(bounds.Size()) - totalFixed
-	if available < 0 {
-		available = 0
+	sizes := make([]int, len(f.Children))
+	copy(sizes, baseSizes)
+	if available > 0 && totalGrow > 0 {
+		extras := distributeFlexSpace(available, growWeights)
+		for i := range sizes {
+			sizes[i] += extras[i]
+		}
+	} else if available < 0 && totalShrink > 0 {
+		shrinks := distributeFlexShrink(-available, shrinkWeights, sizes)
+		for i := range sizes {
+			sizes[i] -= shrinks[i]
+			if sizes[i] < 0 {
+				sizes[i] = 0
+			}
+		}
 	}
 
 	// Position children
 	offset := 0
 	for i, child := range f.Children {
 		// Calculate size
-		var mainSize int
-		if child.Grow > 0 && totalGrow > 0 {
-			// Growing child: get proportional share
-			share := child.Grow / totalGrow
-			mainSize = int(float64(available) * share)
-		} else {
-			mainSize = f.mainSize(childSizes[i])
-		}
+		mainSize := sizes[i]
 
 		// Create bounds for this child
 		var childBounds Rect
@@ -213,6 +230,110 @@ func (f *Flex) Layout(bounds Rect) {
 
 		offset += mainSize + f.Gap
 	}
+}
+
+func distributeFlexSpace(available int, weights []float64) []int {
+	out := make([]int, len(weights))
+	if available <= 0 {
+		return out
+	}
+	total := 0.0
+	for _, w := range weights {
+		total += w
+	}
+	if total <= 0 {
+		return out
+	}
+	fractions := make([]float64, len(weights))
+	used := 0
+	for i, w := range weights {
+		if w <= 0 {
+			continue
+		}
+		share := float64(available) * (w / total)
+		base := int(math.Floor(share))
+		out[i] = base
+		used += base
+		fractions[i] = share - float64(base)
+	}
+	remaining := available - used
+	for remaining > 0 {
+		idx := -1
+		best := -1.0
+		for i, frac := range fractions {
+			if frac > best {
+				best = frac
+				idx = i
+			}
+		}
+		if idx == -1 {
+			break
+		}
+		out[idx]++
+		fractions[idx] = 0
+		remaining--
+	}
+	return out
+}
+
+func distributeFlexShrink(need int, weights []float64, sizes []int) []int {
+	out := make([]int, len(weights))
+	if need <= 0 {
+		return out
+	}
+	remaining := need
+	for rounds := 0; rounds < len(weights) && remaining > 0; rounds++ {
+		total := 0.0
+		for i, w := range weights {
+			if w > 0 && sizes[i]-out[i] > 0 {
+				total += w
+			}
+		}
+		if total <= 0 {
+			break
+		}
+		fractions := make([]float64, len(weights))
+		used := 0
+		for i, w := range weights {
+			capacity := sizes[i] - out[i]
+			if w <= 0 || capacity <= 0 {
+				continue
+			}
+			share := float64(remaining) * (w / total)
+			base := int(math.Floor(share))
+			if base > capacity {
+				base = capacity
+			}
+			out[i] += base
+			used += base
+			fractions[i] = share - float64(base)
+		}
+		remaining -= used
+		if remaining <= 0 {
+			break
+		}
+		progress := false
+		for remaining > 0 {
+			idx := -1
+			best := -1.0
+			for i, frac := range fractions {
+				if frac > best && sizes[i]-out[i] > 0 {
+					best = frac
+					idx = i
+				}
+			}
+			if idx == -1 {
+				break
+			}
+			out[idx]++
+			remaining--
+			progress = true
+		}
+		if !progress {
+			break
+		}
+	}
+	return out
 }
 
 // Bounds returns the assigned bounds for the flex container.

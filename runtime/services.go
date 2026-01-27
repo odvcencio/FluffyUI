@@ -73,6 +73,14 @@ func (s Services) Animator() *animation.Animator {
 	return s.app.animator
 }
 
+// ReducedMotion reports whether motion should be minimized.
+func (s Services) ReducedMotion() bool {
+	if s.app == nil {
+		return false
+	}
+	return s.app.reducedMotion
+}
+
 // Scheduler returns the app state scheduler.
 func (s Services) Scheduler() state.Scheduler {
 	if s.app == nil {

@@ -9,7 +9,7 @@ FluffyUI is a comprehensive terminal UI framework featuring:
 - **35+ widgets** with consistent patterns
 - **Sub-cell graphics** using Braille/Sextant/Quadrant rendering
 - **Reactive state** via signals and computed values
-- **Three backends**: tcell (terminal), ghostty (GPU), sim (testing)
+- **Two backends**: tcell (terminal), sim (testing)
 - **Built-in accessibility** with screen reader support
 - **Agent integration** via MCP protocol
 
@@ -26,9 +26,9 @@ fluffy-ui/
 ├── state/            # Reactive signals and computed values
 ├── animation/        # Tweens, springs, particle systems
 ├── graphics/         # Sub-cell canvas with shapes and curves
+├── gpu/              # GPU canvas and drivers (software/OpenGL/Metal)
 ├── backend/          # Backend abstractions
 │   ├── tcell/        # Real terminal (tcell v2)
-│   ├── ghostty/      # GPU surface (libghostty)
 │   └── sim/          # Simulation for testing
 ├── keybind/          # Keyboard routing and command registry
 ├── forms/            # Form validation and coordination
@@ -514,7 +514,7 @@ chore: update tcell dependency to v2.14
 
 | Variable | Purpose |
 |----------|---------|
-| `FLUFFYUI_BACKEND` | Backend selection: `tcell`, `ghostty`, `sim` |
+| `FLUFFYUI_BACKEND` | Backend selection: `tcell`, `sim` |
 | `FLUFFYUI_RECORD` | Recording output file (`.cast`) |
 | `FLUFFYUI_RECORD_EXPORT` | Video export file (`.mp4`) |
 | `FLUFFYUI_AUDIO_ASSETS` | Audio files path or `off` |
