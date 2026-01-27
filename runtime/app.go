@@ -47,6 +47,7 @@ type AppConfig struct {
 	Stylesheet        *style.Stylesheet
 	Animator          *animation.Animator
 	ReducedMotion     bool
+	ErrorReporter     *ErrorReporter
 }
 
 // App runs a widget tree against a terminal backend.
@@ -73,6 +74,7 @@ type App struct {
 	stylesheet        *style.Stylesheet
 	animator          *animation.Animator
 	reducedMotion     bool
+	errorReporter     *ErrorReporter
 	taskCtx           context.Context
 	taskCancel        context.CancelFunc
 	pendingMu         sync.Mutex
@@ -116,6 +118,7 @@ func NewApp(cfg AppConfig) *App {
 		stylesheet:        cfg.Stylesheet,
 		animator:          cfg.Animator,
 		reducedMotion:     cfg.ReducedMotion,
+		errorReporter:     cfg.ErrorReporter,
 	}
 	if app.flushPolicy == 0 {
 		app.flushPolicy = FlushOnMessageAndTick
@@ -293,6 +296,7 @@ func (a *App) Run(ctx context.Context) error {
 	w, h := a.backend.Size()
 	a.screen = NewScreen(w, h)
 	a.screen.SetServices(a.Services())
+	a.screen.SetErrorReporter(a.errorReporter)
 	a.screen.SetAutoRegisterFocus(a.focusRegistration == FocusRegistrationAuto)
 	if a.root != nil {
 		a.screen.SetRoot(a.root)

@@ -34,6 +34,36 @@ func main() {
 		os.Exit(2)
 	}
 	switch os.Args[1] {
+	case "-h", "--help", "help":
+		usage()
+		return
+	}
+	switch os.Args[1] {
+	case "create":
+		if err := runCreate(os.Args[2:]); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+	case "add":
+		if err := runAdd(os.Args[2:]); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+	case "theme":
+		if err := runTheme(os.Args[2:]); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+	case "test":
+		if err := runTest(os.Args[2:]); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+	case "record":
+		if err := runRecord(os.Args[2:]); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
 	case "dev":
 		if err := runDev(os.Args[2:]); err != nil {
 			fmt.Fprintln(os.Stderr, err)
@@ -46,7 +76,16 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: fluffy dev [--watch path] [--ext .go,.fss] [--debounce 200ms] -- <cmd> [args...]")
+	fmt.Fprint(os.Stderr, `fluffy - FluffyUI developer tools
+
+usage:
+  fluffy dev [--watch path] [--ext .go,.fss] [--debounce 200ms] -- <cmd> [args...]
+  fluffy create <name> [--template minimal|full|game] [--module path] [--force]
+  fluffy add widget|page <Name> [--dir path] [--force]
+  fluffy theme init|check|export [--path theme.yaml] [--output theme.css] [--force]
+  fluffy test [--visual] [--race] [--pkg ./...]
+  fluffy record [--output file.cast|file.gif] [--export file] [--title title] [-- <cmd>]
+`)
 }
 
 func runDev(args []string) error {

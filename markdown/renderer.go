@@ -36,7 +36,8 @@ func NewRenderer(t *theme.Theme) *Renderer {
 // Render parses markdown and returns styled lines for the given source.
 func (r *Renderer) Render(source, content string) []StyledLine {
 	cfg := r.configForSource(source)
-	return r.renderWithConfig(content, cfg)
+	root := r.parser.ParseString(content)
+	return r.renderASTWithConfig(root, []byte(content), cfg)
 }
 
 // CodeBlockBackground returns the default code block background style.
@@ -81,7 +82,23 @@ func (r *Renderer) renderWithConfig(content string, cfg *StyleConfig) []StyledLi
 		return nil
 	}
 	root := r.parser.ParseString(content)
-	state := newRenderState(cfg, []byte(content), r.highlighter)
+	return r.renderASTWithConfig(root, []byte(content), cfg)
+}
+
+// RenderAST renders a pre-parsed markdown AST.
+func (r *Renderer) RenderAST(source string, root ast.Node, content string) []StyledLine {
+	cfg := r.configForSource(source)
+	return r.renderASTWithConfig(root, []byte(content), cfg)
+}
+
+func (r *Renderer) renderASTWithConfig(root ast.Node, source []byte, cfg *StyleConfig) []StyledLine {
+	if cfg == nil {
+		return nil
+	}
+	if root == nil {
+		return nil
+	}
+	state := newRenderState(cfg, source, r.highlighter)
 
 	for node := root.FirstChild(); node != nil; node = node.NextSibling() {
 		r.renderBlock(node, state, false)
@@ -386,28 +403,22 @@ func fallbackCodeLines(code, language string, cfg *StyleConfig) []StyledLine {
 }
 
 func (r *Renderer) renderTable(table *extast.Table, state *renderState) {
-	for row := table.FirstChild(); row != nil; row = row.NextSibling() {
-		header, isHeader := row.(*extast.TableHeader)
-		var rowNode ast.Node = row
-		if isHeader {
-			rowNode = header
-		}
-		var cells []StyledSpan
-		for cell := rowNode.FirstChild(); cell != nil; cell = cell.NextSibling() {
-			text := collectPlainText(cell, state.source)
-			cellStyle := state.cfg.TableCell
-			if isHeader {
-				cellStyle = state.cfg.TableHeader
-			}
-			cells = append(cells, StyledSpan{Text: text, Style: cellStyle})
-			if cell.NextSibling() != nil {
-				cells = append(cells, StyledSpan{Text: " | ", Style: state.cfg.TableBorder})
-			}
-		}
-		state.lines = append(state.lines, StyledLine{
-			Spans:  cells,
-			Prefix: append([]StyledSpan{}, state.prefix...),
-		})
+	// Use enhanced table rendering with box drawing characters
+	config := TableRendererConfig{
+		BoxDrawings:    RoundedBoxDrawings,
+		HeaderStyle:    state.cfg.TableHeader,
+		CellStyle:      state.cfg.TableCell,
+		BorderStyle:    state.cfg.TableBorder,
+		Padding:        1,
+		MinColumnWidth: 3,
+	}
+	
+	renderer := NewEnhancedTableRenderer(config)
+	lines := renderer.RenderTable(table, state.source, 0) // 0 = no max width limit
+	
+	for _, line := range lines {
+		line.Prefix = append([]StyledSpan{}, state.prefix...)
+		state.lines = append(state.lines, line)
 	}
 }
 

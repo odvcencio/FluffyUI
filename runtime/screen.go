@@ -22,6 +22,7 @@ type Screen struct {
 	hitGrid           *HitGrid
 	hitGridModal      bool
 	services          Services
+	errorReporter     *ErrorReporter
 	autoRegisterFocus bool
 	hitGridDirty      bool
 }
@@ -44,6 +45,29 @@ func (s *Screen) SetServices(services Services) {
 		if layer != nil && layer.FocusScope != nil {
 			s.configureFocusScope(layer.FocusScope)
 		}
+	}
+}
+
+// SetErrorReporter configures error reporting for widget panics.
+func (s *Screen) SetErrorReporter(reporter *ErrorReporter) {
+	s.errorReporter = reporter
+	if reporter == nil || reporter.RootProvider != nil {
+		return
+	}
+	reporter.RootProvider = func() Widget {
+		var roots []Widget
+		for _, layer := range s.layers {
+			if layer != nil && layer.Root != nil {
+				roots = append(roots, layer.Root)
+			}
+		}
+		if len(roots) == 0 {
+			return nil
+		}
+		if len(roots) == 1 {
+			return roots[0]
+		}
+		return &widgetTreeRoot{roots: roots}
 	}
 }
 
@@ -220,8 +244,8 @@ func (s *Screen) relayout() {
 			continue
 		}
 		focused := i == len(s.layers)-1
-		applyLayoutStyles(layer.Root, resolver, focused)
-		layer.Root.Layout(bounds)
+		applyLayoutStyles(layer.Root, resolver, focused, s.errorReporter)
+		s.safeLayout(layer.Root, bounds)
 	}
 	s.hitGridDirty = true
 }
@@ -297,7 +321,7 @@ func (s *Screen) Render() {
 		isTopLayer := i == len(s.layers)-1
 		ctx.Focused = isTopLayer
 
-		layer.Root.Render(ctx)
+		s.safeRender(layer.Root, ctx)
 	}
 
 	s.drawFocusIndicator()
@@ -383,7 +407,7 @@ func (s *Screen) HandleMessage(msg Message) HandleResult {
 			s.buildHitGrid()
 		}
 		if target := s.hitGrid.WidgetAt(mouse.X, mouse.Y); target != nil {
-			result := target.HandleMessage(msg)
+			result := s.safeHandleMessage(target, msg)
 			for _, cmd := range result.Commands {
 				s.handleCommand(cmd)
 			}
@@ -402,7 +426,7 @@ func (s *Screen) HandleMessage(msg Message) HandleResult {
 			continue
 		}
 
-		result := layer.Root.HandleMessage(msg)
+		result := s.safeHandleMessage(layer.Root, msg)
 
 		// Process any commands
 		for _, cmd := range result.Commands {
@@ -439,6 +463,54 @@ func (s *Screen) handleCommand(cmd Command) {
 		s.PushLayer(c.Widget, c.Modal)
 	}
 	// Other commands bubble up to App
+}
+
+func (s *Screen) safeHandleMessage(target Widget, msg Message) (result HandleResult) {
+	if target == nil {
+		return Unhandled()
+	}
+	if s == nil || s.errorReporter == nil {
+		return target.HandleMessage(msg)
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			s.errorReporter.ReportWidgetError(target, newPanicError(r), msg)
+			result = Unhandled()
+		}
+	}()
+	return target.HandleMessage(msg)
+}
+
+func (s *Screen) safeRender(target Widget, ctx RenderContext) {
+	if target == nil {
+		return
+	}
+	if s == nil || s.errorReporter == nil {
+		target.Render(ctx)
+		return
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			s.errorReporter.ReportWidgetError(target, newPanicError(r), nil)
+		}
+	}()
+	target.Render(ctx)
+}
+
+func (s *Screen) safeLayout(target Widget, bounds Rect) {
+	if target == nil {
+		return
+	}
+	if s == nil || s.errorReporter == nil {
+		target.Layout(bounds)
+		return
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			s.errorReporter.ReportWidgetError(target, newPanicError(r), nil)
+		}
+	}()
+	target.Layout(bounds)
 }
 
 func (s *Screen) buildHitGrid() {

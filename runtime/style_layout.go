@@ -7,7 +7,7 @@ type StyleApplier interface {
 	ApplyStyle(style.Style)
 }
 
-func applyLayoutStyles(root Widget, resolver *StyleResolver, focused bool) {
+func applyLayoutStyles(root Widget, resolver *StyleResolver, focused bool, reporter *ErrorReporter) {
 	if root == nil {
 		return
 	}
@@ -21,7 +21,18 @@ func applyLayoutStyles(root Widget, resolver *StyleResolver, focused bool) {
 			if resolver != nil {
 				resolved = resolver.Resolve(node, focused)
 			}
-			applier.ApplyStyle(resolved)
+			if reporter == nil {
+				applier.ApplyStyle(resolved)
+			} else {
+				func() {
+					defer func() {
+						if r := recover(); r != nil {
+							reporter.ReportWidgetError(node, newPanicError(r), nil)
+						}
+					}()
+					applier.ApplyStyle(resolved)
+				}()
+			}
 		}
 		if container, ok := node.(ChildProvider); ok {
 			for _, child := range container.ChildWidgets() {
