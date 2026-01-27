@@ -56,3 +56,7 @@ See `docs/widgets/feedback.md` and `examples/widgets/feedback`.
 - Alert
 - ToastStack
 - Charts (Sparkline, BarChart)
+
+## Developer helpers
+
+- SimpleWidget (function-based widget for quick prototypes)

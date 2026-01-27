@@ -50,6 +50,20 @@ if err != nil {
 app.SetStylesheet(sheet)
 ```
 
+### Media queries
+
+FSS supports a focused media query subset:
+
+```fss
+@media (min-width: 80) and (orientation: landscape) {
+  Button { padding: 2; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  Spinner { dim: true; }
+}
+```
+
 ### Hot reload (dev)
 
 Use a file watcher to reload on edits:
@@ -93,6 +107,12 @@ app := runtime.NewApp(runtime.AppConfig{
     Root:       root,
     Stylesheet: theme.DefaultStylesheet(),
 })
+```
+
+For full code + style reload during development, use:
+
+```bash
+go run ./cmd/fluffy dev -- go run ./examples/quickstart
 ```
 
 ## Inline styles (legacy + overrides)
