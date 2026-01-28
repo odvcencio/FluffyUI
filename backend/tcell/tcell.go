@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/odvcencio/fluffy-ui/backend"
-	"github.com/odvcencio/fluffy-ui/terminal"
+	"github.com/odvcencio/fluffyui/backend"
+	"github.com/odvcencio/fluffyui/terminal"
 )
 
 // Backend implements backend.Backend using tcell.

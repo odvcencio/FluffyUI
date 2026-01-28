@@ -1,8 +1,8 @@
 package keybind
 
 import (
-	"github.com/odvcencio/fluffy-ui/accessibility"
-	"github.com/odvcencio/fluffy-ui/runtime"
+	"github.com/odvcencio/fluffyui/accessibility"
+	"github.com/odvcencio/fluffyui/runtime"
 )
 
 // RuntimeHandler adapts a KeyRouter for runtime.App.

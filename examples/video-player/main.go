@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/odvcencio/fluffy-ui/backend"
-	"github.com/odvcencio/fluffy-ui/examples/internal/demo"
-	"github.com/odvcencio/fluffy-ui/runtime"
-	"github.com/odvcencio/fluffy-ui/widgets"
+	"github.com/odvcencio/fluffyui/backend"
+	"github.com/odvcencio/fluffyui/examples/internal/demo"
+	"github.com/odvcencio/fluffyui/runtime"
+	"github.com/odvcencio/fluffyui/widgets"
 )
 
 func main() {

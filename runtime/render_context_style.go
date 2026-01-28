@@ -1,8 +1,8 @@
 package runtime
 
 import (
-	"github.com/odvcencio/fluffy-ui/backend"
-	"github.com/odvcencio/fluffy-ui/style"
+	"github.com/odvcencio/fluffyui/backend"
+	"github.com/odvcencio/fluffyui/style"
 )
 
 // ResolveStyle returns the resolved stylesheet style for the widget.

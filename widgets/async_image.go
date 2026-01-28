@@ -6,9 +6,9 @@ import (
 	"image"
 	"sync"
 
-	"github.com/odvcencio/fluffy-ui/backend"
-	"github.com/odvcencio/fluffy-ui/graphics"
-	"github.com/odvcencio/fluffy-ui/runtime"
+	"github.com/odvcencio/fluffyui/backend"
+	"github.com/odvcencio/fluffyui/graphics"
+	"github.com/odvcencio/fluffyui/runtime"
 )
 
 // AsyncImage loads an image asynchronously and renders it when ready.
@@ -168,7 +168,7 @@ func (w *AsyncImage) Render(ctx runtime.RenderContext) {
 	img, err, loading := w.imageState()
 	if img == nil {
 		if w.placeholder != nil {
-			w.placeholder.Render(ctx)
+			runtime.RenderChild(ctx, w.placeholder)
 			return
 		}
 		message := "Loading..."
@@ -217,7 +217,7 @@ func (w *AsyncImage) startLoad() {
 	w.loadOnce.Do(func() {
 		w.setLoading(true)
 		services := w.Services
-		effect := runtime.Effect{Run: func(ctx context.Context, post func(runtime.Message) bool) {
+		effect := runtime.Effect{Run: func(ctx context.Context, post runtime.PostFunc) {
 			img, err := w.loader()
 			w.setResult(img, err)
 			services.Invalidate()

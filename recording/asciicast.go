@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/odvcencio/fluffy-ui/runtime"
+	"github.com/odvcencio/fluffyui/runtime"
 )
 
 // AsciicastOptions configures asciicast recording.

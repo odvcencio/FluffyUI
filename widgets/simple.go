@@ -1,6 +1,6 @@
 package widgets
 
-import "github.com/odvcencio/fluffy-ui/runtime"
+import "github.com/odvcencio/fluffyui/runtime"
 
 // SimpleWidget provides function hooks for quick widgets with Base styling.
 type SimpleWidget struct {

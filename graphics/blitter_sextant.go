@@ -1,6 +1,6 @@
 package graphics
 
-import "github.com/odvcencio/fluffy-ui/backend"
+import "github.com/odvcencio/fluffyui/backend"
 
 // SextantBlitter renders 2x3 pixels per cell using sextant blocks.
 type SextantBlitter struct{}

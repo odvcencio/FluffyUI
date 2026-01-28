@@ -11,10 +11,12 @@ GoDoc usage examples live in the `widgets` package (for example `ExampleList`,
 See `docs/widgets/layout.md` and `examples/widgets/layout`.
 
 - Grid
+- Flex (VStack / HStack)
 - Splitter
 - Stack
 - ScrollView
 - Panel and Box
+- AspectRatio
 
 ## Data
 
@@ -60,3 +62,9 @@ See `docs/widgets/feedback.md` and `examples/widgets/feedback`.
 ## Developer helpers
 
 - SimpleWidget (function-based widget for quick prototypes)
+- DebugOverlay (visualize bounds and layout)
+- AsyncImage (load images without blocking)
+
+## Building your own
+
+See `docs/widgets/custom.md` for a step-by-step custom widget guide.

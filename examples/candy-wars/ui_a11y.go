@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/odvcencio/fluffy-ui/accessibility"
-	"github.com/odvcencio/fluffy-ui/runtime"
-	"github.com/odvcencio/fluffy-ui/widgets"
+	"github.com/odvcencio/fluffyui/accessibility"
+	"github.com/odvcencio/fluffyui/runtime"
+	"github.com/odvcencio/fluffyui/widgets"
 )
 
 type A11yNode struct {

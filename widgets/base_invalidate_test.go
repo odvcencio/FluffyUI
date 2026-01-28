@@ -3,7 +3,7 @@ package widgets
 import (
 	"testing"
 
-	"github.com/odvcencio/fluffy-ui/runtime"
+	"github.com/odvcencio/fluffyui/runtime"
 )
 
 func TestBase_InvalidateLifecycle(t *testing.T) {

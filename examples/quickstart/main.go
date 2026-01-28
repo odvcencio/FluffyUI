@@ -9,12 +9,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/odvcencio/fluffy-ui/audio"
-	"github.com/odvcencio/fluffy-ui/audio/execdriver"
-	"github.com/odvcencio/fluffy-ui/fluffy"
-	"github.com/odvcencio/fluffy-ui/runtime"
-	"github.com/odvcencio/fluffy-ui/state"
-	"github.com/odvcencio/fluffy-ui/widgets"
+	"github.com/odvcencio/fluffyui/audio"
+	"github.com/odvcencio/fluffyui/audio/execdriver"
+	"github.com/odvcencio/fluffyui/fluffy"
+	"github.com/odvcencio/fluffyui/runtime"
+	"github.com/odvcencio/fluffyui/state"
+	"github.com/odvcencio/fluffyui/widgets"
 )
 
 func main() {
@@ -107,7 +107,7 @@ func (c *CounterView) Render(ctx runtime.RenderContext) {
 	if bounds.Width == 0 || bounds.Height == 0 {
 		return
 	}
-	ctx.Clear(backend.DefaultStyle())
+	ctx.Clear(fluffy.DefaultStyle())
 
 	frame := c.spinner[c.spinnerIndex%len(c.spinner)]
 	lines := []string{
@@ -133,7 +133,7 @@ func (c *CounterView) Render(ctx runtime.RenderContext) {
 		if len(line) > bounds.Width {
 			line = line[:bounds.Width]
 		}
-		ctx.Buffer.SetString(bounds.X, bounds.Y+i, line, backend.DefaultStyle())
+		ctx.Buffer.SetString(bounds.X, bounds.Y+i, line, fluffy.DefaultStyle())
 	}
 }
 

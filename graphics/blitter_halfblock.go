@@ -1,6 +1,6 @@
 package graphics
 
-import "github.com/odvcencio/fluffy-ui/backend"
+import "github.com/odvcencio/fluffyui/backend"
 
 // HalfBlockBlitter renders 1x2 pixels per cell using half blocks.
 type HalfBlockBlitter struct{}

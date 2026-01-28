@@ -6,7 +6,7 @@ loop, reactive state, layout, and a growing widget catalog.
 ## Install
 
 ```
-go get github.com/odvcencio/fluffy-ui@latest
+go get github.com/odvcencio/fluffyui@latest
 ```
 
 ## Quickstart
@@ -19,7 +19,7 @@ import (
     "fmt"
     "os"
 
-    "github.com/odvcencio/fluffy-ui/fluffy"
+    "github.com/odvcencio/fluffyui/fluffy"
 )
 
 func main() {

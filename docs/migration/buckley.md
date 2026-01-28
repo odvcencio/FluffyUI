@@ -35,7 +35,7 @@ This is the approach used by Buckley and is appropriate for applications with:
 ### 1. Backend (Terminal I/O)
 
 ```go
-import "github.com/odvcencio/fluffy-ui/backend/tcell"
+import "github.com/odvcencio/fluffyui/backend/tcell"
 
 be, err := tcell.New()
 if err != nil {
@@ -52,7 +52,7 @@ w, h := be.Size()
 ### 2. Screen (Widget Tree Management)
 
 ```go
-import "github.com/odvcencio/fluffy-ui/runtime"
+import "github.com/odvcencio/fluffyui/runtime"
 
 screen := runtime.NewScreen(w, h)
 screen.SetAutoRegisterFocus(true)  // Auto-register focusable widgets
@@ -108,7 +108,7 @@ func (a *App) Run() error {
 ### 4. Event Polling
 
 ```go
-import "github.com/odvcencio/fluffy-ui/terminal"
+import "github.com/odvcencio/fluffyui/terminal"
 
 func (a *App) pollEvents() {
     for a.running {
@@ -197,7 +197,7 @@ func (a *App) render() {
 Always embed `widgets.Base` or `widgets.FocusableBase`:
 
 ```go
-import "github.com/odvcencio/fluffy-ui/widgets"
+import "github.com/odvcencio/fluffyui/widgets"
 
 type MyWidget struct {
     widgets.Base  // Non-focusable
@@ -287,7 +287,7 @@ func (c *Container) Render(ctx runtime.RenderContext) {
 Leverage built-in flex containers:
 
 ```go
-import "github.com/odvcencio/fluffy-ui/runtime"
+import "github.com/odvcencio/fluffyui/runtime"
 
 // Vertical stack
 root := runtime.VBox(

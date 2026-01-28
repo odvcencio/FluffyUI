@@ -1,6 +1,6 @@
 package graphics
 
-import "github.com/odvcencio/fluffy-ui/backend"
+import "github.com/odvcencio/fluffyui/backend"
 
 // Point represents a pixel coordinate.
 type Point struct {

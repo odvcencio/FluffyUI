@@ -1,6 +1,6 @@
 package keybind
 
-import "github.com/odvcencio/fluffy-ui/clipboard"
+import "github.com/odvcencio/fluffyui/clipboard"
 
 // DefaultKeymap returns a baseline global keymap.
 func DefaultKeymap() *Keymap {

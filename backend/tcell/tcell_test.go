@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/odvcencio/fluffy-ui/terminal"
+	"github.com/odvcencio/fluffyui/terminal"
 )
 
 func TestReverseConvertKeyEvent(t *testing.T) {

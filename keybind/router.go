@@ -1,9 +1,9 @@
 package keybind
 
 import (
-	"github.com/odvcencio/fluffy-ui/accessibility"
-	"github.com/odvcencio/fluffy-ui/runtime"
-	"github.com/odvcencio/fluffy-ui/terminal"
+	"github.com/odvcencio/fluffyui/accessibility"
+	"github.com/odvcencio/fluffyui/runtime"
+	"github.com/odvcencio/fluffyui/terminal"
 )
 
 // Context provides data for key binding conditions and handlers.

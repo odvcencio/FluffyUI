@@ -1,8 +1,8 @@
 package graphics
 
 import (
-	"github.com/odvcencio/fluffy-ui/backend"
-	"github.com/odvcencio/fluffy-ui/gpu"
+	"github.com/odvcencio/fluffyui/backend"
+	"github.com/odvcencio/fluffyui/gpu"
 )
 
 // TerminalEncoder converts raw RGBA pixels into terminal protocol bytes.

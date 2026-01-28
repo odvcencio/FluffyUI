@@ -3,7 +3,7 @@ package content
 import (
 	"strings"
 
-	"github.com/odvcencio/fluffy-ui/markdown"
+	"github.com/odvcencio/fluffyui/markdown"
 	"github.com/yuin/goldmark/ast"
 )
 

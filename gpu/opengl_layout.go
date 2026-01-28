@@ -3,7 +3,7 @@ package gpu
 import (
 	"unsafe"
 
-	"github.com/odvcencio/fluffy-ui/gpu/opengl/gl"
+	"github.com/odvcencio/fluffyui/gpu/opengl/gl"
 )
 
 func applyLayout(layout *VertexLayout) {

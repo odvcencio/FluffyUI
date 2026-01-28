@@ -3,7 +3,7 @@ package scroll
 import (
 	"sort"
 
-	"github.com/odvcencio/fluffy-ui/runtime"
+	"github.com/odvcencio/fluffyui/runtime"
 )
 
 // VirtualRenderFunc renders an item at the given index.

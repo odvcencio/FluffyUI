@@ -1,8 +1,8 @@
 package widgets
 
 import (
-	"github.com/odvcencio/fluffy-ui/graphics"
-	"github.com/odvcencio/fluffy-ui/runtime"
+	"github.com/odvcencio/fluffyui/graphics"
+	"github.com/odvcencio/fluffyui/runtime"
 )
 
 // CanvasWidget is a widget that draws using a Canvas.

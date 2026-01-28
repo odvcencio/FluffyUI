@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strconv"
 
-	"github.com/odvcencio/fluffy-ui/backend"
+	"github.com/odvcencio/fluffyui/backend"
 )
 
 const kittyChunkSize = 4096

@@ -5,11 +5,11 @@ import (
 
 	"github.com/mattn/go-runewidth"
 
-	"github.com/odvcencio/fluffy-ui/backend"
-	"github.com/odvcencio/fluffy-ui/docs/site/content"
-	"github.com/odvcencio/fluffy-ui/runtime"
-	"github.com/odvcencio/fluffy-ui/state"
-	"github.com/odvcencio/fluffy-ui/widgets"
+	"github.com/odvcencio/fluffyui/backend"
+	"github.com/odvcencio/fluffyui/docs/site/content"
+	"github.com/odvcencio/fluffyui/runtime"
+	"github.com/odvcencio/fluffyui/state"
+	"github.com/odvcencio/fluffyui/widgets"
 )
 
 type navItem struct {

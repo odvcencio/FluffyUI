@@ -1,9 +1,9 @@
 package runtime
 
 import (
-	"github.com/odvcencio/fluffy-ui/accessibility"
-	"github.com/odvcencio/fluffy-ui/backend"
-	"github.com/odvcencio/fluffy-ui/style"
+	"github.com/odvcencio/fluffyui/accessibility"
+	"github.com/odvcencio/fluffyui/backend"
+	"github.com/odvcencio/fluffyui/style"
 )
 
 // Layer represents a layer in the modal stack.

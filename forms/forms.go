@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/odvcencio/fluffy-ui/state"
+	"github.com/odvcencio/fluffyui/state"
 )
 
 // Values is a map of form field values.

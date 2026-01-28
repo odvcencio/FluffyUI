@@ -1,8 +1,8 @@
 package demo
 
 import (
-	"github.com/odvcencio/fluffy-ui/runtime"
-	"github.com/odvcencio/fluffy-ui/widgets"
+	"github.com/odvcencio/fluffyui/runtime"
+	"github.com/odvcencio/fluffyui/widgets"
 )
 
 // VBox lays out children vertically using their measured heights.

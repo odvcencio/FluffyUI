@@ -10,15 +10,15 @@ import (
 
 	mcp "github.com/mark3labs/mcp-go/mcp"
 	mcpserver "github.com/mark3labs/mcp-go/server"
-	"github.com/odvcencio/fluffy-ui/accessibility"
-	"github.com/odvcencio/fluffy-ui/agent"
-	"github.com/odvcencio/fluffy-ui/backend"
-	"github.com/odvcencio/fluffy-ui/clipboard"
-	"github.com/odvcencio/fluffy-ui/keybind"
-	"github.com/odvcencio/fluffy-ui/runtime"
-	"github.com/odvcencio/fluffy-ui/scroll"
-	"github.com/odvcencio/fluffy-ui/terminal"
-	"github.com/odvcencio/fluffy-ui/widgets"
+	"github.com/odvcencio/fluffyui/accessibility"
+	"github.com/odvcencio/fluffyui/agent"
+	"github.com/odvcencio/fluffyui/backend"
+	"github.com/odvcencio/fluffyui/clipboard"
+	"github.com/odvcencio/fluffyui/keybind"
+	"github.com/odvcencio/fluffyui/runtime"
+	"github.com/odvcencio/fluffyui/scroll"
+	"github.com/odvcencio/fluffyui/terminal"
+	"github.com/odvcencio/fluffyui/widgets"
 )
 
 func registerTools(s *Server) {

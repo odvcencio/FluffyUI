@@ -21,6 +21,33 @@ grid.Gap = 1
 grid.Add(widgets.NewLabel("Top"), 0, 0, 1, 2)
 ```
 
+## Flex (VStack / HStack)
+
+`Flex` provides responsive layouts with fixed and flexible children. Use
+`runtime.VBox` / `runtime.HBox` directly, or the `fluffy` helpers:
+`VStack`, `HStack`, `Expanded`, and `Space`.
+
+Example:
+
+```go
+content := fluffy.VStack(
+    fluffy.Label("Header"),
+    fluffy.Expanded(fluffy.Text("Main content")),
+    fluffy.Label("Footer"),
+)
+```
+
+## AspectRatio
+
+`AspectRatio` keeps a child at a fixed width/height ratio and centers it in
+the available space.
+
+Example:
+
+```go
+card := widgets.NewAspectRatio(widgets.NewPanel(content), 16.0/9.0)
+```
+
 ## Splitter
 
 `Splitter` divides a region into two resizable panes.

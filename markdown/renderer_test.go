@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/odvcencio/fluffy-ui/theme"
+	"github.com/odvcencio/fluffyui/theme"
 )
 
 func TestRenderer_RenderParagraph(t *testing.T) {

@@ -1,9 +1,9 @@
 package fur
 
 import (
-	"github.com/odvcencio/fluffy-ui/backend"
-	"github.com/odvcencio/fluffy-ui/compositor"
-	uiStyle "github.com/odvcencio/fluffy-ui/style"
+	"github.com/odvcencio/fluffyui/backend"
+	"github.com/odvcencio/fluffyui/compositor"
+	uiStyle "github.com/odvcencio/fluffyui/style"
 )
 
 // Color represents a terminal color.

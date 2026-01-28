@@ -6,11 +6,11 @@ import (
 	"os"
 	"time"
 
-	"github.com/odvcencio/fluffy-ui/animation"
-	"github.com/odvcencio/fluffy-ui/backend"
-	backendtcell "github.com/odvcencio/fluffy-ui/backend/tcell"
-	"github.com/odvcencio/fluffy-ui/runtime"
-	"github.com/odvcencio/fluffy-ui/widgets"
+	"github.com/odvcencio/fluffyui/animation"
+	"github.com/odvcencio/fluffyui/backend"
+	backendtcell "github.com/odvcencio/fluffyui/backend/tcell"
+	"github.com/odvcencio/fluffyui/runtime"
+	"github.com/odvcencio/fluffyui/widgets"
 )
 
 func main() {

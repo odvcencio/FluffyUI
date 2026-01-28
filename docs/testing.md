@@ -11,8 +11,8 @@ The `backend/sim` package provides a testable backend:
 ```go
 import (
     "testing"
-    "github.com/odvcencio/fluffy-ui/backend/sim"
-    "github.com/odvcencio/fluffy-ui/runtime"
+    "github.com/odvcencio/fluffyui/backend/sim"
+    "github.com/odvcencio/fluffyui/runtime"
 )
 
 func TestMyWidget(t *testing.T) {
@@ -46,7 +46,7 @@ The `testing` package provides utilities for common test patterns.
 Render a widget to a string without a backend:
 
 ```go
-import "github.com/odvcencio/fluffy-ui/testing"
+import "github.com/odvcencio/fluffyui/testing"
 
 func TestWidgetRender(t *testing.T) {
     widget := widgets.NewLabel("Hello")
@@ -74,6 +74,22 @@ func TestWithAssertions(t *testing.T) {
     fluffytest.AssertNotContains(t, be, "error")
     fluffytest.AssertTextAt(t, be, 0, 0, "Header")
 }
+```
+
+### Accessibility Assertions
+
+Capture announcements from `accessibility.SimpleAnnouncer`:
+
+```go
+announcer := fluffytest.NewAnnouncer()
+app := runtime.NewApp(runtime.AppConfig{
+    Announcer: announcer,
+    // ...
+})
+
+// ... run app ...
+
+fluffytest.AssertAnnounced(t, announcer, "Line 3 of 10")
 ```
 
 ### Input Injection

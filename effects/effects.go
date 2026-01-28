@@ -4,9 +4,9 @@ import (
 	"math"
 	"math/rand"
 
-	"github.com/odvcencio/fluffy-ui/animation"
-	"github.com/odvcencio/fluffy-ui/backend"
-	"github.com/odvcencio/fluffy-ui/graphics"
+	"github.com/odvcencio/fluffyui/animation"
+	"github.com/odvcencio/fluffyui/backend"
+	"github.com/odvcencio/fluffyui/graphics"
 )
 
 // Shimmer creates a loading skeleton effect.

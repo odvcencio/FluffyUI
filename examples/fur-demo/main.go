@@ -10,7 +10,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/odvcencio/fluffy-ui/fur"
+	"github.com/odvcencio/fluffyui/fur"
 )
 
 func main() {

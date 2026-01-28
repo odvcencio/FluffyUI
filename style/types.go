@@ -1,8 +1,8 @@
 package style
 
 import (
-	"github.com/odvcencio/fluffy-ui/backend"
-	"github.com/odvcencio/fluffy-ui/compositor"
+	"github.com/odvcencio/fluffyui/backend"
+	"github.com/odvcencio/fluffyui/compositor"
 )
 
 // Color represents a terminal color.

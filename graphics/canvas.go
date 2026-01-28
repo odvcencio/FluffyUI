@@ -4,7 +4,7 @@ import (
 	"image"
 	"math"
 
-	"github.com/odvcencio/fluffy-ui/backend"
+	"github.com/odvcencio/fluffyui/backend"
 )
 
 // Canvas provides high-level drawing operations.

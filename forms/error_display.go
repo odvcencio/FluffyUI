@@ -1,6 +1,6 @@
 package forms
 
-import "github.com/odvcencio/fluffy-ui/backend"
+import "github.com/odvcencio/fluffyui/backend"
 
 // ErrorDisplay describes how to render an error for a field.
 type ErrorDisplay struct {

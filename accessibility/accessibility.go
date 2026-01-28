@@ -5,7 +5,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/odvcencio/fluffy-ui/backend"
+	"github.com/odvcencio/fluffyui/backend"
 )
 
 // Role describes the semantic role of a widget.

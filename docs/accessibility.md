@@ -55,3 +55,20 @@ app := runtime.NewApp(runtime.AppConfig{
 ```
 
 Use a short ASCII indicator so it remains visible across terminal fonts.
+
+## Testing announcements
+
+For tests, `accessibility.SimpleAnnouncer` keeps a history you can assert on.
+The `testing` helpers expose this directly:
+
+```go
+announcer := fluffytest.NewAnnouncer()
+app := runtime.NewApp(runtime.AppConfig{
+    Announcer: announcer,
+    // ...
+})
+
+// ... run app ...
+
+fluffytest.AssertAnnounced(t, announcer, "Line 3 of 10")
+```

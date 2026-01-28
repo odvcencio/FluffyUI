@@ -23,23 +23,17 @@ package main
 
 import (
     "context"
-    "github.com/odvcencio/fluffy-ui/backend/tcell"
-    "github.com/odvcencio/fluffy-ui/runtime"
-    "github.com/odvcencio/fluffy-ui/widgets"
+    "github.com/odvcencio/fluffyui/fluffy"
 )
 
 func main() {
-    be, _ := tcell.New()
-
-    app := runtime.NewApp(runtime.AppConfig{
-        Backend: be,
-    })
+    app := fluffy.NewApp()
 
     // Build your widget tree
-    root := runtime.VBox(
-        runtime.Fixed(widgets.NewLabel("Header")),
-        runtime.Expanded(widgets.NewLabel("Content")),
-        runtime.Fixed(widgets.NewLabel("Footer")),
+    root := fluffy.VStack(
+        fluffy.Label("Header"),
+        fluffy.Expanded(fluffy.Label("Content")),
+        fluffy.Label("Footer"),
     )
 
     app.SetRoot(root)
@@ -54,17 +48,14 @@ Use `AppConfig.Update` to handle custom messages:
 ```go
 type CounterMsg struct{ Delta int }
 
-app := runtime.NewApp(runtime.AppConfig{
-    Backend: be,
-    Update: func(app *runtime.App, msg runtime.Message) bool {
+app := fluffy.NewApp(fluffy.WithUpdate(func(app *runtime.App, msg runtime.Message) bool {
         switch m := msg.(type) {
         case CounterMsg:
             counter.Increment(m.Delta)
             return true // request render
         }
         return false
-    },
-})
+}))
 
 // Post messages from anywhere
 app.Post(CounterMsg{Delta: 1})
@@ -75,9 +66,7 @@ app.Post(CounterMsg{Delta: 1})
 Widgets emit commands for app-level actions:
 
 ```go
-app := runtime.NewApp(runtime.AppConfig{
-    Backend: be,
-    CommandHandler: func(cmd runtime.Command) bool {
+app := fluffy.NewApp(fluffy.WithCommandHandler(func(cmd runtime.Command) bool {
         switch c := cmd.(type) {
         case MyCustomCommand:
             handleCustomCommand(c)
@@ -85,7 +74,7 @@ app := runtime.NewApp(runtime.AppConfig{
         }
         return false
     },
-})
+}))
 ```
 
 ## Pattern 2: Screen Only (Advanced)
@@ -99,9 +88,9 @@ This is the pattern used by Buckley.
 package main
 
 import (
-    "github.com/odvcencio/fluffy-ui/backend/tcell"
-    "github.com/odvcencio/fluffy-ui/runtime"
-    "github.com/odvcencio/fluffy-ui/terminal"
+    "github.com/odvcencio/fluffyui/backend/tcell"
+    "github.com/odvcencio/fluffyui/runtime"
+    "github.com/odvcencio/fluffyui/terminal"
 )
 
 type App struct {
@@ -294,7 +283,7 @@ func (w *MyWidget) HandleMessage(msg runtime.Message) runtime.HandleResult {
 FluffyUI provides reactive primitives for automatic UI updates:
 
 ```go
-import "github.com/odvcencio/fluffy-ui/state"
+import "github.com/odvcencio/fluffyui/state"
 
 // Create signals
 counter := state.NewSignal(0)
@@ -394,10 +383,10 @@ package main
 
 import (
     "context"
-    "github.com/odvcencio/fluffy-ui/backend/tcell"
-    "github.com/odvcencio/fluffy-ui/runtime"
-    "github.com/odvcencio/fluffy-ui/state"
-    "github.com/odvcencio/fluffy-ui/widgets"
+    "github.com/odvcencio/fluffyui/backend/tcell"
+    "github.com/odvcencio/fluffyui/runtime"
+    "github.com/odvcencio/fluffyui/state"
+    "github.com/odvcencio/fluffyui/widgets"
 )
 
 func main() {

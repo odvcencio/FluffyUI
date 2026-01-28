@@ -1,6 +1,6 @@
 package graphics
 
-import "github.com/odvcencio/fluffy-ui/backend"
+import "github.com/odvcencio/fluffyui/backend"
 
 // PixelBuffer stores sub-cell pixel data.
 type PixelBuffer struct {

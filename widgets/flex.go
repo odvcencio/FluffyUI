@@ -1,6 +1,6 @@
 package widgets
 
-import "github.com/odvcencio/fluffy-ui/runtime"
+import "github.com/odvcencio/fluffyui/runtime"
 
 // Flex re-exports runtime flex layout types for widget-level usage.
 type Flex = runtime.Flex

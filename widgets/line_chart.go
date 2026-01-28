@@ -3,9 +3,9 @@ package widgets
 import (
 	"math"
 
-	"github.com/odvcencio/fluffy-ui/backend"
-	"github.com/odvcencio/fluffy-ui/graphics"
-	"github.com/odvcencio/fluffy-ui/runtime"
+	"github.com/odvcencio/fluffyui/backend"
+	"github.com/odvcencio/fluffyui/graphics"
+	"github.com/odvcencio/fluffyui/runtime"
 )
 
 // ChartSeries represents a line chart series.

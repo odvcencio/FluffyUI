@@ -5,7 +5,7 @@ import (
 	"html"
 	"strings"
 
-	"github.com/odvcencio/fluffy-ui/compositor"
+	"github.com/odvcencio/fluffyui/compositor"
 )
 
 // ExportFormat identifies output formats.

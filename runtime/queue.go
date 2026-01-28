@@ -1,6 +1,6 @@
 package runtime
 
-import "github.com/odvcencio/fluffy-ui/state"
+import "github.com/odvcencio/fluffyui/state"
 
 // QueueFlushPolicy configures when the app flushes state queues.
 type QueueFlushPolicy int

@@ -1,9 +1,9 @@
 package widgets_test
 
 import (
-	"github.com/odvcencio/fluffy-ui/backend"
-	"github.com/odvcencio/fluffy-ui/state"
-	"github.com/odvcencio/fluffy-ui/widgets"
+	"github.com/odvcencio/fluffyui/backend"
+	"github.com/odvcencio/fluffyui/state"
+	"github.com/odvcencio/fluffyui/widgets"
 )
 
 func ExampleText() {

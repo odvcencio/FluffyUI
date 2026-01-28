@@ -16,8 +16,8 @@ import (
 
 	mcp "github.com/mark3labs/mcp-go/mcp"
 	mcpserver "github.com/mark3labs/mcp-go/server"
-	"github.com/odvcencio/fluffy-ui/agent"
-	"github.com/odvcencio/fluffy-ui/runtime"
+	"github.com/odvcencio/fluffyui/agent"
+	"github.com/odvcencio/fluffyui/runtime"
 	"golang.org/x/time/rate"
 )
 
@@ -26,7 +26,7 @@ const (
 	limitErrorCode    = -32002
 	rateErrorCode     = -32003
 	accessErrorCode   = -32004
-	defaultServerName = "fluffy-ui"
+	defaultServerName = "fluffyui"
 	defaultVersion    = "dev"
 )
 

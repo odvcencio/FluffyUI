@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/odvcencio/fluffy-ui/backend"
-	"github.com/odvcencio/fluffy-ui/backend/sim"
-	"github.com/odvcencio/fluffy-ui/terminal"
+	"github.com/odvcencio/fluffyui/backend"
+	"github.com/odvcencio/fluffyui/backend/sim"
+	"github.com/odvcencio/fluffyui/terminal"
 )
 
 type testCommand struct{}

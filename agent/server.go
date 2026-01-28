@@ -13,8 +13,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/odvcencio/fluffy-ui/keybind"
-	"github.com/odvcencio/fluffy-ui/runtime"
+	"github.com/odvcencio/fluffyui/keybind"
+	"github.com/odvcencio/fluffyui/runtime"
 )
 
 // ServerOptions configures the agent interaction server.

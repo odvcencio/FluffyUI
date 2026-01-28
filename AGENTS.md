@@ -20,7 +20,7 @@ FluffyUI is a comprehensive terminal UI framework featuring:
 ## Directory Structure
 
 ```
-fluffy-ui/
+fluffyui/
 ├── runtime/          # Core app loop, render pipeline, message handling
 ├── widgets/          # 35+ reusable UI components
 ├── state/            # Reactive signals and computed values
@@ -157,7 +157,7 @@ import (
 
     "github.com/external/pkg"
 
-    "fluffy-ui/runtime"
+    "fluffyui/runtime"
 )
 
 // 2. Type definition
@@ -397,7 +397,7 @@ func TestMyWidget(t *testing.T) {
 ### Using Test Helpers
 
 ```go
-import "fluffy-ui/testing"
+import "fluffyui/testing"
 
 func TestLabel(t *testing.T) {
     label := widgets.NewLabel("Hello")

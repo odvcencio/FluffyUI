@@ -3,7 +3,7 @@ package widgets
 import (
 	"sort"
 
-	"github.com/odvcencio/fluffy-ui/keybind"
+	"github.com/odvcencio/fluffyui/keybind"
 )
 
 // EnhancedPalette wraps a command registry with palette UI.

@@ -17,10 +17,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/odvcencio/fluffy-ui/examples/internal/demo"
-	"github.com/odvcencio/fluffy-ui/gpu"
-	"github.com/odvcencio/fluffy-ui/runtime"
-	"github.com/odvcencio/fluffy-ui/widgets"
+	"github.com/odvcencio/fluffyui/examples/internal/demo"
+	"github.com/odvcencio/fluffyui/gpu"
+	"github.com/odvcencio/fluffyui/runtime"
+	"github.com/odvcencio/fluffyui/widgets"
 )
 
 func main() {

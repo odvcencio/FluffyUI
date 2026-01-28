@@ -1,6 +1,6 @@
 package graphics
 
-import "github.com/odvcencio/fluffy-ui/backend"
+import "github.com/odvcencio/fluffyui/backend"
 
 // ASCIIBlitter renders a single pixel as an ASCII character.
 type ASCIIBlitter struct{}

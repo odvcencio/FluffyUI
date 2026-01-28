@@ -4,7 +4,7 @@ import (
 	"image"
 	"unsafe"
 
-	"github.com/odvcencio/fluffy-ui/gpu/opengl/gl"
+	"github.com/odvcencio/fluffyui/gpu/opengl/gl"
 )
 
 type openglTexture struct {

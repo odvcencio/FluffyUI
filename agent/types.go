@@ -3,8 +3,8 @@ package agent
 import (
 	"time"
 
-	"github.com/odvcencio/fluffy-ui/accessibility"
-	"github.com/odvcencio/fluffy-ui/runtime"
+	"github.com/odvcencio/fluffyui/accessibility"
+	"github.com/odvcencio/fluffyui/runtime"
 )
 
 // Snapshot captures a structured view of the current UI state.

@@ -1,6 +1,6 @@
 package widgets_test
 
-import "github.com/odvcencio/fluffy-ui/widgets"
+import "github.com/odvcencio/fluffyui/widgets"
 
 func ExampleButton() {
 	button := widgets.NewButton("Save", widgets.WithVariant(widgets.VariantPrimary))

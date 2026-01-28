@@ -9,7 +9,7 @@ package runtime
 // compositor.Screen exists as an alternative for pure-ANSI output but
 // is not used in the tcell backend path.
 
-import "github.com/odvcencio/fluffy-ui/backend"
+import "github.com/odvcencio/fluffyui/backend"
 
 // Cell represents a single character cell in the buffer.
 type Cell = backend.Cell

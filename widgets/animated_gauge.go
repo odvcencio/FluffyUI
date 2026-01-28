@@ -3,11 +3,11 @@ package widgets
 import (
 	"math"
 
-	"github.com/odvcencio/fluffy-ui/animation"
-	"github.com/odvcencio/fluffy-ui/backend"
-	"github.com/odvcencio/fluffy-ui/effects"
-	"github.com/odvcencio/fluffy-ui/graphics"
-	"github.com/odvcencio/fluffy-ui/runtime"
+	"github.com/odvcencio/fluffyui/animation"
+	"github.com/odvcencio/fluffyui/backend"
+	"github.com/odvcencio/fluffyui/effects"
+	"github.com/odvcencio/fluffyui/graphics"
+	"github.com/odvcencio/fluffyui/runtime"
 )
 
 // GaugeColors defines the colors used for the animated gauge.

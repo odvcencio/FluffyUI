@@ -19,13 +19,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/odvcencio/fluffy-ui/backend"
-	"github.com/odvcencio/fluffy-ui/backend/sim"
-	"github.com/odvcencio/fluffy-ui/graphics"
-	"github.com/odvcencio/fluffy-ui/recording"
-	"github.com/odvcencio/fluffy-ui/runtime"
-	"github.com/odvcencio/fluffy-ui/state"
-	"github.com/odvcencio/fluffy-ui/widgets"
+	"github.com/odvcencio/fluffyui/backend"
+	"github.com/odvcencio/fluffyui/backend/sim"
+	"github.com/odvcencio/fluffyui/graphics"
+	"github.com/odvcencio/fluffyui/recording"
+	"github.com/odvcencio/fluffyui/runtime"
+	"github.com/odvcencio/fluffyui/state"
+	"github.com/odvcencio/fluffyui/widgets"
 )
 
 var (
@@ -1307,7 +1307,7 @@ func (t *tabsDemo) Render(ctx runtime.RenderContext) {
 	}{
 		{"Overview", "Welcome to FluffyUI! A batteries-included TUI framework.", "◉"},
 		{"Features", "35+ widgets, reactive state, accessibility built-in.", "★"},
-		{"Install", "go get github.com/odvcencio/fluffy-ui", "↓"},
+		{"Install", "go get github.com/odvcencio/fluffyui", "↓"},
 		{"Docs", "Comprehensive guides and examples included.", "📖"},
 	}
 
@@ -1984,7 +1984,7 @@ func (h *heroDemo) Render(ctx runtime.RenderContext) {
 
 	// Install command with pulsing highlight
 	installY := bounds.Y + bounds.Height - 3
-	install := " go get github.com/odvcencio/fluffy-ui "
+	install := " go get github.com/odvcencio/fluffyui "
 	ix := (bounds.Width - len(install)) / 2
 	installColor := rainbowColors[(h.frame/5)%len(rainbowColors)]
 	ctx.Buffer.SetString(ix, installY, install, backend.DefaultStyle().Background(installColor).Foreground(backend.ColorBlack).Bold(true))

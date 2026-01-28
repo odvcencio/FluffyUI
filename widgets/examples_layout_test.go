@@ -1,8 +1,8 @@
 package widgets_test
 
 import (
-	"github.com/odvcencio/fluffy-ui/backend"
-	"github.com/odvcencio/fluffy-ui/widgets"
+	"github.com/odvcencio/fluffyui/backend"
+	"github.com/odvcencio/fluffyui/widgets"
 )
 
 func ExampleGrid() {

@@ -3,7 +3,7 @@ package animation
 import (
 	"testing"
 
-	"github.com/odvcencio/fluffy-ui/backend"
+	"github.com/odvcencio/fluffyui/backend"
 )
 
 func TestParticleSystemUpdate(t *testing.T) {

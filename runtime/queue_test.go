@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/odvcencio/fluffy-ui/state"
+	"github.com/odvcencio/fluffyui/state"
 )
 
 func TestWithQueue_FlushOnTick(t *testing.T) {

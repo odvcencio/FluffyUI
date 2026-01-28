@@ -1,6 +1,6 @@
-module github.com/odvcencio/fluffy-ui
+module github.com/odvcencio/fluffyui
 
-go 1.22
+go 1.24.0
 
 require (
 	github.com/alecthomas/chroma/v2 v2.22.0
@@ -16,6 +16,7 @@ require (
 	golang.org/x/sys v0.38.0
 	golang.org/x/term v0.37.0
 	golang.org/x/time v0.14.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -36,7 +37,6 @@ require (
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	golang.org/x/text v0.33.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
 replace github.com/mark3labs/mcp-go => ./third_party/mcp-go

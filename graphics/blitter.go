@@ -1,8 +1,8 @@
 package graphics
 
 import (
-	"github.com/odvcencio/fluffy-ui/backend"
-	"github.com/odvcencio/fluffy-ui/terminal"
+	"github.com/odvcencio/fluffyui/backend"
+	"github.com/odvcencio/fluffyui/terminal"
 )
 
 // Blitter converts pixel data to terminal cells.

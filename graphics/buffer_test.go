@@ -3,7 +3,7 @@ package graphics
 import (
 	"testing"
 
-	"github.com/odvcencio/fluffy-ui/backend"
+	"github.com/odvcencio/fluffyui/backend"
 )
 
 func TestPixelBufferSetGet(t *testing.T) {

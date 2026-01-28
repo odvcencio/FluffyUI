@@ -1,6 +1,6 @@
 package runtime
 
-import "github.com/odvcencio/fluffy-ui/style"
+import "github.com/odvcencio/fluffyui/style"
 
 // StyleApplier receives resolved stylesheet styles for layout.
 type StyleApplier interface {

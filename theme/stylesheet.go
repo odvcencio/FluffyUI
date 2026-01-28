@@ -1,6 +1,6 @@
 package theme
 
-import "github.com/odvcencio/fluffy-ui/style"
+import "github.com/odvcencio/fluffyui/style"
 
 // DefaultStylesheet returns the default stylesheet using the theme palette.
 func DefaultStylesheet() *style.Stylesheet {

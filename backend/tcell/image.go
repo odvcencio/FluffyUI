@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/odvcencio/fluffy-ui/backend"
-	"github.com/odvcencio/fluffy-ui/graphics"
+	"github.com/odvcencio/fluffyui/backend"
+	"github.com/odvcencio/fluffyui/graphics"
 )
 
 // DrawImage renders a pixel image using Kitty or Sixel protocols.

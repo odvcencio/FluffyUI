@@ -1,6 +1,6 @@
 package fluffy
 
-import "github.com/odvcencio/fluffy-ui/runtime"
+import "github.com/odvcencio/fluffyui/runtime"
 
 // Flex re-exports.
 type Flex = runtime.Flex

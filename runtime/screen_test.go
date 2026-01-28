@@ -3,8 +3,8 @@ package runtime
 import (
 	"testing"
 
-	"github.com/odvcencio/fluffy-ui/backend"
-	"github.com/odvcencio/fluffy-ui/terminal"
+	"github.com/odvcencio/fluffyui/backend"
+	"github.com/odvcencio/fluffyui/terminal"
 )
 
 // mockWidget is a test widget.

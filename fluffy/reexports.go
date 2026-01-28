@@ -3,12 +3,12 @@ package fluffy
 import (
 	"image"
 
-	"github.com/odvcencio/fluffy-ui/backend"
-	"github.com/odvcencio/fluffy-ui/runtime"
-	"github.com/odvcencio/fluffy-ui/state"
-	"github.com/odvcencio/fluffy-ui/style"
-	"github.com/odvcencio/fluffy-ui/theme"
-	"github.com/odvcencio/fluffy-ui/widgets"
+	"github.com/odvcencio/fluffyui/backend"
+	"github.com/odvcencio/fluffyui/runtime"
+	"github.com/odvcencio/fluffyui/state"
+	"github.com/odvcencio/fluffyui/style"
+	"github.com/odvcencio/fluffyui/theme"
+	"github.com/odvcencio/fluffyui/widgets"
 )
 
 // Common runtime re-exports.
@@ -20,6 +20,8 @@ type Rect = runtime.Rect
 type RenderContext = runtime.RenderContext
 type HandleResult = runtime.HandleResult
 type Command = runtime.Command
+type App = runtime.App
+type Services = runtime.Services
 type Persistable = runtime.Persistable
 type PersistSnapshot = runtime.PersistSnapshot
 
@@ -90,20 +92,20 @@ func Button(label string, opts ...widgets.ButtonOption) *widgets.Button {
 	return widgets.NewButton(label, opts...)
 }
 
-func NewInput(value string, opts ...widgets.InputOption) *widgets.Input {
-	return widgets.NewInput(value, opts...)
+func NewInput() *widgets.Input {
+	return widgets.NewInput()
 }
 
-func Input(value string, opts ...widgets.InputOption) *widgets.Input {
-	return widgets.NewInput(value, opts...)
+func Input() *widgets.Input {
+	return widgets.NewInput()
 }
 
-func NewTextArea(value string, opts ...widgets.TextAreaOption) *widgets.TextArea {
-	return widgets.NewTextArea(value, opts...)
+func NewTextArea() *widgets.TextArea {
+	return widgets.NewTextArea()
 }
 
-func TextArea(value string, opts ...widgets.TextAreaOption) *widgets.TextArea {
-	return widgets.NewTextArea(value, opts...)
+func TextArea() *widgets.TextArea {
+	return widgets.NewTextArea()
 }
 
 func NewGrid(rows, cols int) *widgets.Grid {

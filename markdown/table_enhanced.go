@@ -3,8 +3,8 @@ package markdown
 import (
 	"strings"
 
-	"github.com/odvcencio/fluffy-ui/compositor"
-	"github.com/odvcencio/fluffy-ui/theme"
+	"github.com/odvcencio/fluffyui/compositor"
+	"github.com/odvcencio/fluffyui/theme"
 	extast "github.com/yuin/goldmark/extension/ast"
 )
 

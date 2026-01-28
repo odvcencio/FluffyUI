@@ -17,7 +17,7 @@ A batteries-included Terminal User Interface (TUI) framework for Go. Build inter
 **Reactive. Accessible. Testable. Terminal UI for Go.**
 
 ```bash
-go get github.com/odvcencio/fluffy-ui@latest
+go get github.com/odvcencio/fluffyui@latest
 ```
 
 ## Features
@@ -35,10 +35,12 @@ go get github.com/odvcencio/fluffy-ui@latest
 ## Installation
 
 ```bash
-go get github.com/odvcencio/fluffy-ui@latest
+go get github.com/odvcencio/fluffyui@latest
 ```
 
 **Requirements:** Go 1.22 or later
+
+Import path is the GitHub module path above (vanity domain is not set up yet).
 
 ## Quick Start
 
@@ -52,7 +54,7 @@ package main
 import (
     "context"
 
-    "github.com/odvcencio/fluffy-ui/fluffy"
+    "github.com/odvcencio/fluffyui/fluffy"
 )
 
 func main() {
@@ -84,7 +86,7 @@ Audio note: the quickstart ships with tiny WAVs in `examples/quickstart/assets/a
 FluffyUI can expose an explicit JSONL socket for agent-driven input. The default snapshot is the accessibility tree (roles/labels/values/bounds/focus). Raw screen text is opt-in and gated.
 
 ```go
-import "github.com/odvcencio/fluffy-ui/agent"
+import "github.com/odvcencio/fluffyui/agent"
 
 srv, err := agent.NewServer(agent.ServerOptions{
     Addr:      "unix:/tmp/fluffyui.sock",
@@ -395,7 +397,7 @@ FLUFFYUI_RECORD=session.cast FLUFFYUI_RECORD_EXPORT=output.mp4 go run ./examples
 Use the simulation backend for deterministic tests without a terminal:
 
 ```go
-import "github.com/odvcencio/fluffy-ui/backend/sim"
+import "github.com/odvcencio/fluffyui/backend/sim"
 
 func TestMyWidget(t *testing.T) {
     // Create simulation backend
@@ -519,10 +521,15 @@ Comprehensive documentation is available in the `docs/` directory:
 | Guide | Description |
 |-------|-------------|
 | [Getting Started](docs/getting-started.md) | Installation and first app |
+| [API Reference](docs/api/index.md) | Package reference entry point |
 | [Architecture](docs/architecture.md) | Core concepts and render pipeline |
 | [Keybindings](docs/keybindings.md) | Command registry and keymap stacking |
 | [Accessibility](docs/accessibility.md) | Roles, announcements, focus styles |
+| [Debugging](docs/debugging.md) | Error reports and layout overlays |
 | [Forms](docs/forms.md) | Field validation and form coordination |
+| [Integration](docs/integration-guide.md) | App integration patterns |
+| [Migration](docs/migration/bubbletea.md) | Moving from Bubble Tea |
+| [Persistence](docs/persistence.md) | Save and restore widget state |
 | [Testing](docs/testing.md) | Simulation backend for testing |
 | [Theming](docs/theming.md) | Theme management |
 | [Performance](docs/performance.md) | Optimization best practices |
@@ -538,11 +545,12 @@ Comprehensive documentation is available in the `docs/` directory:
 | [Input Widgets](docs/widgets/input.md) | Button, Input, Select |
 | [Navigation Widgets](docs/widgets/navigation.md) | Tabs, Menu, Palette |
 | [Feedback Widgets](docs/widgets/feedback.md) | Dialog, Alert, Progress |
+| [Custom Widgets](docs/widgets/custom.md) | Building your own widgets |
 
 ## Package Structure
 
 ```
-fluffy-ui/
+fluffyui/
 ├── runtime/        Core app loop, rendering, message handling
 ├── widgets/        Complete widget library (35+ components)
 ├── graphics/       Sub-cell canvas with shapes, curves, images

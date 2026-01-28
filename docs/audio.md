@@ -19,8 +19,8 @@ wire a driver that integrates your preferred Go audio library.
 import (
     "time"
 
-    "github.com/odvcencio/fluffy-ui/audio"
-    "github.com/odvcencio/fluffy-ui/runtime"
+    "github.com/odvcencio/fluffyui/audio"
+    "github.com/odvcencio/fluffyui/runtime"
 )
 
 driver := NewMyAudioDriver() // implement audio.Driver
@@ -82,7 +82,7 @@ real playback (tests, CI, or headless builds).
 player and map cue IDs to file paths.
 
 ```go
-import "github.com/odvcencio/fluffy-ui/audio/execdriver"
+import "github.com/odvcencio/fluffyui/audio/execdriver"
 
 command, _ := execdriver.DetectCommand()
 driver := execdriver.NewDriver(execdriver.Config{

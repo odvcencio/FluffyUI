@@ -3,7 +3,7 @@ package runtime
 import (
 	"sync/atomic"
 
-	"github.com/odvcencio/fluffy-ui/state"
+	"github.com/odvcencio/fluffyui/state"
 )
 
 // QueueScheduler enqueues callbacks and wakes the app to flush.

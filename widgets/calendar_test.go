@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/odvcencio/fluffy-ui/runtime"
-	"github.com/odvcencio/fluffy-ui/terminal"
-	fluffytest "github.com/odvcencio/fluffy-ui/testing"
+	"github.com/odvcencio/fluffyui/runtime"
+	"github.com/odvcencio/fluffyui/terminal"
+	fluffytest "github.com/odvcencio/fluffyui/testing"
 )
 
 func TestCalendarSelectClampsToMinMax(t *testing.T) {

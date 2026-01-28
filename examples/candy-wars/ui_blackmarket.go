@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 
-	"github.com/odvcencio/fluffy-ui/runtime"
-	"github.com/odvcencio/fluffy-ui/terminal"
+	"github.com/odvcencio/fluffyui/runtime"
+	"github.com/odvcencio/fluffyui/terminal"
 )
 
 type blackMarketKind int
