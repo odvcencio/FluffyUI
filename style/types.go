@@ -182,6 +182,16 @@ func (s Style) IsZero() bool {
 		s.BorderRadius == nil
 }
 
+// AffectsLayout reports whether the style includes layout-affecting fields.
+func (s Style) AffectsLayout() bool {
+	return s.Padding != nil ||
+		s.Margin != nil ||
+		s.Width != nil ||
+		s.Height != nil ||
+		s.Border != nil ||
+		s.BorderRadius != nil
+}
+
 // Merge overlays the provided style on top of the current one.
 func (s Style) Merge(override Style) Style {
 	if override.Foreground.Mode != compositor.ColorModeNone {

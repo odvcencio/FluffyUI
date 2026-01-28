@@ -1,6 +1,7 @@
 package widgets
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/odvcencio/fluffy-ui/accessibility"
@@ -118,12 +119,12 @@ func (t *Tabs) Render(ctx runtime.RenderContext) {
 			available := content.Width - (x - content.X)
 			label = truncateString(label, available)
 			ctx.Buffer.SetString(x, content.Y, label, style)
-			x += len(label)
+			x += textWidth(label)
 		}
 	}
 	selected := t.selectedTab()
 	if selected != nil && selected.Content != nil {
-		selected.Content.Render(ctx)
+		runtime.RenderChild(ctx, selected.Content)
 	}
 }
 
@@ -182,6 +183,22 @@ func (t *Tabs) ChildWidgets() []runtime.Widget {
 		return nil
 	}
 	return []runtime.Widget{selected.Content}
+}
+
+// PathSegment returns a debug path segment for the given child.
+func (t *Tabs) PathSegment(child runtime.Widget) string {
+	if t == nil {
+		return "Tabs"
+	}
+	selected := t.selectedTab()
+	if selected != nil && selected.Content == child {
+		title := strings.TrimSpace(selected.Title)
+		if title != "" {
+			return fmt.Sprintf("Tabs[%s]", title)
+		}
+		return "Tabs[selected]"
+	}
+	return "Tabs"
 }
 
 func (t *Tabs) selectedTab() *Tab {

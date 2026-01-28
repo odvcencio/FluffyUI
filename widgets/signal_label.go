@@ -70,7 +70,7 @@ func (s *SignalLabel) StyleType() string {
 func (s *SignalLabel) Measure(constraints runtime.Constraints) runtime.Size {
 	return s.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {
 		return contentConstraints.Constrain(runtime.Size{
-			Width:  len(s.text),
+			Width:  textWidth(s.text),
 			Height: 1,
 		})
 	})
@@ -85,16 +85,17 @@ func (s *SignalLabel) Render(ctx runtime.RenderContext) {
 	s.syncA11y()
 
 	text := s.text
-	if len(text) > bounds.Width {
+	if textWidth(text) > bounds.Width {
 		text = truncateString(text, bounds.Width)
 	}
 
 	x := bounds.X
+	textW := textWidth(text)
 	switch s.alignment {
 	case AlignCenter:
-		x = bounds.X + (bounds.Width-len(text))/2
+		x = bounds.X + (bounds.Width-textW)/2
 	case AlignRight:
-		x = bounds.X + bounds.Width - len(text)
+		x = bounds.X + bounds.Width - textW
 	}
 
 	baseStyle := resolveBaseStyle(ctx, s, s.style, s.styleSet)

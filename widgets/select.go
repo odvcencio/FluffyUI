@@ -120,7 +120,7 @@ func (s *Select) SetSelected(index int) {
 func (s *Select) Measure(constraints runtime.Constraints) runtime.Size {
 	return s.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {
 		label := s.currentLabel()
-		width := len(label) + 4
+		width := textWidth(label) + 4
 		if width < 6 {
 			width = 6
 		}

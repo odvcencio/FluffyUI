@@ -1,6 +1,7 @@
 package widgets
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/odvcencio/fluffy-ui/accessibility"
@@ -66,9 +67,7 @@ func (s *Stack) Layout(bounds runtime.Rect) {
 func (s *Stack) Render(ctx runtime.RenderContext) {
 	s.syncA11y()
 	for _, child := range s.Children {
-		if child != nil {
-			child.Render(ctx)
-		}
+		runtime.RenderChild(ctx, child)
 	}
 }
 
@@ -92,6 +91,19 @@ func (s *Stack) ChildWidgets() []runtime.Widget {
 		return nil
 	}
 	return s.Children
+}
+
+// PathSegment returns a debug path segment for the given child.
+func (s *Stack) PathSegment(child runtime.Widget) string {
+	if s == nil {
+		return "Stack"
+	}
+	for i, entry := range s.Children {
+		if entry == child {
+			return fmt.Sprintf("Stack[%d]", i)
+		}
+	}
+	return "Stack"
 }
 
 func (s *Stack) syncA11y() {

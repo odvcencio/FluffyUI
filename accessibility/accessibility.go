@@ -22,6 +22,7 @@ const (
 	RoleTable       Role = "table"
 	RoleRow         Role = "row"
 	RoleCell        Role = "cell"
+	RoleSlider      Role = "slider"
 	RoleTree        Role = "tree"
 	RoleTreeItem    Role = "treeitem"
 	RoleMenu        Role = "menu"

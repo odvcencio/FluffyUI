@@ -25,7 +25,7 @@ func extractHeadings(root ast.Node, source []byte) []Heading {
 		if text == "" {
 			return ast.WalkContinue, nil
 		}
-		slug := slugify(text)
+		slug := headingID(h, text)
 		if slug == "" {
 			slug = "section"
 		}
@@ -41,6 +41,24 @@ func extractHeadings(root ast.Node, source []byte) []Heading {
 		return ast.WalkContinue, nil
 	})
 	return headings
+}
+
+func headingID(h *ast.Heading, fallback string) string {
+	if h != nil {
+		if value, ok := h.AttributeString("id"); ok {
+			switch v := value.(type) {
+			case string:
+				if v != "" {
+					return v
+				}
+			case []byte:
+				if len(v) > 0 {
+					return string(v)
+				}
+			}
+		}
+	}
+	return slugify(fallback)
 }
 
 func firstParagraphText(root ast.Node, source []byte) string {

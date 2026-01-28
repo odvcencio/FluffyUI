@@ -3,6 +3,7 @@ package tcell
 
 import (
 	"strings"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/odvcencio/fluffy-ui/backend"
@@ -169,12 +170,28 @@ func (b *Backend) PollEvent() terminal.Event {
 }
 
 // PostEvent injects an event into the queue.
+// Retries with exponential backoff if the queue is temporarily full.
 func (b *Backend) PostEvent(ev terminal.Event) error {
 	tev := reverseConvertEvent(ev)
-	if tev != nil {
-		return b.screen.PostEvent(tev)
+	if tev == nil {
+		return nil
 	}
-	return nil
+
+	// Try posting with retry and exponential backoff
+	const maxRetries = 5
+	delay := time.Millisecond
+
+	for i := 0; i < maxRetries; i++ {
+		err := b.screen.PostEvent(tev)
+		if err == nil {
+			return nil
+		}
+		// If queue is full, wait and retry
+		time.Sleep(delay)
+		delay *= 2 // Exponential backoff: 1ms, 2ms, 4ms, 8ms, 16ms
+	}
+
+	return b.screen.PostEvent(tev) // Final attempt, return any error
 }
 
 // Beep emits an audible bell.

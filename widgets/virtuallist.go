@@ -524,7 +524,9 @@ func (v *VirtualList[T]) renderWidgetItems(ctx runtime.RenderContext, content ru
 		item := v.adapter.Item(i)
 		v.widgetFactory.UpdateWidget(widget, item, i, i == v.list.SelectedIndex())
 		widget.Layout(itemBounds)
-		widget.Render(ctx.Sub(itemBounds))
+		if childCtx, ok := ctx.SubVisible(itemBounds); ok {
+			widget.Render(childCtx)
+		}
 	}
 }
 

@@ -62,7 +62,7 @@ func NewDocsView(site *content.SiteContent) *DocsView {
 	view.searchList = widgets.NewList(widgets.NewSignalAdapter(view.searchItems, renderSearchItem))
 	view.searchList.SetLabel("Search Results")
 	view.searchList.OnSelect(func(index int, item navItem) {
-		view.selectDoc(item.DocID)
+		view.selectDocAnchor(item.DocID, item.HeadingID)
 	})
 
 	view.docView = NewMarkdownView(nil)
@@ -218,8 +218,12 @@ func (d *DocsView) onSearchChanged(text string) {
 	hits := d.site.Index.Search(query, 50)
 	results := make([]navItem, 0, len(hits))
 	for _, hit := range hits {
+		title := hit.Entry.Heading
+		if title == "" {
+			title = hit.Entry.DocTitle
+		}
 		results = append(results, navItem{
-			Title:     hit.Entry.DocTitle,
+			Title:     title,
 			DocID:     hit.Entry.DocID,
 			HeadingID: hit.Entry.HeadingID,
 			DocTitle:  hit.Entry.DocTitle,
@@ -249,6 +253,13 @@ func (d *DocsView) selectDoc(docID string) {
 	}
 	d.updateStatus(doc.Path)
 	d.Invalidate()
+}
+
+func (d *DocsView) selectDocAnchor(docID, anchor string) {
+	d.selectDoc(docID)
+	if anchor != "" && d.docView != nil {
+		d.docView.ScrollToAnchor(anchor)
+	}
 }
 
 func (d *DocsView) updateStatus(text string) {

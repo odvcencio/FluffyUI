@@ -61,7 +61,7 @@ func (s *Stepper) Measure(constraints runtime.Constraints) runtime.Size {
 	return s.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {
 		width := 0
 		for i, step := range s.Steps {
-			width += len(step.Title) + 4
+			width += textWidth(step.Title) + 4
 			if i < len(s.Steps)-1 {
 				width += 3
 			}

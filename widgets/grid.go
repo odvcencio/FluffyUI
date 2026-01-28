@@ -1,6 +1,7 @@
 package widgets
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/odvcencio/fluffy-ui/accessibility"
@@ -145,9 +146,7 @@ func (g *Grid) Layout(bounds runtime.Rect) {
 func (g *Grid) Render(ctx runtime.RenderContext) {
 	g.syncA11y()
 	for _, child := range g.Children {
-		if child.Widget != nil {
-			child.Widget.Render(ctx)
-		}
+		runtime.RenderChild(ctx, child.Widget)
 	}
 }
 
@@ -176,6 +175,19 @@ func (g *Grid) ChildWidgets() []runtime.Widget {
 		}
 	}
 	return out
+}
+
+// PathSegment returns a debug path segment for the given child.
+func (g *Grid) PathSegment(child runtime.Widget) string {
+	if g == nil {
+		return "Grid"
+	}
+	for _, entry := range g.Children {
+		if entry.Widget == child {
+			return fmt.Sprintf("Grid[%d,%d]", entry.Row, entry.Col)
+		}
+	}
+	return "Grid"
 }
 
 func (g *Grid) syncA11y() {

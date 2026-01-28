@@ -72,7 +72,7 @@ func (a *Alert) StyleClasses() []string {
 // Measure returns desired size.
 func (a *Alert) Measure(constraints runtime.Constraints) runtime.Size {
 	return a.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {
-		width := len(a.Text)
+		width := textWidth(a.Text)
 		if width < 1 {
 			width = 1
 		}

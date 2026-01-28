@@ -165,8 +165,8 @@ func (s *Section) Render(ctx runtime.RenderContext) {
 	ctx.Buffer.Set(b.X+1, y, ' ', headerStyle)
 
 	title := s.title
-	if len(title) > b.Width-3 {
-		title = title[:b.Width-3]
+	if textWidth(title) > b.Width-3 {
+		title = truncateString(title, b.Width-3)
 	}
 	ctx.Buffer.SetString(b.X+2, y, title, headerStyle)
 	y++
@@ -206,15 +206,19 @@ func (s *Section) Render(ctx runtime.RenderContext) {
 
 			text := item.Text
 			maxText := b.Width - 5
-			if len(text) > maxText {
-				text = text[:maxText-3] + "..."
+			if textWidth(text) > maxText {
+				text = truncateString(text, maxText)
 			}
 			ctx.Buffer.SetString(b.X+4, y, text, textStyle)
 			y++
 
 			// SubText on next line if present
 			if item.SubText != "" && y < b.Y+b.Height {
-				ctx.Buffer.SetString(b.X+4, y, "  "+item.SubText, itemStyle)
+				sub := "  " + item.SubText
+				if textWidth(sub) > maxText {
+					sub = truncateString(sub, maxText)
+				}
+				ctx.Buffer.SetString(b.X+4, y, sub, itemStyle)
 				y++
 			}
 		}

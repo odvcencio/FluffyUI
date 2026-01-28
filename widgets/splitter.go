@@ -132,12 +132,8 @@ func (s *Splitter) Layout(bounds runtime.Rect) {
 // Render draws both panes.
 func (s *Splitter) Render(ctx runtime.RenderContext) {
 	s.syncA11y()
-	if s.First != nil {
-		s.First.Render(ctx)
-	}
-	if s.Second != nil {
-		s.Second.Render(ctx)
-	}
+	runtime.RenderChild(ctx, s.First)
+	runtime.RenderChild(ctx, s.Second)
 }
 
 // HandleMessage forwards messages to child panes.
@@ -168,6 +164,21 @@ func (s *Splitter) ChildWidgets() []runtime.Widget {
 		children = append(children, s.Second)
 	}
 	return children
+}
+
+// PathSegment returns a debug path segment for the given child.
+func (s *Splitter) PathSegment(child runtime.Widget) string {
+	if s == nil {
+		return "Splitter"
+	}
+	switch child {
+	case s.First:
+		return "Splitter[first]"
+	case s.Second:
+		return "Splitter[second]"
+	default:
+		return "Splitter"
+	}
 }
 
 func (s *Splitter) syncA11y() {

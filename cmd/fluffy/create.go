@@ -144,7 +144,7 @@ func gameTemplate() projectTemplate {
 
 const goModTemplate = `module {{.ModulePath}}
 
-go 1.25.1
+go 1.22
 `
 
 const fluffyTomlTemplate = `name = "{{.AppName}}"
@@ -159,20 +159,12 @@ import (
 	"fmt"
 	"os"
 
-	backendtcell "github.com/odvcencio/fluffy-ui/backend/tcell"
-	"github.com/odvcencio/fluffy-ui/runtime"
-	ui "github.com/odvcencio/fluffy-ui/widgets"
+	"github.com/odvcencio/fluffy-ui/fluffy"
 )
 
 func main() {
-	be, err := backendtcell.New()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "backend init failed: %v\n", err)
-		os.Exit(1)
-	}
-
-	app := runtime.NewApp(runtime.AppConfig{Backend: be})
-	app.SetRoot(ui.NewLabel("{{.AppTitle}}"))
+	app := fluffy.NewApp()
+	app.SetRoot(fluffy.NewLabel("{{.AppTitle}}"))
 
 	if err := app.Run(context.Background()); err != nil && err != context.Canceled {
 		fmt.Fprintf(os.Stderr, "app run failed: %v\n", err)
@@ -189,20 +181,14 @@ import (
 	"os"
 
 	"github.com/odvcencio/fluffy-ui/backend"
-	backendtcell "github.com/odvcencio/fluffy-ui/backend/tcell"
+	"github.com/odvcencio/fluffy-ui/fluffy"
 	"github.com/odvcencio/fluffy-ui/runtime"
 	"github.com/odvcencio/fluffy-ui/state"
 	ui "github.com/odvcencio/fluffy-ui/widgets"
 )
 
 func main() {
-	be, err := backendtcell.New()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "backend init failed: %v\n", err)
-		os.Exit(1)
-	}
-
-	app := runtime.NewApp(runtime.AppConfig{Backend: be})
+	app := fluffy.NewApp()
 	app.SetRoot(NewDashboard())
 
 	if err := app.Run(context.Background()); err != nil && err != context.Canceled {
@@ -317,22 +303,13 @@ import (
 	"time"
 
 	"github.com/odvcencio/fluffy-ui/backend"
-	backendtcell "github.com/odvcencio/fluffy-ui/backend/tcell"
+	"github.com/odvcencio/fluffy-ui/fluffy"
 	"github.com/odvcencio/fluffy-ui/runtime"
 	ui "github.com/odvcencio/fluffy-ui/widgets"
 )
 
 func main() {
-	be, err := backendtcell.New()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "backend init failed: %v\n", err)
-		os.Exit(1)
-	}
-
-	app := runtime.NewApp(runtime.AppConfig{
-		Backend:  be,
-		TickRate: time.Second / 60,
-	})
+	app := fluffy.NewApp(fluffy.WithTickRate(time.Second / 60))
 	app.SetRoot(NewBouncer())
 
 	if err := app.Run(context.Background()); err != nil && err != context.Canceled {

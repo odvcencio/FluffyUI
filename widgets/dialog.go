@@ -140,20 +140,21 @@ func (d *Dialog) ShouldDismiss(now time.Time) bool {
 	return now.Sub(d.startTime) >= d.autoDismiss
 }
 
-// Measure returns desired size.
-func (d *Dialog) Measure(constraints runtime.Constraints) runtime.Size {
-	return d.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {
-		width := len(d.Title)
+	// Measure returns desired size.
+	func (d *Dialog) Measure(constraints runtime.Constraints) runtime.Size {
+		return d.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {
+			width := textWidth(d.Title)
 
-		// Measure body text width
-		if d.Content == nil {
-			for _, line := range strings.Split(d.Body, "\n") {
-				if len(line) > width {
-					width = len(line)
+			// Measure body text width
+			if d.Content == nil {
+				for _, line := range strings.Split(d.Body, "\n") {
+					lineWidth := textWidth(line)
+					if lineWidth > width {
+						width = lineWidth
+					}
 				}
-			}
-		} else {
-			// For custom content, use a reasonable default or measure it
+			} else {
+				// For custom content, use a reasonable default or measure it
 			contentSize := d.Content.Measure(contentConstraints)
 			if contentSize.Width > width {
 				width = contentSize.Width
@@ -242,7 +243,7 @@ func (d *Dialog) Render(ctx runtime.RenderContext) {
 
 	// Render body: custom Content or text Body
 	if d.Content != nil {
-		d.Content.Render(ctx)
+		runtime.RenderChild(ctx, d.Content)
 	} else {
 		bodyLines := strings.Split(d.Body, "\n")
 		for i, line := range bodyLines {
@@ -277,24 +278,25 @@ func (d *Dialog) Render(ctx runtime.RenderContext) {
 	}
 	buttonY := inner.Y + inner.Height - 1
 	x := inner.X
-	for i, button := range d.Buttons {
-		var label string
-		if button.Key != 0 {
-			label = "[" + string(unicode.ToUpper(button.Key)) + "] " + button.Label
-		} else {
-			label = "[" + button.Label + "]"
+		for i, button := range d.Buttons {
+			var label string
+			if button.Key != 0 {
+				label = "[" + string(unicode.ToUpper(button.Key)) + "] " + button.Label
+			} else {
+				label = "[" + button.Label + "]"
+			}
+			labelWidth := textWidth(label)
+			if x+labelWidth > inner.X+inner.Width {
+				break
+			}
+			style := baseStyle
+			if i == d.selected {
+				style = style.Reverse(true)
+			}
+			ctx.Buffer.SetString(x, buttonY, label, style)
+			x += labelWidth + 2
 		}
-		if x+len(label) > inner.X+inner.Width {
-			break
-		}
-		style := baseStyle
-		if i == d.selected {
-			style = style.Reverse(true)
-		}
-		ctx.Buffer.SetString(x, buttonY, label, style)
-		x += len(label) + 2
 	}
-}
 
 // HandleMessage handles button selection and keyboard shortcuts.
 func (d *Dialog) HandleMessage(msg runtime.Message) runtime.HandleResult {
@@ -373,6 +375,17 @@ func (d *Dialog) ChildWidgets() []runtime.Widget {
 		return nil
 	}
 	return []runtime.Widget{d.Content}
+}
+
+// PathSegment returns a debug path segment for the given child.
+func (d *Dialog) PathSegment(child runtime.Widget) string {
+	if d == nil {
+		return "Dialog"
+	}
+	if d.Content != nil && d.Content == child {
+		return "Dialog[content]"
+	}
+	return "Dialog"
 }
 
 func (d *Dialog) setSelected(index int) {

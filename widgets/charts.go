@@ -217,7 +217,8 @@ func (b *BarChart) Render(ctx runtime.RenderContext) {
 		if b.ShowLabels {
 			label = entry.Label + " "
 		}
-		barWidth := bounds.Width - len(label)
+		labelWidth := textWidth(label)
+		barWidth := bounds.Width - labelWidth
 		if barWidth < 1 {
 			barWidth = 1
 		}

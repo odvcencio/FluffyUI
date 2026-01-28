@@ -44,6 +44,13 @@ func (er *ErrorReporter) format(widget Widget, err error, msg Message) string {
 		err.Error(),
 	}
 
+	if root := er.rootForTree(); root != nil {
+		if path := buildWidgetPath(root, widget); len(path) > 0 {
+			lines = append(lines, "")
+			lines = append(lines, "Widget Path: "+strings.Join(path, " > "))
+		}
+	}
+
 	if er.ShowWidgetTree {
 		if root := er.rootForTree(); root != nil {
 			lines = append(lines, "")
@@ -208,6 +215,42 @@ func buildWidgetTree(root Widget, target Widget) []string {
 	}
 	walk(root, "", true)
 	return lines
+}
+
+func buildWidgetPath(root Widget, target Widget) []string {
+	if root == nil || target == nil {
+		return nil
+	}
+	var walk func(node Widget) ([]string, bool)
+	walk = func(node Widget) ([]string, bool) {
+		if node == nil {
+			return nil, false
+		}
+		if node == target {
+			return []string{widgetDisplayName(node)}, true
+		}
+		container, ok := node.(ChildProvider)
+		if !ok {
+			return nil, false
+		}
+		for _, child := range container.ChildWidgets() {
+			if child == nil {
+				continue
+			}
+			if path, ok := walk(child); ok {
+				segment := widgetDisplayName(node)
+				if segmenter, ok := node.(PathSegmenter); ok {
+					if seg := strings.TrimSpace(segmenter.PathSegment(child)); seg != "" {
+						segment = seg
+					}
+				}
+				return append([]string{segment}, path...), true
+			}
+		}
+		return nil, false
+	}
+	path, _ := walk(root)
+	return path
 }
 
 func formatBox(lines []string) string {

@@ -131,6 +131,22 @@ func (s *Stylesheet) ResolveWithContext(node Node, ancestors []Node, ctx MediaCo
 	return resolved
 }
 
+// RelayoutOnFocus reports whether focus-based rules can affect layout.
+func (s *Stylesheet) RelayoutOnFocus() bool {
+	if s == nil {
+		return false
+	}
+	for _, rule := range s.rules {
+		if !rule.Selector.HasPseudo(PseudoFocus) {
+			continue
+		}
+		if rule.Style.AffectsLayout() || rule.Important.AffectsLayout() {
+			return true
+		}
+	}
+	return false
+}
+
 // Merge combines multiple stylesheets into one.
 func Merge(sheets ...*Stylesheet) *Stylesheet {
 	merged := NewStylesheet()

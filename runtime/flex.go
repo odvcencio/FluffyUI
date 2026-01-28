@@ -1,6 +1,9 @@
 package runtime
 
-import "math"
+import (
+	"math"
+	"strconv"
+)
 
 // FlexDirection specifies the main axis of a flex container.
 type FlexDirection int
@@ -355,11 +358,33 @@ func (f *Flex) ChildWidgets() []Widget {
 	return children
 }
 
+// PathSegment returns a debug path segment for the given child.
+func (f *Flex) PathSegment(child Widget) string {
+	if f == nil {
+		return "Flex"
+	}
+	for i, entry := range f.Children {
+		if entry.Widget == child {
+			return "Flex[" + strconv.Itoa(i) + "]"
+		}
+	}
+	return "Flex"
+}
+
 // Render draws all children.
 func (f *Flex) Render(ctx RenderContext) {
 	for i, child := range f.Children {
-		if i < len(f.childBounds) {
-			childCtx := ctx.Sub(f.childBounds[i])
+		if i >= len(f.childBounds) {
+			continue
+		}
+		bounds := f.childBounds[i]
+		if bounds.Width <= 0 || bounds.Height <= 0 {
+			continue
+		}
+		if child.Widget == nil {
+			continue
+		}
+		if childCtx, ok := ctx.SubVisible(bounds); ok {
 			child.Widget.Render(childCtx)
 		}
 	}

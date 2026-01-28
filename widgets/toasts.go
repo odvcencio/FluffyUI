@@ -218,8 +218,9 @@ func (t *ToastStack) Render(ctx runtime.RenderContext) {
 			}
 			startX := rect.X + toastPaddingX
 			if lineIdx == 0 && prefix != "" {
+				prefixWidth := textWidth(prefix)
 				ctx.Buffer.SetString(startX, row.Y, prefix, levelStyle(toast.Level, infoStyle, successStyle, warnStyle, errorStyle))
-				ctx.Buffer.SetString(startX+len(prefix), row.Y, line[len(prefix):], textStyle)
+				ctx.Buffer.SetString(startX+prefixWidth, row.Y, line[len(prefix):], textStyle)
 			} else {
 				ctx.Buffer.SetString(startX, row.Y, line, textStyle)
 			}
@@ -316,7 +317,7 @@ func (t *ToastStack) toastLines(toast *toast.Toast, maxWidth int) ([]string, str
 		title = levelLabel(toast.Level)
 	}
 	prefix := levelIcon(toast.Level) + " "
-	contentWidth := maxWidth - len(prefix)
+	contentWidth := maxWidth - textWidth(prefix)
 	if contentWidth < 0 {
 		contentWidth = 0
 	}
@@ -377,8 +378,9 @@ func levelIcon(level toast.ToastLevel) string {
 func maxLineLen(lines []string) int {
 	max := 0
 	for _, line := range lines {
-		if len(line) > max {
-			max = len(line)
+		lineWidth := textWidth(line)
+		if lineWidth > max {
+			max = lineWidth
 		}
 	}
 	return max

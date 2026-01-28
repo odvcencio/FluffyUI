@@ -18,48 +18,13 @@ import (
     "context"
     "fmt"
     "os"
-    "time"
 
-    "github.com/odvcencio/fluffy-ui/accessibility"
-    "github.com/odvcencio/fluffy-ui/backend"
-    backendtcell "github.com/odvcencio/fluffy-ui/backend/tcell"
-    "github.com/odvcencio/fluffy-ui/clipboard"
-    "github.com/odvcencio/fluffy-ui/keybind"
-    "github.com/odvcencio/fluffy-ui/runtime"
-    "github.com/odvcencio/fluffy-ui/widgets"
+    "github.com/odvcencio/fluffy-ui/fluffy"
 )
 
 func main() {
-    be, err := backendtcell.New()
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "backend init failed: %v\n", err)
-        os.Exit(1)
-    }
-
-    registry := keybind.NewRegistry()
-    keybind.RegisterStandardCommands(registry)
-    keybind.RegisterScrollCommands(registry)
-    keybind.RegisterClipboardCommands(registry)
-
-    keymap := keybind.DefaultKeymap()
-    stack := &keybind.KeymapStack{}
-    stack.Push(keymap)
-    router := keybind.NewKeyRouter(registry, nil, stack)
-    keyHandler := &keybind.RuntimeHandler{Router: router}
-
-    app := runtime.NewApp(runtime.AppConfig{
-        Backend:    be,
-        TickRate:   time.Second / 30,
-        KeyHandler: keyHandler,
-        Announcer:  &accessibility.SimpleAnnouncer{},
-        Clipboard:  &clipboard.MemoryClipboard{},
-        FocusStyle: &accessibility.FocusStyle{
-            Indicator: "> ",
-            Style:     backend.DefaultStyle().Bold(true),
-        },
-    })
-
-    app.SetRoot(widgets.NewLabel("Hello from FluffyUI"))
+    app := fluffy.NewApp()
+    app.SetRoot(fluffy.NewLabel("Hello from FluffyUI"))
 
     if err := app.Run(context.Background()); err != nil && err != context.Canceled {
         fmt.Fprintf(os.Stderr, "app run failed: %v\n", err)

@@ -388,16 +388,16 @@ func (p *PaletteWidget) Render(ctx runtime.RenderContext) {
 		label := item.Label
 		maxLabel := b.Width - 6
 		if item.Shortcut != "" {
-			maxLabel -= len(item.Shortcut) + 2
+			maxLabel -= textWidth(item.Shortcut) + 2
 		}
-		if len(label) > maxLabel {
-			label = label[:maxLabel-3] + "..."
+		if textWidth(label) > maxLabel {
+			label = truncateString(label, maxLabel)
 		}
 		ctx.Buffer.SetString(b.X+3, y, label, style)
 
 		// Shortcut (right-aligned)
 		if item.Shortcut != "" {
-			shortcutX := b.X + b.Width - 2 - len(item.Shortcut)
+			shortcutX := b.X + b.Width - 2 - textWidth(item.Shortcut)
 			itemShortcutStyle := shortcutStyle
 			if i == p.selected {
 				itemShortcutStyle = style
@@ -411,7 +411,7 @@ func (p *PaletteWidget) Render(ctx runtime.RenderContext) {
 	// Draw item count if more items than visible
 	if len(p.filtered) > maxItems {
 		countStr := strconv.Itoa(len(p.filtered)) + " results"
-		ctx.Buffer.SetString(b.X+b.Width-2-len(countStr), b.Y+b.Height-1, countStr, borderStyle)
+		ctx.Buffer.SetString(b.X+b.Width-2-textWidth(countStr), b.Y+b.Height-1, countStr, borderStyle)
 	}
 }
 

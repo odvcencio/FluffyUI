@@ -9,65 +9,19 @@ import (
 	"strings"
 	"time"
 
-	"github.com/odvcencio/fluffy-ui/accessibility"
 	"github.com/odvcencio/fluffy-ui/audio"
 	"github.com/odvcencio/fluffy-ui/audio/execdriver"
-	"github.com/odvcencio/fluffy-ui/backend"
-	backendtcell "github.com/odvcencio/fluffy-ui/backend/tcell"
-	"github.com/odvcencio/fluffy-ui/clipboard"
-	"github.com/odvcencio/fluffy-ui/keybind"
-	"github.com/odvcencio/fluffy-ui/recording"
+	"github.com/odvcencio/fluffy-ui/fluffy"
 	"github.com/odvcencio/fluffy-ui/runtime"
 	"github.com/odvcencio/fluffy-ui/state"
 	"github.com/odvcencio/fluffy-ui/widgets"
 )
 
 func main() {
-	be, err := backendtcell.New()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "backend init failed: %v\n", err)
-		os.Exit(1)
-	}
-
-	registry := keybind.NewRegistry()
-	keybind.RegisterStandardCommands(registry)
-	keybind.RegisterScrollCommands(registry)
-	keybind.RegisterClipboardCommands(registry)
-
-	keymap := keybind.DefaultKeymap()
-	stack := &keybind.KeymapStack{}
-	stack.Push(keymap)
-	router := keybind.NewKeyRouter(registry, nil, stack)
-	keyHandler := &keybind.RuntimeHandler{Router: router}
-
 	recordPath := os.Getenv("FLUFFYUI_RECORD")
 	exportPath := os.Getenv("FLUFFYUI_RECORD_EXPORT")
-	var recorder runtime.Recorder
-	if recordPath != "" {
-		rec, err := recording.NewAsciicastRecorder(recordPath, recording.AsciicastOptions{
-			Title: "FluffyUI Quickstart",
-		})
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "recording init failed: %v\n", err)
-			os.Exit(1)
-		}
-		recorder = rec
-	}
-
 	audioService, audioStatus := setupAudio()
-	app := runtime.NewApp(runtime.AppConfig{
-		Backend:    be,
-		TickRate:   time.Second / 30,
-		KeyHandler: keyHandler,
-		Announcer:  &accessibility.SimpleAnnouncer{},
-		Clipboard:  &clipboard.MemoryClipboard{},
-		FocusStyle: &accessibility.FocusStyle{
-			Indicator: "▶ ",
-			Style:     backend.DefaultStyle().Bold(true),
-		},
-		Recorder: recorder,
-		Audio:    audioService,
-	})
+	app := fluffy.NewApp(fluffy.WithAudio(audioService))
 
 	count := state.NewSignal(0)
 	count.SetEqualFunc(state.EqualComparable[int])
@@ -88,17 +42,6 @@ func main() {
 	if err := app.Run(context.Background()); err != nil && err != context.Canceled {
 		fmt.Fprintf(os.Stderr, "app run failed: %v\n", err)
 		os.Exit(1)
-	}
-	if recordPath != "" && exportPath != "" {
-		if err := recording.ExportVideo(recordPath, exportPath, recording.VideoOptions{
-			Agg: recording.AggOptions{
-				Theme:    "monokai",
-				FontSize: 16,
-				FPS:      30,
-			},
-		}); err != nil {
-			fmt.Fprintf(os.Stderr, "recording export failed: %v\n", err)
-		}
 	}
 }
 

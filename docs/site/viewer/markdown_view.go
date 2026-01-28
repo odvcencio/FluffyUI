@@ -18,15 +18,17 @@ import (
 // MarkdownView renders styled markdown lines with internal scrolling.
 type MarkdownView struct {
 	widgets.FocusableBase
-	lines       []markdown.StyledLine
-	wrapped     []renderLine
-	width       int
-	offset      int
-	label       string
-	style       backend.Style
-	showBar     bool
-	scrollbar   scroll.Scrollbar
-	contentSize runtime.Size
+	lines         []markdown.StyledLine
+	wrapped       []renderLine
+	width         int
+	offset        int
+	label         string
+	style         backend.Style
+	showBar       bool
+	scrollbar     scroll.Scrollbar
+	contentSize   runtime.Size
+	anchorOffsets map[string]int
+	pendingAnchor string
 }
 
 // NewMarkdownView creates a new markdown view.
@@ -56,6 +58,8 @@ func (m *MarkdownView) SetLines(lines []markdown.StyledLine) {
 	}
 	m.lines = lines
 	m.wrapped = nil
+	m.anchorOffsets = nil
+	m.pendingAnchor = ""
 	if m.width > 0 {
 		m.wrap(m.width)
 	}
@@ -253,6 +257,21 @@ func (m *MarkdownView) ScrollToEnd() {
 	m.ScrollTo(0, maxOffset)
 }
 
+// ScrollToAnchor scrolls to a heading anchor if available.
+func (m *MarkdownView) ScrollToAnchor(anchor string) {
+	if m == nil || anchor == "" {
+		return
+	}
+	m.pendingAnchor = anchor
+	if m.anchorOffsets == nil {
+		return
+	}
+	if offset, ok := m.anchorOffsets[anchor]; ok {
+		m.pendingAnchor = ""
+		m.ScrollTo(0, offset)
+	}
+}
+
 func (m *MarkdownView) clampOffset(viewHeight int) {
 	maxOffset := max(0, len(m.wrapped)-viewHeight)
 	if m.offset < 0 {
@@ -280,6 +299,21 @@ func (m *MarkdownView) wrap(width int) {
 	m.width = width
 	m.wrapped = wrapLines(m.lines, width)
 	m.contentSize = runtime.Size{Width: width, Height: len(m.wrapped)}
+	m.anchorOffsets = map[string]int{}
+	for i, line := range m.wrapped {
+		if line.Anchor == "" {
+			continue
+		}
+		if _, ok := m.anchorOffsets[line.Anchor]; !ok {
+			m.anchorOffsets[line.Anchor] = i
+		}
+	}
+	if m.pendingAnchor != "" {
+		if offset, ok := m.anchorOffsets[m.pendingAnchor]; ok {
+			m.pendingAnchor = ""
+			m.ScrollTo(0, offset)
+		}
+	}
 }
 
 func (m *MarkdownView) syncA11y() {
@@ -305,6 +339,7 @@ type renderLine struct {
 	Spans     []renderSpan
 	BlankLine bool
 	BaseStyle backend.Style
+	Anchor    string
 }
 
 func wrapLines(lines []markdown.StyledLine, width int) []renderLine {
@@ -332,11 +367,11 @@ func wrapLine(line markdown.StyledLine, width int) []renderLine {
 		prefixWidth = spanWidth(prefix)
 	}
 	var lines []renderLine
-	current := newRenderLine(prefix)
+	current := newRenderLine(prefix, line.Anchor)
 	curWidth := prefixWidth
 	appendLine := func() {
 		lines = append(lines, current)
-		current = newRenderLine(prefix)
+		current = newRenderLine(prefix, "")
 		curWidth = prefixWidth
 	}
 	for _, span := range convertSpans(line.Spans) {
@@ -365,8 +400,8 @@ func wrapLine(line markdown.StyledLine, width int) []renderLine {
 	return lines
 }
 
-func newRenderLine(prefix []renderSpan) renderLine {
-	line := renderLine{}
+func newRenderLine(prefix []renderSpan, anchor string) renderLine {
+	line := renderLine{Anchor: anchor}
 	if len(prefix) > 0 {
 		line.Spans = append(line.Spans, prefix...)
 	}

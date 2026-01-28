@@ -20,6 +20,8 @@ type StyledLine struct {
 	Indent                 int          // Indentation level for nested structures
 	IsCode                 bool         // Inside a code block
 	IsCodeHeader           bool         // Header line for a code block
+	Anchor                 string       // Anchor id for headings
+	HeadingLevel           int          // Heading level (1-6)
 	Language               string       // Language for syntax highlighting
 	CodeLineNumberWidth    int          // Width of the code line number gutter
 	CodeLineNumberOptional bool         // Line numbers appear on hover for short blocks

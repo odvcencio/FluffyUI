@@ -66,9 +66,9 @@ func (b *Breadcrumb) Measure(constraints runtime.Constraints) runtime.Size {
 			sep = " > "
 		}
 		for i, item := range b.Items {
-			width += len(item.Label)
+			width += textWidth(item.Label)
 			if i < len(b.Items)-1 {
-				width += len(sep)
+				width += textWidth(sep)
 			}
 		}
 		if width < 1 {
@@ -93,6 +93,7 @@ func (b *Breadcrumb) Render(ctx runtime.RenderContext) {
 	if sep == "" {
 		sep = " > "
 	}
+	sepWidth := textWidth(sep)
 
 	x := bounds.X
 	normalStyle := backend.DefaultStyle()
@@ -102,9 +103,9 @@ func (b *Breadcrumb) Render(ctx runtime.RenderContext) {
 	for i, item := range b.Items {
 		if i > 0 {
 			// Draw separator
-			if x+len(sep) <= bounds.X+bounds.Width {
+			if x+sepWidth <= bounds.X+bounds.Width {
 				ctx.Buffer.SetString(x, bounds.Y, sep, sepStyle)
-				x += len(sep)
+				x += sepWidth
 			}
 		}
 
@@ -115,12 +116,13 @@ func (b *Breadcrumb) Render(ctx runtime.RenderContext) {
 		}
 		label := item.Label
 		available := bounds.X + bounds.Width - x
-		if len(label) > available {
-			label = label[:available]
+		if textWidth(label) > available {
+			label = clipString(label, available)
 		}
-		if len(label) > 0 {
+		labelWidth := textWidth(label)
+		if labelWidth > 0 {
 			ctx.Buffer.SetString(x, bounds.Y, label, style)
-			x += len(label)
+			x += labelWidth
 		}
 
 		if x >= bounds.X+bounds.Width {
@@ -215,13 +217,14 @@ func (b *Breadcrumb) itemAtPosition(x, y int) int {
 	if sep == "" {
 		sep = " > "
 	}
+	sepWidth := textWidth(sep)
 
 	currentX := bounds.X
 	for i, item := range b.Items {
 		if i > 0 {
-			currentX += len(sep)
+			currentX += sepWidth
 		}
-		itemEnd := currentX + len(item.Label)
+		itemEnd := currentX + textWidth(item.Label)
 		if x >= currentX && x < itemEnd {
 			return i
 		}

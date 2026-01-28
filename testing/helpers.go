@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/odvcencio/fluffy-ui/accessibility"
 	"github.com/odvcencio/fluffy-ui/backend"
 	"github.com/odvcencio/fluffy-ui/backend/sim"
 	"github.com/odvcencio/fluffy-ui/runtime"
@@ -120,6 +121,34 @@ func AssertCellStyle(t *testing.T, be *sim.Backend, x, y int, bold, italic, unde
 	if underline && attrs&backend.AttrUnderline == 0 {
 		t.Errorf("expected cell (%d,%d) to be underlined", x, y)
 	}
+}
+
+// NewAnnouncer returns an in-memory announcer for accessibility tests.
+func NewAnnouncer() *accessibility.SimpleAnnouncer {
+	return &accessibility.SimpleAnnouncer{}
+}
+
+// Announcements returns captured announcements for a SimpleAnnouncer.
+func Announcements(announcer accessibility.Announcer) []accessibility.Announcement {
+	if announcer == nil {
+		return nil
+	}
+	if simple, ok := announcer.(*accessibility.SimpleAnnouncer); ok {
+		return simple.History()
+	}
+	return nil
+}
+
+// AssertAnnounced fails the test if the announcer never emitted a matching message.
+func AssertAnnounced(t *testing.T, announcer accessibility.Announcer, contains string) {
+	t.Helper()
+	history := Announcements(announcer)
+	for _, entry := range history {
+		if strings.Contains(entry.Message, contains) {
+			return
+		}
+	}
+	t.Errorf("expected announcement containing %q, got %v", contains, history)
 }
 
 // NewTestBackend creates an initialized simulation backend for testing.

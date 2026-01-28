@@ -25,6 +25,12 @@ type Screen struct {
 	errorReporter     *ErrorReporter
 	autoRegisterFocus bool
 	hitGridDirty      bool
+	relayoutOnFocus   bool
+	styleResolver     *StyleResolver
+	styleResolverSheet *style.Stylesheet
+	styleResolverRoots []Widget
+	styleResolverMedia style.MediaContext
+	styleResolverDirty bool
 }
 
 // NewScreen creates a new screen with the given dimensions.
@@ -41,6 +47,11 @@ func NewScreen(w, h int) *Screen {
 // SetServices configures app services for bindable widgets.
 func (s *Screen) SetServices(services Services) {
 	s.services = services
+	s.invalidateStyleResolver()
+	s.relayoutOnFocus = false
+	if sheet := services.Stylesheet(); sheet != nil {
+		s.relayoutOnFocus = sheet.RelayoutOnFocus()
+	}
 	for _, layer := range s.layers {
 		if layer != nil && layer.FocusScope != nil {
 			s.configureFocusScope(layer.FocusScope)
@@ -106,6 +117,7 @@ func (s *Screen) Resize(w, h int) {
 		s.hitGrid.Resize(w, h)
 	}
 	s.hitGridDirty = true
+	s.invalidateStyleResolver()
 
 	s.relayout()
 }
@@ -136,6 +148,7 @@ func (s *Screen) SetRoot(root Widget) {
 		UnbindTree(oldRoot)
 	}
 	s.hitGridDirty = true
+	s.invalidateStyleResolver()
 
 	// Layout the root widget
 	if root != nil {
@@ -167,6 +180,7 @@ func (s *Screen) PushLayer(root Widget, modal bool) {
 	s.configureFocusScope(layer.FocusScope)
 	s.layers = append(s.layers, layer)
 	s.hitGridDirty = true
+	s.invalidateStyleResolver()
 
 	// Layout the new layer
 	if root != nil {
@@ -196,6 +210,7 @@ func (s *Screen) PopLayer() bool {
 
 	s.layers = s.layers[:len(s.layers)-1]
 	s.hitGridDirty = true
+	s.invalidateStyleResolver()
 	s.relayout()
 	return true
 }
@@ -222,23 +237,36 @@ func (s *Screen) Layer(i int) *Layer {
 	return s.layers[i]
 }
 
-func (s *Screen) relayout() {
-	if s == nil || len(s.layers) == 0 {
-		return
-	}
+func (s *Screen) currentRoots() []Widget {
 	roots := make([]Widget, 0, len(s.layers))
 	for _, layer := range s.layers {
 		if layer != nil && layer.Root != nil {
 			roots = append(roots, layer.Root)
 		}
 	}
+	return roots
+}
+
+func (s *Screen) relayout() {
+	if s == nil || len(s.layers) == 0 {
+		return
+	}
+	roots := s.currentRoots()
 	media := style.MediaContext{
 		Width:         s.width,
 		Height:        s.height,
 		ReducedMotion: s.services.ReducedMotion(),
 	}
-	resolver := newStyleResolver(s.services.Stylesheet(), roots, media)
+	s.styleResolverDirty = true
+	resolver := s.styleResolverFor(roots, media)
+	if resolver != nil {
+		resolver.ResetCache()
+	}
 	bounds := Rect{0, 0, s.width, s.height}
+	s.relayoutOnFocus = false
+	if sheet := s.services.Stylesheet(); sheet != nil {
+		s.relayoutOnFocus = sheet.RelayoutOnFocus()
+	}
 	for i, layer := range s.layers {
 		if layer == nil || layer.Root == nil {
 			continue
@@ -292,18 +320,16 @@ func (s *Screen) BaseFocusScope() *FocusScope {
 
 // Render draws all layers to the buffer.
 func (s *Screen) Render() {
-	roots := make([]Widget, 0, len(s.layers))
-	for _, layer := range s.layers {
-		if layer != nil && layer.Root != nil {
-			roots = append(roots, layer.Root)
-		}
-	}
+	roots := s.currentRoots()
 	media := style.MediaContext{
 		Width:         s.width,
 		Height:        s.height,
 		ReducedMotion: s.services.ReducedMotion(),
 	}
-	resolver := newStyleResolver(s.services.Stylesheet(), roots, media)
+	resolver := s.styleResolverFor(roots, media)
+	if resolver != nil {
+		resolver.ResetCache()
+	}
 	ctx := RenderContext{
 		Buffer:        s.buffer,
 		Focused:       false,
@@ -325,9 +351,49 @@ func (s *Screen) Render() {
 	}
 
 	s.drawFocusIndicator()
-	if s.hitGridDirty {
-		s.buildHitGrid()
+}
+
+func (s *Screen) styleResolverFor(roots []Widget, media style.MediaContext) *StyleResolver {
+	if s == nil {
+		return nil
 	}
+	sheet := s.services.Stylesheet()
+	if !s.styleResolverDirty &&
+		s.styleResolver != nil &&
+		s.styleResolverSheet == sheet &&
+		s.styleResolverMedia == media &&
+		sameRoots(roots, s.styleResolverRoots) {
+		return s.styleResolver
+	}
+	s.styleResolver = newStyleResolver(sheet, roots, media)
+	s.styleResolverSheet = sheet
+	s.styleResolverMedia = media
+	if len(roots) == 0 {
+		s.styleResolverRoots = nil
+	} else {
+		s.styleResolverRoots = append(s.styleResolverRoots[:0], roots...)
+	}
+	s.styleResolverDirty = false
+	return s.styleResolver
+}
+
+func (s *Screen) invalidateStyleResolver() {
+	if s == nil {
+		return
+	}
+	s.styleResolverDirty = true
+}
+
+func sameRoots(a, b []Widget) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }
 
 func (s *Screen) configureFocusScope(scope *FocusScope) {
@@ -336,9 +402,31 @@ func (s *Screen) configureFocusScope(scope *FocusScope) {
 	}
 	scope.SetOnChange(func(prev Focusable, next Focusable) {
 		s.announceFocus(next)
-		s.relayout()
+		if s.shouldRelayoutOnFocus(prev, next) {
+			s.relayout()
+		} else {
+			s.invalidateStyleResolver()
+		}
 		s.services.Invalidate()
 	})
+}
+
+func (s *Screen) shouldRelayoutOnFocus(prev Focusable, next Focusable) bool {
+	if s == nil {
+		return false
+	}
+	if s.relayoutOnFocus {
+		return true
+	}
+	return focusAffectsLayout(prev) || focusAffectsLayout(next)
+}
+
+func focusAffectsLayout(target Focusable) bool {
+	if target == nil {
+		return false
+	}
+	provider, ok := target.(FocusLayoutAffecting)
+	return ok && provider.FocusAffectsLayout()
 }
 
 func (s *Screen) refreshLayerFocusables(layer *Layer) {
@@ -402,20 +490,22 @@ func (s *Screen) drawFocusIndicator() {
 // Messages go to the top layer. If not handled and not modal,
 // they bubble down to lower layers.
 func (s *Screen) HandleMessage(msg Message) HandleResult {
-	if mouse, ok := msg.(MouseMsg); ok && s.hitGrid != nil {
-		if s.hitGridDirty {
+	if mouse, ok := msg.(MouseMsg); ok {
+		if s.hitGrid == nil || s.hitGridDirty {
 			s.buildHitGrid()
 		}
-		if target := s.hitGrid.WidgetAt(mouse.X, mouse.Y); target != nil {
-			result := s.safeHandleMessage(target, msg)
-			for _, cmd := range result.Commands {
-				s.handleCommand(cmd)
+		if s.hitGrid != nil {
+			if target := s.hitGrid.WidgetAt(mouse.X, mouse.Y); target != nil {
+				result := s.safeHandleMessage(target, msg)
+				for _, cmd := range result.Commands {
+					s.handleCommand(cmd)
+				}
+				if result.Handled || s.hitGridModal {
+					return result
+				}
+			} else if s.hitGridModal {
+				return Unhandled()
 			}
-			if result.Handled || s.hitGridModal {
-				return result
-			}
-		} else if s.hitGridModal {
-			return Unhandled()
 		}
 	}
 
@@ -580,6 +670,25 @@ func (ctx RenderContext) Sub(bounds Rect) RenderContext {
 		Bounds:        bounds,
 		styleResolver: ctx.styleResolver,
 	}
+}
+
+// Visible reports whether the given bounds intersect the current context bounds.
+func (ctx RenderContext) Visible(bounds Rect) bool {
+	if ctx.Bounds.Width <= 0 || ctx.Bounds.Height <= 0 {
+		return true
+	}
+	return ctx.Bounds.Intersects(bounds)
+}
+
+// SubVisible returns a child context and whether it is visible.
+func (ctx RenderContext) SubVisible(bounds Rect) (RenderContext, bool) {
+	if bounds.Width <= 0 || bounds.Height <= 0 {
+		return RenderContext{}, false
+	}
+	if !ctx.Visible(bounds) {
+		return RenderContext{}, false
+	}
+	return ctx.Sub(bounds), true
 }
 
 // Clear fills the context bounds with spaces using the provided style.

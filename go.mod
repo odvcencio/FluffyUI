@@ -1,6 +1,6 @@
 module github.com/odvcencio/fluffy-ui
 
-go 1.25.1
+go 1.22
 
 require (
 	github.com/alecthomas/chroma/v2 v2.22.0

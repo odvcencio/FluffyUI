@@ -178,6 +178,12 @@ type ChildProvider interface {
 	ChildWidgets() []Widget
 }
 
+// PathSegmenter customizes widget path segments for error reporting.
+// Implementations can include child-specific context (e.g., Grid[row,col]).
+type PathSegmenter interface {
+	PathSegment(child Widget) string
+}
+
 // Invalidatable marks widgets that can report whether they need a render pass.
 type Invalidatable interface {
 	Invalidate()
@@ -202,10 +208,22 @@ type Focusable interface {
 	IsFocused() bool
 }
 
+// FocusLayoutAffecting reports whether focus changes can affect layout.
+// Implement this on widgets whose focus state impacts measurement or layout.
+type FocusLayoutAffecting interface {
+	FocusAffectsLayout() bool
+}
+
+// Keyed identifies widgets with stable identity for diffing/persistence.
+type Keyed interface {
+	Key() string
+}
+
 // HandleResult is returned from HandleMessage.
 type HandleResult struct {
 	Handled  bool      // Was the message consumed?
 	Commands []Command // Commands to send to parent/app
+	inline   [1]Command
 }
 
 // Handled returns a result indicating the message was consumed.
@@ -220,11 +238,17 @@ func Unhandled() HandleResult {
 
 // WithCommand returns a handled result with a single command.
 func WithCommand(cmd Command) HandleResult {
-	return HandleResult{Handled: true, Commands: []Command{cmd}}
+	result := HandleResult{Handled: true}
+	result.inline[0] = cmd
+	result.Commands = result.inline[:1]
+	return result
 }
 
 // WithCommands returns a handled result with multiple commands.
 func WithCommands(cmds ...Command) HandleResult {
+	if len(cmds) == 1 {
+		return WithCommand(cmds[0])
+	}
 	return HandleResult{Handled: true, Commands: cmds}
 }
 

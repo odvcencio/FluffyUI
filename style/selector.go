@@ -215,6 +215,19 @@ func (s Selector) specificity() specificity {
 	return spec
 }
 
+// HasPseudo reports whether the selector (or any parent selector) uses the pseudo-class.
+func (s Selector) HasPseudo(pseudo PseudoClass) bool {
+	for _, p := range s.Pseudo {
+		if p == pseudo {
+			return true
+		}
+	}
+	if s.Parent != nil {
+		return s.Parent.HasPseudo(pseudo)
+	}
+	return false
+}
+
 func (s specificity) less(other specificity) bool {
 	if s.ids != other.ids {
 		return s.ids < other.ids

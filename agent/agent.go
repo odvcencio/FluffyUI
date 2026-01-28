@@ -38,11 +38,16 @@ type Agent struct {
 	mu          sync.Mutex
 	app         *runtime.App
 	sim         *sim.Backend
+	postKey     PostKeyFunc
 	screen      *runtime.Screen
 	tickRate    time.Duration
 	autoAttach  bool
 	includeText bool
 }
+
+// PostKeyFunc is a callback for injecting key events into a custom event loop.
+// Used when the application has its own message loop instead of runtime.App.
+type PostKeyFunc func(msg runtime.KeyMsg) error
 
 // Config configures an Agent.
 type Config struct {
@@ -52,6 +57,11 @@ type Config struct {
 
 	// Sim is the simulation backend. If nil and App is not set, one will be created.
 	Sim *sim.Backend
+
+	// PostKey is an optional callback for posting key events.
+	// When set, key events are sent through this function instead of the sim backend.
+	// This is useful for applications with custom event loops.
+	PostKey PostKeyFunc
 
 	// DisableAutoAttach skips automatic App.Screen() attachment.
 	// Useful when the caller wants to manage SetScreen explicitly.
@@ -100,6 +110,7 @@ func New(cfg Config) *Agent {
 	return &Agent{
 		app:         cfg.App,
 		sim:         s,
+		postKey:     cfg.PostKey,
 		screen:      screen,
 		tickRate:    tickRate,
 		autoAttach:  autoAttach,
@@ -711,8 +722,13 @@ func (a *Agent) SendKeyMsg(msg runtime.KeyMsg) error {
 	a.mu.Lock()
 	simBackend := a.sim
 	app := a.app
+	postKey := a.postKey
 	a.mu.Unlock()
 
+	// Use custom PostKey callback if provided (for apps with custom event loops)
+	if postKey != nil {
+		return postKey(msg)
+	}
 	if simBackend != nil {
 		return simBackend.PostEvent(terminal.KeyEvent{
 			Key:   msg.Key,

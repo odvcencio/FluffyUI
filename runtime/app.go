@@ -81,7 +81,7 @@ type App struct {
 	pendingEffects    []Effect
 	mcpCloser         io.Closer
 
-	running     bool
+	running     atomic.Bool
 	dirty       bool
 	renderMu    sync.Mutex
 	renderFrame int64
@@ -314,7 +314,7 @@ func (a *App) Run(ctx context.Context) error {
 		a.update = DefaultUpdate
 	}
 
-	a.running = true
+	a.running.Store(true)
 	a.dirty = true
 
 	a.startPendingEffects()
@@ -329,11 +329,11 @@ func (a *App) Run(ctx context.Context) error {
 		ticks = ticker.C
 	}
 
-	for a.running {
+	for a.running.Load() {
 		var msg Message
 		select {
 		case <-ctx.Done():
-			a.running = false
+			a.running.Store(false)
 			a.cancelTasks()
 		case msg = <-a.messages:
 			if call, ok := msg.(callMsg); ok {
@@ -360,7 +360,7 @@ func (a *App) Run(ctx context.Context) error {
 			}
 		}
 
-		if !a.running {
+		if !a.running.Load() {
 			continue
 		}
 
@@ -432,7 +432,7 @@ func (a *App) dispatchMessage(msg Message) bool {
 func (a *App) handleCommand(cmd Command) bool {
 	switch c := cmd.(type) {
 	case Quit:
-		a.running = false
+		a.running.Store(false)
 		a.cancelTasks()
 		return false
 	case Refresh:
@@ -465,7 +465,7 @@ func (a *App) ExecuteCommand(cmd Command) bool {
 }
 
 func (a *App) pollEvents() {
-	for a.running {
+	for a.running.Load() {
 		ev := a.backend.PollEvent()
 		if ev == nil {
 			continue

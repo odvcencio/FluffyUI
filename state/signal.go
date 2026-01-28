@@ -30,6 +30,12 @@ type Signal[T any] struct {
 	equal EqualFunc[T]
 }
 
+var subscriberPool = sync.Pool{
+	New: func() any {
+		return make([]subscriber, 0, 8)
+	},
+}
+
 // NewSignal creates a new signal with an initial value.
 func NewSignal[T any](initial T) *Signal[T] {
 	return &Signal[T]{value: initial}
@@ -120,7 +126,7 @@ func (s *Signal[T]) copySubscribersLocked() []subscriber {
 	if len(s.subs) == 0 {
 		return nil
 	}
-	subs := make([]subscriber, 0, len(s.subs))
+	subs := acquireSubscribers(len(s.subs))
 	for _, sub := range s.subs {
 		subs = append(subs, sub)
 	}
@@ -138,4 +144,24 @@ func (s *Signal[T]) notify(subs []subscriber) {
 		}
 		sub.scheduler.Schedule(sub.fn)
 	}
+	releaseSubscribers(subs)
+}
+
+func acquireSubscribers(size int) []subscriber {
+	if size <= 0 {
+		return nil
+	}
+	pooled, ok := subscriberPool.Get().([]subscriber)
+	if !ok || cap(pooled) < size {
+		return make([]subscriber, 0, size)
+	}
+	return pooled[:0]
+}
+
+func releaseSubscribers(subs []subscriber) {
+	if subs == nil {
+		return
+	}
+	subs = subs[:0]
+	subscriberPool.Put(subs)
 }

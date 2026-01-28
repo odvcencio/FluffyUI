@@ -173,8 +173,8 @@ func (p *Panel) Render(ctx runtime.RenderContext) {
 		// Draw title in top border
 		if drawn && p.title != "" {
 			title := " " + p.title + " "
-			if len(title) > bounds.Width-4 {
-				title = title[:bounds.Width-4]
+			if textWidth(title) > bounds.Width-4 {
+				title = clipString(title, bounds.Width-4)
 			}
 			x := bounds.X + 2
 			ctx.Buffer.SetString(x, bounds.Y, title, drawStyle)
@@ -182,9 +182,7 @@ func (p *Panel) Render(ctx runtime.RenderContext) {
 	}
 
 	// Render child
-	if p.child != nil {
-		p.child.Render(ctx)
-	}
+	runtime.RenderChild(ctx, p.child)
 }
 
 // HandleMessage delegates to child.
@@ -292,9 +290,7 @@ func (b *Box) Render(ctx runtime.RenderContext) {
 	ctx.Buffer.Fill(b.bounds, ' ', background)
 
 	// Render child
-	if b.child != nil {
-		b.child.Render(ctx)
-	}
+	runtime.RenderChild(ctx, b.child)
 }
 
 // HandleMessage delegates to child.

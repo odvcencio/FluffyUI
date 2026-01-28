@@ -223,12 +223,8 @@ func (d *DatePicker) Render(ctx runtime.RenderContext) {
 		return
 	}
 	d.syncA11y()
-	if d.input != nil {
-		d.input.Render(ctx)
-	}
-	if d.calendar != nil {
-		d.calendar.Render(ctx)
-	}
+	runtime.RenderChild(ctx, d.input)
+	runtime.RenderChild(ctx, d.calendar)
 }
 
 // HandleMessage forwards messages to children.
@@ -262,6 +258,21 @@ func (d *DatePicker) ChildWidgets() []runtime.Widget {
 		children = append(children, d.calendar)
 	}
 	return children
+}
+
+// PathSegment returns a debug path segment for the given child.
+func (d *DatePicker) PathSegment(child runtime.Widget) string {
+	if d == nil {
+		return "DatePicker"
+	}
+	switch child {
+	case d.input:
+		return "DatePicker[input]"
+	case d.calendar:
+		return "DatePicker[calendar]"
+	default:
+		return "DatePicker"
+	}
 }
 
 func (d *DatePicker) handleInputChange(text string) {

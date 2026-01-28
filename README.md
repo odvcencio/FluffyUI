@@ -38,7 +38,7 @@ go get github.com/odvcencio/fluffy-ui@latest
 go get github.com/odvcencio/fluffy-ui@latest
 ```
 
-**Requirements:** Go 1.25.1 or later
+**Requirements:** Go 1.22 or later
 
 ## Quick Start
 
@@ -51,46 +51,16 @@ package main
 
 import (
     "context"
-    "time"
 
-    "github.com/odvcencio/fluffy-ui/accessibility"
-    "github.com/odvcencio/fluffy-ui/backend"
-    backendtcell "github.com/odvcencio/fluffy-ui/backend/tcell"
-    "github.com/odvcencio/fluffy-ui/clipboard"
-    "github.com/odvcencio/fluffy-ui/keybind"
-    "github.com/odvcencio/fluffy-ui/runtime"
-    "github.com/odvcencio/fluffy-ui/theme"
-    "github.com/odvcencio/fluffy-ui/widgets"
+    "github.com/odvcencio/fluffy-ui/fluffy"
 )
 
 func main() {
-    // Initialize terminal backend
-    be, _ := backendtcell.New()
-
-    // Set up keybindings
-    registry := keybind.NewRegistry()
-    keybind.RegisterStandardCommands(registry)
-    keymap := keybind.DefaultKeymap()
-    stack := &keybind.KeymapStack{}
-    stack.Push(keymap)
-    router := keybind.NewKeyRouter(registry, nil, stack)
-
-    // Create the application
-    app := runtime.NewApp(runtime.AppConfig{
-        Backend:    be,
-        TickRate:   time.Second / 30,
-        KeyHandler: &keybind.RuntimeHandler{Router: router},
-        Announcer:  &accessibility.SimpleAnnouncer{},
-        Clipboard:  &clipboard.MemoryClipboard{},
-        Stylesheet: theme.DefaultStylesheet(),
-        FocusStyle: &accessibility.FocusStyle{
-            Indicator: "> ",
-            Style:     backend.DefaultStyle().Bold(true),
-        },
-    })
+    // Create the application with defaults
+    app := fluffy.NewApp()
 
     // Set root widget and run
-    app.SetRoot(widgets.NewLabel("Hello from FluffyUI!"))
+    app.SetRoot(fluffy.NewLabel("Hello from FluffyUI!"))
     app.Run(context.Background())
 }
 ```

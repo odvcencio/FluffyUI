@@ -550,9 +550,10 @@ func sliderTrackRect(bounds runtime.Rect, orientation Orientation, valueText str
 	}
 	track := bounds
 	valueRect := runtime.Rect{}
-	if valueText != "" && bounds.Width > len(valueText)+1 {
-		track.Width = bounds.Width - len(valueText) - 1
-		valueRect = runtime.Rect{X: bounds.X + track.Width + 1, Y: bounds.Y, Width: len(valueText), Height: 1}
+	valueWidth := textWidth(valueText)
+	if valueText != "" && bounds.Width > valueWidth+1 {
+		track.Width = bounds.Width - valueWidth - 1
+		valueRect = runtime.Rect{X: bounds.X + track.Width + 1, Y: bounds.Y, Width: valueWidth, Height: 1}
 	}
 	return track, valueRect
 }

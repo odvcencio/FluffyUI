@@ -204,14 +204,29 @@ func (s *ScrollView) Render(ctx runtime.RenderContext) {
 	if contentSize.Width <= 0 || contentSize.Height <= 0 {
 		return
 	}
+	resized := false
 	if s.childBuf == nil {
 		s.childBuf = runtime.NewBuffer(contentSize.Width, contentSize.Height)
+		resized = true
 	} else {
+		w, h := s.childBuf.Size()
+		if w != contentSize.Width || h != contentSize.Height {
+			resized = true
+		}
 		s.childBuf.Resize(contentSize.Width, contentSize.Height)
 	}
-	s.childBuf.Clear()
-	childCtx := ctx.WithBuffer(s.childBuf, runtime.Rect{Width: contentSize.Width, Height: contentSize.Height})
-	s.content.Render(childCtx)
+	renderContent := resized
+	if inv, ok := s.content.(runtime.Invalidatable); ok {
+		renderContent = renderContent || inv.NeedsRender()
+	}
+	if renderContent {
+		s.childBuf.Clear()
+		childCtx := ctx.WithBuffer(s.childBuf, runtime.Rect{Width: contentSize.Width, Height: contentSize.Height})
+		s.content.Render(childCtx)
+		if inv, ok := s.content.(runtime.Invalidatable); ok {
+			inv.ClearInvalidation()
+		}
+	}
 
 	offset := s.viewport.Offset()
 	for y := 0; y < contentBounds.Height; y++ {

@@ -84,6 +84,14 @@ func (b *Base) ID() string {
 	return b.id
 }
 
+// Key returns the stable widget identity (defaults to ID).
+func (b *Base) Key() string {
+	if b == nil {
+		return ""
+	}
+	return b.id
+}
+
 // StyleID returns the style selector ID.
 func (b *Base) StyleID() string {
 	if b == nil {
@@ -284,6 +292,10 @@ func fillRect(buf *runtime.Buffer, bounds runtime.Rect, ch rune, style backend.S
 	buf.Fill(bounds, ch, style)
 }
 
+func textWidth(s string) int {
+	return runewidth.StringWidth(s)
+}
+
 // truncateString truncates a string to fit within maxWidth.
 // Adds "..." if truncated.
 func truncateString(s string, maxWidth int) string {
@@ -297,6 +309,39 @@ func truncateString(s string, maxWidth int) string {
 		return runewidth.Truncate(s, maxWidth, "")
 	}
 	return runewidth.Truncate(s, maxWidth, "...")
+}
+
+// clipString truncates a string to fit within maxWidth without ellipsis.
+func clipString(s string, maxWidth int) string {
+	if maxWidth <= 0 {
+		return ""
+	}
+	return runewidth.Truncate(s, maxWidth, "")
+}
+
+// clipStringRight keeps the rightmost portion of the string within maxWidth.
+func clipStringRight(s string, maxWidth int) string {
+	if maxWidth <= 0 {
+		return ""
+	}
+	if textWidth(s) <= maxWidth {
+		return s
+	}
+	runes := []rune(s)
+	width := 0
+	start := len(runes)
+	for start > 0 {
+		w := runewidth.RuneWidth(runes[start-1])
+		if w < 0 {
+			w = 0
+		}
+		if width+w > maxWidth {
+			break
+		}
+		width += w
+		start--
+	}
+	return string(runes[start:])
 }
 
 // padRight pads a string with spaces to reach the given width.
@@ -328,16 +373,16 @@ func writePadded(buf *runtime.Buffer, x, y, width int, text string, style backen
 
 // centerString centers a string within the given width.
 func centerString(s string, width int) string {
-	if len(s) >= width {
-		return s
+	if width <= 0 {
+		return ""
 	}
-	padding := (width - len(s)) / 2
-	result := make([]byte, width)
-	for i := range result {
-		result[i] = ' '
+	if textWidth(s) >= width {
+		return runewidth.Truncate(s, width, "")
 	}
-	copy(result[padding:], s)
-	return string(result)
+	pad := width - textWidth(s)
+	left := pad / 2
+	right := pad - left
+	return strings.Repeat(" ", left) + s + strings.Repeat(" ", right)
 }
 
 func resolveBaseStyle(ctx runtime.RenderContext, widget runtime.Widget, fallback backend.Style, fallbackSet bool) backend.Style {

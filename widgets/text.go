@@ -73,8 +73,9 @@ func (t *Text) Measure(constraints runtime.Constraints) runtime.Size {
 		// Calculate width: longest line
 		maxWidth := 0
 		for _, line := range t.lines {
-			if len(line) > maxWidth {
-				maxWidth = len(line)
+			lineWidth := textWidth(line)
+			if lineWidth > maxWidth {
+				maxWidth = lineWidth
 			}
 		}
 
@@ -115,8 +116,8 @@ func (t *Text) Render(ctx runtime.RenderContext) {
 		}
 		y := bounds.Y + i
 		displayLine := line
-		if len(displayLine) > bounds.Width {
-			displayLine = displayLine[:bounds.Width]
+		if textWidth(displayLine) > bounds.Width {
+			displayLine = clipString(displayLine, bounds.Width)
 		}
 		ctx.Buffer.SetString(bounds.X, y, displayLine, style)
 	}
@@ -224,7 +225,7 @@ func (l *Label) WithAlignment(align Alignment) *Label {
 func (l *Label) Measure(constraints runtime.Constraints) runtime.Size {
 	return l.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {
 		return contentConstraints.Constrain(runtime.Size{
-			Width:  len(l.text),
+			Width:  textWidth(l.text),
 			Height: 1,
 		})
 	})
@@ -239,17 +240,18 @@ func (l *Label) Render(ctx runtime.RenderContext) {
 	l.syncA11y()
 
 	text := l.text
-	if len(text) > bounds.Width {
+	if textWidth(text) > bounds.Width {
 		text = truncateString(text, bounds.Width)
 	}
 
 	// Calculate X position based on alignment
 	x := bounds.X
+	textW := textWidth(text)
 	switch l.alignment {
 	case AlignCenter:
-		x = bounds.X + (bounds.Width-len(text))/2
+		x = bounds.X + (bounds.Width-textW)/2
 	case AlignRight:
-		x = bounds.X + bounds.Width - len(text)
+		x = bounds.X + bounds.Width - textW
 	}
 
 	style := l.style

@@ -71,6 +71,16 @@ func newStyleResolver(sheet *style.Stylesheet, roots []Widget, media style.Media
 	}
 }
 
+// ResetCache clears cached resolved styles while keeping parent maps.
+func (r *StyleResolver) ResetCache() {
+	if r == nil || len(r.cache) == 0 {
+		return
+	}
+	for key := range r.cache {
+		delete(r.cache, key)
+	}
+}
+
 func buildParentMap(roots []Widget) map[Widget]Widget {
 	parents := make(map[Widget]Widget)
 	var walk func(parent, node Widget)

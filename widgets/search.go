@@ -155,13 +155,13 @@ func (s *SearchWidget) Render(ctx runtime.RenderContext) {
 	queryX := b.X + 2
 	maxQuery := b.Width - 20
 	query := s.query
-	if len(query) > maxQuery {
-		query = query[len(query)-maxQuery:]
+	if textWidth(query) > maxQuery {
+		query = clipStringRight(query, maxQuery)
 	}
 	buf.SetString(queryX, b.Y, query, textStyle)
 
 	// Draw cursor
-	cursorX := queryX + len(query)
+	cursorX := queryX + textWidth(query)
 	if cursorX < b.X+b.Width-15 && s.focused {
 		buf.Set(cursorX, b.Y, '█', textStyle)
 	}
@@ -169,11 +169,11 @@ func (s *SearchWidget) Render(ctx runtime.RenderContext) {
 	// Draw match count on the right
 	if s.matchCount > 0 {
 		matchInfo := strconv.Itoa(s.currentMatch+1) + "/" + strconv.Itoa(s.matchCount)
-		infoX := b.X + b.Width - len(matchInfo) - 2
+		infoX := b.X + b.Width - textWidth(matchInfo) - 2
 		buf.SetString(infoX, b.Y, matchInfo, matchStyle)
 	} else if s.query != "" {
 		noMatch := "No matches"
-		infoX := b.X + b.Width - len(noMatch) - 2
+		infoX := b.X + b.Width - textWidth(noMatch) - 2
 		buf.SetString(infoX, b.Y, noMatch, matchStyle)
 	}
 }

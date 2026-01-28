@@ -379,8 +379,8 @@ func (a *Accordion) Render(ctx runtime.RenderContext) {
 		}
 		label := fmt.Sprintf("%s %s", icon, title)
 		writePadded(ctx.Buffer, section.headerBounds.X, section.headerBounds.Y, section.headerBounds.Width, label, style)
-		if section.content != nil && section.contentBounds.Height > 0 {
-			section.content.Render(ctx)
+		if section.contentBounds.Height > 0 {
+			runtime.RenderChild(ctx, section.content)
 		}
 	}
 }
@@ -452,6 +452,27 @@ func (a *Accordion) ChildWidgets() []runtime.Widget {
 		}
 	}
 	return children
+}
+
+// PathSegment returns a debug path segment for the given child.
+func (a *Accordion) PathSegment(child runtime.Widget) string {
+	if a == nil {
+		return "Accordion"
+	}
+	for i, section := range a.sections {
+		if section == nil || section.content != child {
+			continue
+		}
+		title := ""
+		if section.title != nil {
+			title = strings.TrimSpace(section.title.Get())
+		}
+		if title != "" {
+			return fmt.Sprintf("Accordion[%s]", title)
+		}
+		return fmt.Sprintf("Accordion[%d]", i)
+	}
+	return "Accordion"
 }
 
 // ToggleSection toggles a section by index.

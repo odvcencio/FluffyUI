@@ -145,6 +145,78 @@ func WithOnClick(fn func()) ButtonOption {
 	}
 }
 
+// SetVariant updates the button variant.
+func (b *Button) SetVariant(variant Variant) {
+	if b == nil {
+		return
+	}
+	b.variant = variant
+}
+
+// Primary applies the primary variant and returns the button for chaining.
+func (b *Button) Primary() *Button {
+	if b != nil {
+		b.variant = VariantPrimary
+	}
+	return b
+}
+
+// Secondary applies the secondary variant and returns the button for chaining.
+func (b *Button) Secondary() *Button {
+	if b != nil {
+		b.variant = VariantSecondary
+	}
+	return b
+}
+
+// Danger applies the danger variant and returns the button for chaining.
+func (b *Button) Danger() *Button {
+	if b != nil {
+		b.variant = VariantDanger
+	}
+	return b
+}
+
+// Disabled sets the disabled signal and returns the button for chaining.
+func (b *Button) Disabled(disabled *state.Signal[bool]) *Button {
+	if b != nil && disabled != nil {
+		b.disabled = disabled
+	}
+	return b
+}
+
+// Loading sets the loading signal and returns the button for chaining.
+func (b *Button) Loading(loading *state.Signal[bool]) *Button {
+	if b != nil && loading != nil {
+		b.loading = loading
+	}
+	return b
+}
+
+// OnClick sets the click handler and returns the button for chaining.
+func (b *Button) OnClick(fn func()) *Button {
+	if b != nil {
+		b.onClick = fn
+	}
+	return b
+}
+
+// Class adds a style class and returns the button for chaining.
+func (b *Button) Class(class string) *Button {
+	if b != nil {
+		b.AddClass(class)
+	}
+	return b
+}
+
+// Classes adds style classes and returns the button for chaining.
+func (b *Button) Classes(classes ...string) *Button {
+	if b != nil {
+		b.AddClasses(classes...)
+	}
+	return b
+}
+
 // SetLabel updates the button label.
 func (b *Button) SetLabel(label string) {
 	if b == nil || b.label == nil {
@@ -209,7 +281,7 @@ func (b *Button) Measure(constraints runtime.Constraints) runtime.Size {
 		if b.label != nil {
 			label = b.label.Get()
 		}
-		width := len(label) + 4
+		width := textWidth(label) + 4
 		if width < 4 {
 			width = 4
 		}

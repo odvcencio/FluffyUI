@@ -13,7 +13,7 @@ FluffyUI is a comprehensive terminal UI framework featuring:
 - **Built-in accessibility** with screen reader support
 - **Agent integration** via MCP protocol
 
-**Go Version:** 1.25.1+
+**Go Version:** 1.22+
 
 ---
 

@@ -157,7 +157,7 @@ func (r *Radio) Measure(constraints runtime.Constraints) runtime.Size {
 		if r.label != nil {
 			label = r.label.Get()
 		}
-		width := 4 + len(label)
+		width := 4 + textWidth(label)
 		if width < 4 {
 			width = 4
 		}

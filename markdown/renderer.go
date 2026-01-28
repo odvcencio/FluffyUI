@@ -162,6 +162,20 @@ func (s *renderState) flushLine(force bool, isCode bool, language string) {
 	s.current = nil
 }
 
+func (s *renderState) flushHeadingLine(level int, anchor string) {
+	if len(s.current) == 0 {
+		return
+	}
+	line := StyledLine{
+		Spans:        s.current,
+		Prefix:       append([]StyledSpan{}, s.prefix...),
+		HeadingLevel: level,
+		Anchor:       anchor,
+	}
+	s.lines = append(s.lines, line)
+	s.current = nil
+}
+
 func (s *renderState) addSpacer() {
 	if len(s.lines) > 0 && s.lines[len(s.lines)-1].BlankLine {
 		return
@@ -194,6 +208,38 @@ func (s *renderState) withBaseStyle(base compositor.Style, fn func()) {
 	s.baseStyle = prev
 }
 
+func inlineText(spans []StyledSpan) string {
+	if len(spans) == 0 {
+		return ""
+	}
+	var sb strings.Builder
+	for _, span := range spans {
+		sb.WriteString(span.Text)
+	}
+	return sb.String()
+}
+
+func headingAnchor(node *ast.Heading, fallback string) string {
+	if node != nil {
+		if value, ok := node.AttributeString("id"); ok {
+			switch v := value.(type) {
+			case string:
+				if v != "" {
+					return v
+				}
+			case []byte:
+				if len(v) > 0 {
+					return string(v)
+				}
+			}
+		}
+	}
+	if fallback == "" {
+		return ""
+	}
+	return slugify(fallback)
+}
+
 func (r *Renderer) renderBlock(node ast.Node, state *renderState, tight bool) {
 	switch n := node.(type) {
 	case *ast.Paragraph:
@@ -206,7 +252,9 @@ func (r *Renderer) renderBlock(node ast.Node, state *renderState, tight bool) {
 	case *ast.Heading:
 		style := headingStyle(state.cfg, n.Level)
 		r.renderInlineChildren(n, state, style)
-		state.flushLine(false, false, "")
+		headingText := inlineText(state.current)
+		anchor := headingAnchor(n, headingText)
+		state.flushHeadingLine(n.Level, anchor)
 		state.addSpacer()
 
 	case *ast.Blockquote:
@@ -321,6 +369,29 @@ func headingStyle(cfg *StyleConfig, level int) compositor.Style {
 	}
 }
 
+func slugify(text string) string {
+	text = strings.TrimSpace(strings.ToLower(text))
+	if text == "" {
+		return ""
+	}
+	var out []rune
+	lastDash := false
+	for _, r := range text {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+			out = append(out, r)
+			lastDash = false
+			continue
+		}
+		if r == '-' || r == '_' || r == ' ' || r == '.' || r == '/' {
+			if !lastDash && len(out) > 0 {
+				out = append(out, '-')
+				lastDash = true
+			}
+		}
+	}
+	return strings.Trim(string(out), "-")
+}
+
 func (r *Renderer) renderCodeBlock(state *renderState, raw []byte, language string) {
 	state.flushLine(false, false, "")
 	code := strings.TrimRight(string(raw), "\n")
@@ -412,10 +483,10 @@ func (r *Renderer) renderTable(table *extast.Table, state *renderState) {
 		Padding:        1,
 		MinColumnWidth: 3,
 	}
-	
+
 	renderer := NewEnhancedTableRenderer(config)
 	lines := renderer.RenderTable(table, state.source, 0) // 0 = no max width limit
-	
+
 	for _, line := range lines {
 		line.Prefix = append([]StyledSpan{}, state.prefix...)
 		state.lines = append(state.lines, line)

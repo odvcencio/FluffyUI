@@ -69,7 +69,7 @@ func (p *Progress) Render(ctx runtime.RenderContext) {
 	DrawGauge(ctx.Buffer, bounds.X, bounds.Y, bounds.Width, ratio, style)
 	if p.ShowPercent && bounds.Width >= 4 {
 		text := fmt.Sprintf("%3.0f%%", ratio*100)
-		ctx.Buffer.SetString(bounds.X+bounds.Width-len(text), bounds.Y, text, baseStyle)
+		ctx.Buffer.SetString(bounds.X+bounds.Width-textWidth(text), bounds.Y, text, baseStyle)
 	}
 }
 
