@@ -12,6 +12,14 @@ UIs.
 - Commands: widgets emit commands to request app-level actions.
 - App services: shared helpers like announcer, clipboard, scheduler, and audio.
 
+### Computed dependencies
+
+`state.Computed` supports automatic dependency tracking when you omit the
+dependency list. The computed function is executed while reads are recorded,
+and the computed will resubscribe on each recompute. This is intended for
+single-goroutine usage (the UI thread). For background or concurrent access,
+prefer explicit dependencies to avoid capturing unrelated signal reads.
+
 ## Render pipeline
 
 Each frame follows a simple flow:

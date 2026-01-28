@@ -289,6 +289,11 @@ import "github.com/odvcencio/fluffyui/state"
 counter := state.NewSignal(0)
 doubled := state.NewComputed(func() int {
     return counter.Get() * 2
+})
+
+// Explicit dependencies are still supported
+explicit := state.NewComputed(func() int {
+    return counter.Get() * 2
 }, counter)
 
 // Subscribe to changes
@@ -299,6 +304,9 @@ counter.Subscribe(func() {
 // Update triggers subscribers
 counter.Set(5) // prints "Counter changed: 5"
 ```
+
+Auto-tracking is designed for the single UI goroutine. If signals are read
+across multiple goroutines, prefer explicit dependencies.
 
 ### Signals in Widgets
 

@@ -84,6 +84,7 @@ func (s *Signal[T]) Get() T {
 	s.mu.Lock()
 	value := s.value
 	s.mu.Unlock()
+	recordDependency(s)
 	return value
 }
 
