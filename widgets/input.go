@@ -100,7 +100,7 @@ func (i *Input) Text() string {
 func (i *Input) SetText(text string) {
 	i.text.Reset()
 	i.text.WriteString(text)
-	i.cursorPos = i.text.Len()
+	i.cursorPos = runeCount(text)
 	i.syncA11y()
 }
 
@@ -140,8 +140,9 @@ func (i *Input) SetCursorOffset(offset int) {
 	if offset < 0 {
 		offset = 0
 	}
-	if offset > i.text.Len() {
-		offset = i.text.Len()
+	textLen := len(i.textRunes())
+	if offset > textLen {
+		offset = textLen
 	}
 	i.cursorPos = offset
 	i.services.Invalidate()
@@ -192,15 +193,15 @@ func (i *Input) Render(ctx runtime.RenderContext) {
 
 	style := i.style
 	resolved := ctx.ResolveStyle(i)
-		if !resolved.IsZero() {
-			final := resolved
-			if i.styleSet {
-				final = final.Merge(uistyle.FromBackend(i.style))
-			}
-			if i.focused && i.focusSet {
-				final = final.Merge(uistyle.FromBackend(i.focusStyle))
-			}
-			style = final.ToBackend()
+	if !resolved.IsZero() {
+		final := resolved
+		if i.styleSet {
+			final = final.Merge(uistyle.FromBackend(i.style))
+		}
+		if i.focused && i.focusSet {
+			final = final.Merge(uistyle.FromBackend(i.focusStyle))
+		}
+		style = final.ToBackend()
 	} else if i.focused {
 		style = i.focusStyle
 	}
@@ -213,13 +214,16 @@ func (i *Input) Render(ctx runtime.RenderContext) {
 	}
 
 	text := i.text.String()
+	runes := []rune(text)
+	textLen := len(runes)
 
 	// Show placeholder if empty and not focused
 	if text == "" && !i.focused && i.placeholder != "" {
 		placeholderStyle := style.Dim(true)
 		display := i.placeholder
-		if len(display) > content.Width {
-			display = display[:content.Width]
+		if runeCount(display) > content.Width {
+			displayRunes := []rune(display)
+			display = string(displayRunes[:content.Width])
 		}
 		ctx.Buffer.SetString(content.X, content.Y, display, placeholderStyle)
 		return
@@ -233,13 +237,13 @@ func (i *Input) Render(ctx runtime.RenderContext) {
 	}
 
 	visibleEnd := visibleStart + content.Width
-	if visibleEnd > len(text) {
-		visibleEnd = len(text)
+	if visibleEnd > textLen {
+		visibleEnd = textLen
 	}
 
-	visible := ""
-	if visibleStart < len(text) {
-		visible = text[visibleStart:visibleEnd]
+	var visibleRunes []rune
+	if visibleStart < textLen {
+		visibleRunes = runes[visibleStart:visibleEnd]
 	}
 
 	// Draw text with selection highlighting
@@ -247,7 +251,7 @@ func (i *Input) Render(ctx runtime.RenderContext) {
 	sel := i.selection.Normalize()
 	hasSelection := !i.selection.IsEmpty()
 
-	for idx, ch := range visible {
+	for idx, ch := range visibleRunes {
 		textIdx := visibleStart + idx
 		screenX := content.X + idx
 		charStyle := style
@@ -265,8 +269,8 @@ func (i *Input) Render(ctx runtime.RenderContext) {
 		cursorX := content.X + i.cursorPos - visibleStart
 		if cursorX >= content.X && cursorX < content.X+content.Width {
 			var cursorChar rune = ' '
-			if i.cursorPos < len(text) {
-				cursorChar = rune(text[i.cursorPos])
+			if i.cursorPos < textLen {
+				cursorChar = runes[i.cursorPos]
 			}
 			cursorStyle := style.Reverse(true)
 			ctx.Buffer.Set(cursorX, content.Y, cursorChar, cursorStyle)
@@ -307,21 +311,25 @@ func (i *Input) HandleMessage(msg runtime.Message) runtime.HandleResult {
 
 	case terminal.KeyBackspace:
 		if i.cursorPos > 0 {
-			text := i.text.String()
-			i.text.Reset()
-			i.text.WriteString(text[:i.cursorPos-1])
-			i.text.WriteString(text[i.cursorPos:])
+			runes := i.textRunes()
+			if i.cursorPos > len(runes) {
+				i.cursorPos = len(runes)
+			}
+			runes = append(runes[:i.cursorPos-1], runes[i.cursorPos:]...)
+			i.setTextRunes(runes)
 			i.cursorPos--
 			i.notifyChange()
 		}
 		return runtime.Handled()
 
 	case terminal.KeyDelete:
-		text := i.text.String()
-		if i.cursorPos < len(text) {
-			i.text.Reset()
-			i.text.WriteString(text[:i.cursorPos])
-			i.text.WriteString(text[i.cursorPos+1:])
+		runes := i.textRunes()
+		if i.cursorPos > len(runes) {
+			i.cursorPos = len(runes)
+		}
+		if i.cursorPos < len(runes) {
+			runes = append(runes[:i.cursorPos], runes[i.cursorPos+1:]...)
+			i.setTextRunes(runes)
 			i.notifyChange()
 		}
 		return runtime.Handled()
@@ -339,7 +347,7 @@ func (i *Input) HandleMessage(msg runtime.Message) runtime.HandleResult {
 		if key.Ctrl {
 			// Word right
 			i.cursorPos = i.wordBoundaryRight()
-		} else if i.cursorPos < i.text.Len() {
+		} else if i.cursorPos < len(i.textRunes()) {
 			i.cursorPos++
 		}
 		return runtime.Handled()
@@ -349,16 +357,17 @@ func (i *Input) HandleMessage(msg runtime.Message) runtime.HandleResult {
 		return runtime.Handled()
 
 	case terminal.KeyEnd:
-		i.cursorPos = i.text.Len()
+		i.cursorPos = len(i.textRunes())
 		return runtime.Handled()
 
 	case terminal.KeyRune:
 		// Insert character
-		text := i.text.String()
-		i.text.Reset()
-		i.text.WriteString(text[:i.cursorPos])
-		i.text.WriteRune(key.Rune)
-		i.text.WriteString(text[i.cursorPos:])
+		runes := i.textRunes()
+		if i.cursorPos > len(runes) {
+			i.cursorPos = len(runes)
+		}
+		runes = append(runes[:i.cursorPos], append([]rune{key.Rune}, runes[i.cursorPos:]...)...)
+		i.setTextRunes(runes)
 		i.cursorPos++
 		i.notifyChange()
 		return runtime.Handled()
@@ -435,16 +444,15 @@ func (i *Input) deleteSelection() {
 		return
 	}
 	sel := i.selection.Normalize()
-	text := i.text.String()
-	if sel.End > len(text) {
-		sel.End = len(text)
+	runes := i.textRunes()
+	if sel.End > len(runes) {
+		sel.End = len(runes)
 	}
-	if sel.Start > len(text) {
-		sel.Start = len(text)
+	if sel.Start > len(runes) {
+		sel.Start = len(runes)
 	}
-	i.text.Reset()
-	i.text.WriteString(text[:sel.Start])
-	i.text.WriteString(text[sel.End:])
+	runes = append(runes[:sel.Start], runes[sel.End:]...)
+	i.setTextRunes(runes)
 	i.cursorPos = sel.Start
 	i.selection = Selection{}
 	i.notifyChange()
@@ -501,13 +509,30 @@ func (i *Input) insertText(text string) {
 	if text == "" {
 		return
 	}
-	current := i.text.String()
-	i.text.Reset()
-	i.text.WriteString(current[:i.cursorPos])
-	i.text.WriteString(text)
-	i.text.WriteString(current[i.cursorPos:])
-	i.cursorPos += len(text)
+	current := i.textRunes()
+	if i.cursorPos > len(current) {
+		i.cursorPos = len(current)
+	}
+	insertRunes := []rune(text)
+	current = append(current[:i.cursorPos], append(insertRunes, current[i.cursorPos:]...)...)
+	i.setTextRunes(current)
+	i.cursorPos += len(insertRunes)
 	i.notifyChange()
+}
+
+func (i *Input) textRunes() []rune {
+	if i == nil {
+		return nil
+	}
+	return []rune(i.text.String())
+}
+
+func (i *Input) setTextRunes(runes []rune) {
+	if i == nil {
+		return
+	}
+	i.text.Reset()
+	i.text.WriteString(string(runes))
 }
 
 var _ clipboard.Target = (*Input)(nil)
@@ -527,7 +552,7 @@ func (i *Input) SetSelection(sel Selection) {
 	if i == nil {
 		return
 	}
-	textLen := i.text.Len()
+	textLen := len(i.textRunes())
 	// Clamp to valid range
 	if sel.Start < 0 {
 		sel.Start = 0
@@ -550,7 +575,7 @@ func (i *Input) SelectAll() {
 	if i == nil {
 		return
 	}
-	i.selection = Selection{Start: 0, End: i.text.Len()}
+	i.selection = Selection{Start: 0, End: len(i.textRunes())}
 	i.services.Invalidate()
 }
 
@@ -572,7 +597,7 @@ func (i *Input) SelectWord() {
 	if len(text) == 0 {
 		return
 	}
-	start, end := findWordBoundaries(text, i.cursorPos)
+	start, end := findWordBoundaries([]rune(text), i.cursorPos)
 	i.selection = Selection{Start: start, End: end}
 	i.services.Invalidate()
 }
@@ -596,20 +621,24 @@ func (i *Input) GetSelectedText() string {
 		return ""
 	}
 	sel := i.selection.Normalize()
-	text := i.text.String()
-	if sel.End > len(text) {
-		sel.End = len(text)
+	runes := i.textRunes()
+	if sel.End > len(runes) {
+		sel.End = len(runes)
 	}
-	if sel.Start > len(text) {
+	if sel.Start > len(runes) {
 		return ""
 	}
-	return text[sel.Start:sel.End]
+	return string(runes[sel.Start:sel.End])
 }
 
 var _ Selectable = (*Input)(nil)
 
+func runeCount(text string) int {
+	return len([]rune(text))
+}
+
 // findWordBoundaries returns the start and end positions of the word at pos.
-func findWordBoundaries(text string, pos int) (start, end int) {
+func findWordBoundaries(text []rune, pos int) (start, end int) {
 	if len(text) == 0 {
 		return 0, 0
 	}
@@ -636,36 +665,51 @@ func findWordBoundaries(text string, pos int) (start, end int) {
 }
 
 func (i *Input) wordBoundaryLeft() int {
-	text := i.text.String()
+	runes := i.textRunes()
+	if len(runes) == 0 {
+		return 0
+	}
 	pos := i.cursorPos - 1
+	if pos < 0 {
+		return 0
+	}
+	if pos >= len(runes) {
+		pos = len(runes) - 1
+	}
 
 	// Skip whitespace
-	for pos > 0 && text[pos] == ' ' {
+	for pos > 0 && runes[pos] == ' ' {
 		pos--
 	}
 	// Skip word characters
-	for pos > 0 && text[pos-1] != ' ' {
+	for pos > 0 && runes[pos-1] != ' ' {
 		pos--
 	}
 	return pos
 }
 
 func (i *Input) wordBoundaryRight() int {
-	text := i.text.String()
+	runes := i.textRunes()
 	pos := i.cursorPos
+	if pos < 0 {
+		pos = 0
+	}
+	if pos > len(runes) {
+		pos = len(runes)
+	}
 
 	// Skip word characters
-	for pos < len(text) && text[pos] != ' ' {
+	for pos < len(runes) && runes[pos] != ' ' {
 		pos++
 	}
 	// Skip whitespace
-	for pos < len(text) && text[pos] == ' ' {
+	for pos < len(runes) && runes[pos] == ' ' {
 		pos++
 	}
 	return pos
 }
 
-func multilineWordBoundaryLeft(text string, cursor int) int {
+func multilineWordBoundaryLeft(text []rune, cursor int) int {
 	if cursor <= 0 {
 		return 0
 	}
@@ -682,7 +726,7 @@ func multilineWordBoundaryLeft(text string, cursor int) int {
 	return pos
 }
 
-func multilineWordBoundaryRight(text string, cursor int) int {
+func multilineWordBoundaryRight(text []rune, cursor int) int {
 	if cursor < 0 {
 		cursor = 0
 	}
@@ -699,7 +743,7 @@ func multilineWordBoundaryRight(text string, cursor int) int {
 	return pos
 }
 
-func isWordSeparator(ch byte) bool {
+func isWordSeparator(ch rune) bool {
 	switch ch {
 	case ' ', '\n', '\t':
 		return true
@@ -768,7 +812,7 @@ func (m *MultilineInput) SetText(text string) {
 		m.lines = []string{""}
 	}
 	m.cursorY = len(m.lines) - 1
-	m.cursorX = len(m.lines[m.cursorY])
+	m.cursorX = runeCount(m.lines[m.cursorY])
 	m.syncA11y()
 }
 
@@ -787,7 +831,7 @@ func (m *MultilineInput) CursorOffset() int {
 	}
 	offset := 0
 	for i := 0; i < m.cursorY && i < len(m.lines); i++ {
-		offset += len(m.lines[i]) + 1
+		offset += runeCount(m.lines[i]) + 1
 	}
 	offset += m.cursorX
 	return offset
@@ -805,11 +849,12 @@ func (m *MultilineInput) SetCursorPosition(x, y int) {
 		y = len(m.lines) - 1
 	}
 	line := m.lines[y]
+	lineRunes := []rune(line)
 	if x < 0 {
 		x = 0
 	}
-	if x > len(line) {
-		x = len(line)
+	if x > len(lineRunes) {
+		x = len(lineRunes)
 	}
 	m.cursorX = x
 	m.cursorY = y
@@ -825,13 +870,13 @@ func (m *MultilineInput) SetCursorOffset(offset int) {
 	if offset < 0 {
 		offset = 0
 	}
-	total := len(m.Text())
+	total := runeCount(m.Text())
 	if offset > total {
 		offset = total
 	}
 	remaining := offset
 	for i, line := range m.lines {
-		lineLen := len(line)
+		lineLen := runeCount(line)
 		if remaining <= lineLen {
 			m.cursorY = i
 			m.cursorX = remaining
@@ -850,7 +895,7 @@ func (m *MultilineInput) SetCursorOffset(offset int) {
 		remaining--
 	}
 	m.cursorY = len(m.lines) - 1
-	m.cursorX = len(m.lines[m.cursorY])
+	m.cursorX = runeCount(m.lines[m.cursorY])
 	m.ensureCursorVisible()
 	m.services.Invalidate()
 }
@@ -860,7 +905,7 @@ func (m *MultilineInput) CursorWordLeft() {
 	if m == nil {
 		return
 	}
-	offset := multilineWordBoundaryLeft(m.Text(), m.CursorOffset())
+	offset := multilineWordBoundaryLeft([]rune(m.Text()), m.CursorOffset())
 	m.SetCursorOffset(offset)
 }
 
@@ -869,7 +914,7 @@ func (m *MultilineInput) CursorWordRight() {
 	if m == nil {
 		return
 	}
-	offset := multilineWordBoundaryRight(m.Text(), m.CursorOffset())
+	offset := multilineWordBoundaryRight([]rune(m.Text()), m.CursorOffset())
 	m.SetCursorOffset(offset)
 }
 
@@ -969,8 +1014,9 @@ func (m *MultilineInput) Render(ctx runtime.RenderContext) {
 		}
 
 		line := m.lines[lineIdx]
-		if len(line) > content.Width {
-			line = line[:content.Width]
+		if runeCount(line) > content.Width {
+			lineRunes := []rune(line)
+			line = string(lineRunes[:content.Width])
 		}
 		ctx.Buffer.SetString(content.X, content.Y+i, line, style)
 	}
@@ -982,8 +1028,11 @@ func (m *MultilineInput) Render(ctx runtime.RenderContext) {
 			cursorX := content.X + m.cursorX
 			if cursorX >= content.X && cursorX < content.X+content.Width {
 				var ch rune = ' '
-				if m.cursorY < len(m.lines) && m.cursorX < len(m.lines[m.cursorY]) {
-					ch = rune(m.lines[m.cursorY][m.cursorX])
+				if m.cursorY < len(m.lines) {
+					lineRunes := []rune(m.lines[m.cursorY])
+					if m.cursorX < len(lineRunes) {
+						ch = lineRunes[m.cursorX]
+					}
 				}
 				ctx.Buffer.Set(cursorX, content.Y+cursorScreenY, ch, style.Reverse(true))
 			}
@@ -1023,8 +1072,12 @@ func (m *MultilineInput) HandleMessage(msg runtime.Message) runtime.HandleResult
 		}
 		// Insert newline
 		line := m.lines[m.cursorY]
-		m.lines[m.cursorY] = line[:m.cursorX]
-		newLine := line[m.cursorX:]
+		lineRunes := []rune(line)
+		if m.cursorX > len(lineRunes) {
+			m.cursorX = len(lineRunes)
+		}
+		m.lines[m.cursorY] = string(lineRunes[:m.cursorX])
+		newLine := string(lineRunes[m.cursorX:])
 		m.lines = append(m.lines[:m.cursorY+1], append([]string{newLine}, m.lines[m.cursorY+1:]...)...)
 		m.cursorY++
 		m.cursorX = 0
@@ -1035,12 +1088,17 @@ func (m *MultilineInput) HandleMessage(msg runtime.Message) runtime.HandleResult
 	case terminal.KeyBackspace:
 		if m.cursorX > 0 {
 			line := m.lines[m.cursorY]
-			m.lines[m.cursorY] = line[:m.cursorX-1] + line[m.cursorX:]
+			lineRunes := []rune(line)
+			if m.cursorX > len(lineRunes) {
+				m.cursorX = len(lineRunes)
+			}
+			lineRunes = append(lineRunes[:m.cursorX-1], lineRunes[m.cursorX:]...)
+			m.lines[m.cursorY] = string(lineRunes)
 			m.cursorX--
 		} else if m.cursorY > 0 {
 			// Join with previous line
 			prevLine := m.lines[m.cursorY-1]
-			m.cursorX = len(prevLine)
+			m.cursorX = runeCount(prevLine)
 			m.lines[m.cursorY-1] = prevLine + m.lines[m.cursorY]
 			m.lines = append(m.lines[:m.cursorY], m.lines[m.cursorY+1:]...)
 			m.cursorY--
@@ -1051,8 +1109,9 @@ func (m *MultilineInput) HandleMessage(msg runtime.Message) runtime.HandleResult
 	case terminal.KeyUp:
 		if m.cursorY > 0 {
 			m.cursorY--
-			if m.cursorX > len(m.lines[m.cursorY]) {
-				m.cursorX = len(m.lines[m.cursorY])
+			lineLen := runeCount(m.lines[m.cursorY])
+			if m.cursorX > lineLen {
+				m.cursorX = lineLen
 			}
 			m.ensureCursorVisible()
 		}
@@ -1061,8 +1120,9 @@ func (m *MultilineInput) HandleMessage(msg runtime.Message) runtime.HandleResult
 	case terminal.KeyDown:
 		if m.cursorY < len(m.lines)-1 {
 			m.cursorY++
-			if m.cursorX > len(m.lines[m.cursorY]) {
-				m.cursorX = len(m.lines[m.cursorY])
+			lineLen := runeCount(m.lines[m.cursorY])
+			if m.cursorX > lineLen {
+				m.cursorX = lineLen
 			}
 			m.ensureCursorVisible()
 		}
@@ -1073,12 +1133,12 @@ func (m *MultilineInput) HandleMessage(msg runtime.Message) runtime.HandleResult
 			m.cursorX--
 		} else if m.cursorY > 0 {
 			m.cursorY--
-			m.cursorX = len(m.lines[m.cursorY])
+			m.cursorX = runeCount(m.lines[m.cursorY])
 		}
 		return runtime.Handled()
 
 	case terminal.KeyRight:
-		if m.cursorX < len(m.lines[m.cursorY]) {
+		if m.cursorX < runeCount(m.lines[m.cursorY]) {
 			m.cursorX++
 		} else if m.cursorY < len(m.lines)-1 {
 			m.cursorY++
@@ -1088,7 +1148,12 @@ func (m *MultilineInput) HandleMessage(msg runtime.Message) runtime.HandleResult
 
 	case terminal.KeyRune:
 		line := m.lines[m.cursorY]
-		m.lines[m.cursorY] = line[:m.cursorX] + string(key.Rune) + line[m.cursorX:]
+		lineRunes := []rune(line)
+		if m.cursorX > len(lineRunes) {
+			m.cursorX = len(lineRunes)
+		}
+		lineRunes = append(lineRunes[:m.cursorX], append([]rune{key.Rune}, lineRunes[m.cursorX:]...)...)
+		m.lines[m.cursorY] = string(lineRunes)
 		m.cursorX++
 		m.notifyChange()
 		return runtime.Handled()
@@ -1168,15 +1233,15 @@ func (m *MultilineInput) deleteSelection() {
 		return
 	}
 	sel := m.selection.Normalize()
-	text := m.Text()
-	if sel.End > len(text) {
-		sel.End = len(text)
+	runes := []rune(m.Text())
+	if sel.End > len(runes) {
+		sel.End = len(runes)
 	}
-	if sel.Start > len(text) {
-		sel.Start = len(text)
+	if sel.Start > len(runes) {
+		sel.Start = len(runes)
 	}
-	newText := text[:sel.Start] + text[sel.End:]
-	m.SetText(newText)
+	runes = append(runes[:sel.Start], runes[sel.End:]...)
+	m.SetText(string(runes))
 	m.SetCursorOffset(sel.Start)
 	m.selection = Selection{}
 	m.notifyChange()
@@ -1240,12 +1305,16 @@ func (m *MultilineInput) insertText(text string) {
 	}
 	parts := strings.Split(text, "\n")
 	line := m.lines[m.cursorY]
-	prefix := line[:m.cursorX]
-	suffix := line[m.cursorX:]
+	lineRunes := []rune(line)
+	if m.cursorX > len(lineRunes) {
+		m.cursorX = len(lineRunes)
+	}
+	prefix := string(lineRunes[:m.cursorX])
+	suffix := string(lineRunes[m.cursorX:])
 
 	if len(parts) == 1 {
 		m.lines[m.cursorY] = prefix + parts[0] + suffix
-		m.cursorX += len(parts[0])
+		m.cursorX += runeCount(parts[0])
 		m.notifyChange()
 		return
 	}
@@ -1264,7 +1333,7 @@ func (m *MultilineInput) insertText(text string) {
 	}
 	m.lines = newLines
 	m.cursorY += len(parts) - 1
-	m.cursorX = len(parts[len(parts)-1])
+	m.cursorX = runeCount(parts[len(parts)-1])
 	m.ensureCursorVisible()
 	m.notifyChange()
 }
@@ -1286,7 +1355,7 @@ func (m *MultilineInput) SetSelection(sel Selection) {
 	if m == nil {
 		return
 	}
-	textLen := len(m.Text())
+	textLen := runeCount(m.Text())
 	// Clamp to valid range
 	if sel.Start < 0 {
 		sel.Start = 0
@@ -1309,7 +1378,7 @@ func (m *MultilineInput) SelectAll() {
 	if m == nil {
 		return
 	}
-	m.selection = Selection{Start: 0, End: len(m.Text())}
+	m.selection = Selection{Start: 0, End: runeCount(m.Text())}
 	m.services.Invalidate()
 }
 
@@ -1332,7 +1401,7 @@ func (m *MultilineInput) SelectWord() {
 		return
 	}
 	offset := m.CursorOffset()
-	start, end := findWordBoundaries(text, offset)
+	start, end := findWordBoundaries([]rune(text), offset)
 	m.selection = Selection{Start: start, End: end}
 	m.services.Invalidate()
 }
@@ -1345,10 +1414,10 @@ func (m *MultilineInput) SelectLine() {
 	// Calculate start offset (beginning of current line)
 	start := 0
 	for i := 0; i < m.cursorY && i < len(m.lines); i++ {
-		start += len(m.lines[i]) + 1 // +1 for newline
+		start += runeCount(m.lines[i]) + 1 // +1 for newline
 	}
 	// Calculate end offset (end of current line)
-	end := start + len(m.lines[m.cursorY])
+	end := start + runeCount(m.lines[m.cursorY])
 	m.selection = Selection{Start: start, End: end}
 	m.services.Invalidate()
 }
@@ -1367,14 +1436,19 @@ func (m *MultilineInput) GetSelectedText() string {
 		return ""
 	}
 	sel := m.selection.Normalize()
-	text := m.Text()
-	if sel.End > len(text) {
-		sel.End = len(text)
+	runes := []rune(m.Text())
+	if sel.End > len(runes) {
+		sel.End = len(runes)
 	}
-	if sel.Start > len(text) {
+	if sel.Start > len(runes) {
 		return ""
 	}
-	return text[sel.Start:sel.End]
+	return string(runes[sel.Start:sel.End])
 }
 
 var _ Selectable = (*MultilineInput)(nil)
+
+var _ runtime.Widget = (*Input)(nil)
+var _ runtime.Focusable = (*Input)(nil)
+var _ runtime.Widget = (*MultilineInput)(nil)
+var _ runtime.Focusable = (*MultilineInput)(nil)

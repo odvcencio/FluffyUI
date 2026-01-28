@@ -126,6 +126,67 @@ func DefaultTheme() *Theme {
 	}
 }
 
+// LightTheme returns a light variant of the default palette.
+func LightTheme() *Theme {
+	return &Theme{
+		// Core palette - warm off-whites with gentle depth
+		Background:    compositor.DefaultStyle().WithBG(compositor.RGB(248, 247, 244)),
+		Surface:       compositor.DefaultStyle().WithBG(compositor.RGB(240, 239, 236)),
+		SurfaceRaised: compositor.DefaultStyle().WithBG(compositor.RGB(232, 231, 228)),
+		SurfaceDim:    compositor.DefaultStyle().WithBG(compositor.RGB(224, 223, 220)),
+
+		// Text hierarchy - deep graphite
+		TextPrimary:   compositor.DefaultStyle().WithFG(compositor.RGB(24, 24, 28)),
+		TextSecondary: compositor.DefaultStyle().WithFG(compositor.RGB(70, 70, 78)),
+		TextMuted:     compositor.DefaultStyle().WithFG(compositor.RGB(110, 110, 118)),
+		TextInverse:   compositor.DefaultStyle().WithFG(compositor.RGB(248, 247, 244)),
+
+		// Accent - warm amber (readable on light surfaces)
+		Accent:       compositor.DefaultStyle().WithFG(compositor.RGB(184, 110, 36)),
+		AccentDim:    compositor.DefaultStyle().WithFG(compositor.RGB(150, 90, 30)),
+		AccentGlow:   compositor.DefaultStyle().WithFG(compositor.RGB(200, 130, 50)).WithBold(true),
+		ElectricBlue: compositor.DefaultStyle().WithFG(compositor.RGB(30, 110, 190)),
+		Coral:        compositor.DefaultStyle().WithFG(compositor.RGB(200, 90, 70)),
+		Teal:         compositor.DefaultStyle().WithFG(compositor.RGB(40, 130, 120)),
+
+		// Glow variants - softened highlights
+		BlueGlow:   compositor.DefaultStyle().WithFG(compositor.RGB(80, 140, 210)).WithDim(true),
+		PurpleGlow: compositor.DefaultStyle().WithFG(compositor.RGB(140, 100, 190)).WithDim(true),
+		CoralGlow:  compositor.DefaultStyle().WithFG(compositor.RGB(220, 130, 110)).WithDim(true),
+
+		// Semantic colors
+		Success: compositor.DefaultStyle().WithFG(compositor.RGB(40, 140, 90)),
+		Warning: compositor.DefaultStyle().WithFG(compositor.RGB(190, 120, 50)),
+		Error:   compositor.DefaultStyle().WithFG(compositor.RGB(190, 70, 70)),
+		Info:    compositor.DefaultStyle().WithFG(compositor.RGB(30, 130, 150)),
+
+		// Message sources
+		User:      compositor.DefaultStyle().WithFG(compositor.RGB(40, 140, 90)),
+		Assistant: compositor.DefaultStyle().WithFG(compositor.RGB(184, 110, 36)),
+		System:    compositor.DefaultStyle().WithFG(compositor.RGB(70, 70, 78)).WithItalic(true),
+		Tool:      compositor.DefaultStyle().WithFG(compositor.RGB(150, 110, 200)),
+		Thinking:  compositor.DefaultStyle().WithFG(compositor.RGB(110, 110, 118)).WithItalic(true),
+
+		// UI elements
+		Border:      compositor.DefaultStyle().WithFG(compositor.RGB(170, 170, 180)),
+		BorderFocus: compositor.DefaultStyle().WithFG(compositor.RGB(184, 110, 36)),
+		Selection:   compositor.DefaultStyle().WithBG(compositor.RGB(208, 225, 245)),
+		SearchMatch: compositor.DefaultStyle().WithBG(compositor.RGB(255, 230, 160)).WithFG(compositor.RGB(24, 24, 28)),
+		Scrollbar:   compositor.DefaultStyle().WithFG(compositor.RGB(170, 170, 180)),
+		ScrollThumb: compositor.DefaultStyle().WithFG(compositor.RGB(130, 130, 140)),
+
+		// Mode indicators
+		ModeNormal: compositor.DefaultStyle().WithFG(compositor.RGB(70, 70, 78)),
+		ModeShell:  compositor.DefaultStyle().WithFG(compositor.RGB(40, 140, 90)).WithBold(true),
+		ModeEnv:    compositor.DefaultStyle().WithFG(compositor.RGB(30, 110, 190)).WithBold(true),
+		ModeSearch: compositor.DefaultStyle().WithFG(compositor.RGB(190, 120, 50)).WithBold(true),
+
+		// Special
+		Logo:    compositor.DefaultStyle().WithFG(compositor.RGB(184, 110, 36)).WithBold(true),
+		Spinner: compositor.DefaultStyle().WithFG(compositor.RGB(184, 110, 36)),
+	}
+}
+
 // Symbols provides consistent iconography.
 var Symbols = struct {
 	// Bullets and markers

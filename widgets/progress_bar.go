@@ -125,3 +125,5 @@ func mergeGaugeStyle(base backend.Style, style GaugeStyle) GaugeStyle {
 	}
 	return merged
 }
+
+var _ runtime.Widget = (*Progress)(nil)

@@ -566,3 +566,6 @@ func (t *TextArea) pasteFromClipboard() bool {
 }
 
 var _ clipboard.Target = (*TextArea)(nil)
+
+var _ runtime.Widget = (*TextArea)(nil)
+var _ runtime.Focusable = (*TextArea)(nil)

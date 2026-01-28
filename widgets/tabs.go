@@ -24,6 +24,8 @@ type Tabs struct {
 	label         string
 	style         backend.Style
 	selectedStyle backend.Style
+	services      runtime.Services
+	mounted       bool
 }
 
 // NewTabs creates a tab container.
@@ -38,6 +40,38 @@ func NewTabs(tabs ...Tab) *Tabs {
 	w.Base.Role = accessibility.RoleTabList
 	w.syncA11y()
 	return w
+}
+
+// Bind attaches app services.
+func (t *Tabs) Bind(services runtime.Services) {
+	if t == nil {
+		return
+	}
+	t.services = services
+}
+
+// Unbind releases app services.
+func (t *Tabs) Unbind() {
+	if t == nil {
+		return
+	}
+	t.services = runtime.Services{}
+}
+
+// Mount marks the tab container as mounted.
+func (t *Tabs) Mount() {
+	if t == nil {
+		return
+	}
+	t.mounted = true
+}
+
+// Unmount marks the tab container as unmounted.
+func (t *Tabs) Unmount() {
+	if t == nil {
+		return
+	}
+	t.mounted = false
 }
 
 // SetStyle updates the base tab style.
@@ -219,15 +253,31 @@ func (t *Tabs) setSelected(index int) {
 		t.selected = 0
 		return
 	}
+	prev := t.selectedTab()
+	var prevContent runtime.Widget
+	if prev != nil {
+		prevContent = prev.Content
+	}
 	if index < 0 {
 		index = 0
 	}
 	if index >= len(t.Tabs) {
 		index = len(t.Tabs) - 1
 	}
+	if t.selected == index {
+		t.layoutSelected()
+		t.syncA11y()
+		return
+	}
 	t.selected = index
 	t.layoutSelected()
 	t.syncA11y()
+	var nextContent runtime.Widget
+	if next := t.selectedTab(); next != nil {
+		nextContent = next.Content
+	}
+	t.swapContent(prevContent, nextContent)
+	t.relayout()
 }
 
 func (t *Tabs) layoutSelected() {
@@ -246,6 +296,32 @@ func (t *Tabs) layoutSelected() {
 		Height: max(0, content.Height-1),
 	}
 	selected.Content.Layout(contentBounds)
+}
+
+func (t *Tabs) swapContent(prev runtime.Widget, next runtime.Widget) {
+	if prev == next {
+		return
+	}
+	if prev != nil {
+		if t.mounted {
+			runtime.UnmountTree(prev)
+		}
+		runtime.UnbindTree(prev)
+	}
+	if next != nil {
+		runtime.BindTree(next, t.services)
+		if t.mounted {
+			runtime.MountTree(next)
+		}
+	}
+}
+
+func (t *Tabs) relayout() {
+	if t == nil {
+		return
+	}
+	t.Invalidate()
+	t.services.Relayout()
 }
 
 func (t *Tabs) syncA11y() {
@@ -277,3 +353,9 @@ func (t *Tabs) syncA11y() {
 		t.Base.Description = ""
 	}
 }
+
+var _ runtime.Widget = (*Tabs)(nil)
+var _ runtime.Focusable = (*Tabs)(nil)
+var _ runtime.Bindable = (*Tabs)(nil)
+var _ runtime.Unbindable = (*Tabs)(nil)
+var _ runtime.Lifecycle = (*Tabs)(nil)

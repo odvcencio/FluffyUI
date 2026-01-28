@@ -79,3 +79,5 @@ func (w *CanvasWidget) Render(ctx runtime.RenderContext) {
 	w.draw(w.canvas)
 	w.canvas.Render(ctx.Buffer, content.X, content.Y)
 }
+
+var _ runtime.Widget = (*CanvasWidget)(nil)

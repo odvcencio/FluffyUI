@@ -512,3 +512,6 @@ func (p *PaletteWidget) HandleMessage(msg runtime.Message) runtime.HandleResult 
 
 	return runtime.Unhandled()
 }
+
+var _ runtime.Widget = (*PaletteWidget)(nil)
+var _ runtime.Focusable = (*PaletteWidget)(nil)

@@ -87,6 +87,31 @@ func TestInput_TextOperations(t *testing.T) {
 	}
 }
 
+func TestInput_TextOperations_Unicode(t *testing.T) {
+	input := NewInput()
+	input.SetText("hé")
+
+	if input.CursorPos() != 2 {
+		t.Errorf("Cursor should be at rune end, got %d", input.CursorPos())
+	}
+
+	input.Focus()
+	input.HandleMessage(runtime.KeyMsg{Key: terminal.KeyBackspace})
+	if input.Text() != "h" {
+		t.Errorf("Backspace should remove one rune, got %q", input.Text())
+	}
+	if input.CursorPos() != 1 {
+		t.Errorf("Cursor should move back one rune, got %d", input.CursorPos())
+	}
+
+	input.SetText("你好吗")
+	input.SetCursorOffset(1)
+	input.HandleMessage(runtime.KeyMsg{Key: terminal.KeyRune, Rune: 'A'})
+	if input.Text() != "你A好吗" {
+		t.Errorf("Unicode insert failed, got %q", input.Text())
+	}
+}
+
 func TestInput_HandleMessage_Typing(t *testing.T) {
 	input := NewInput()
 	input.Focus()
@@ -472,6 +497,21 @@ func TestMultilineInput_SetText(t *testing.T) {
 	}
 	if len(mi.lines) != 3 {
 		t.Errorf("expected 3 lines, got %d", len(mi.lines))
+	}
+}
+
+func TestMultilineInput_UnicodeOffsets(t *testing.T) {
+	mi := NewMultilineInput()
+	mi.SetText("你\n好")
+
+	if mi.CursorOffset() != 3 {
+		t.Errorf("CursorOffset = %d, want 3", mi.CursorOffset())
+	}
+
+	mi.SetCursorOffset(2)
+	x, y := mi.CursorPosition()
+	if x != 0 || y != 1 {
+		t.Errorf("CursorPosition = (%d,%d), want (0,1)", x, y)
 	}
 }
 

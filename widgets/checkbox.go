@@ -198,3 +198,6 @@ func (c *Checkbox) syncState() {
 		c.Base.Role = accessibility.RoleCheckbox
 	}
 }
+
+var _ runtime.Widget = (*Checkbox)(nil)
+var _ runtime.Focusable = (*Checkbox)(nil)

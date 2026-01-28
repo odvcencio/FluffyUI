@@ -148,10 +148,10 @@ func TestMultilineInputSelection(t *testing.T) {
 
 func TestFindWordBoundaries(t *testing.T) {
 	tests := []struct {
-		text       string
-		pos        int
-		wantStart  int
-		wantEnd    int
+		text      string
+		pos       int
+		wantStart int
+		wantEnd   int
 	}{
 		{"hello world", 0, 0, 5},   // Start of first word
 		{"hello world", 2, 0, 5},   // Middle of first word
@@ -164,7 +164,7 @@ func TestFindWordBoundaries(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		start, end := findWordBoundaries(tt.text, tt.pos)
+		start, end := findWordBoundaries([]rune(tt.text), tt.pos)
 		if start != tt.wantStart || end != tt.wantEnd {
 			t.Errorf("findWordBoundaries(%q, %d) = (%d, %d), want (%d, %d)",
 				tt.text, tt.pos, start, end, tt.wantStart, tt.wantEnd)

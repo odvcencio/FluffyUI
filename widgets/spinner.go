@@ -94,3 +94,5 @@ func (s *Spinner) syncA11y() {
 		s.Base.Label = "Loading"
 	}
 }
+
+var _ runtime.Widget = (*Spinner)(nil)

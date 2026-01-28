@@ -371,3 +371,6 @@ func (m *Menu) syncA11y() {
 }
 
 var _ scroll.Controller = (*Menu)(nil)
+
+var _ runtime.Widget = (*Menu)(nil)
+var _ runtime.Focusable = (*Menu)(nil)

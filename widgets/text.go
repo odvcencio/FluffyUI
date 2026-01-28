@@ -291,3 +291,6 @@ func (l *Label) syncA11y() {
 	l.Base.Label = label
 	l.Base.Value = nil
 }
+
+var _ runtime.Widget = (*Text)(nil)
+var _ runtime.Widget = (*Label)(nil)

@@ -17,6 +17,7 @@ import (
 	"github.com/odvcencio/fluffyui/state"
 	"github.com/odvcencio/fluffyui/style"
 	"github.com/odvcencio/fluffyui/terminal"
+	"github.com/odvcencio/fluffyui/theme"
 )
 
 // UpdateFunc handles a message and returns true if a render is needed.
@@ -44,6 +45,7 @@ type AppConfig struct {
 	RenderObserver    RenderObserver
 	FocusRegistration FocusRegistrationMode
 	Audio             audio.Service
+	Theme             *theme.Theme
 	Stylesheet        *style.Stylesheet
 	Animator          *animation.Animator
 	ReducedMotion     bool
@@ -71,6 +73,7 @@ type App struct {
 	renderObserver    RenderObserver
 	focusRegistration FocusRegistrationMode
 	audio             audio.Service
+	theme             *theme.Theme
 	stylesheet        *style.Stylesheet
 	animator          *animation.Animator
 	reducedMotion     bool
@@ -98,6 +101,14 @@ func NewApp(cfg AppConfig) *App {
 		queue = state.NewQueue()
 	}
 	policy := cfg.FlushPolicy
+	sheet := cfg.Stylesheet
+	appTheme := cfg.Theme
+	if sheet == nil && appTheme != nil {
+		sheet = theme.Stylesheet(appTheme)
+	} else if sheet != nil {
+		appTheme = nil
+	}
+
 	app := &App{
 		backend:           cfg.Backend,
 		root:              cfg.Root,
@@ -115,7 +126,8 @@ func NewApp(cfg AppConfig) *App {
 		renderObserver:    cfg.RenderObserver,
 		focusRegistration: cfg.FocusRegistration,
 		audio:             cfg.Audio,
-		stylesheet:        cfg.Stylesheet,
+		theme:             appTheme,
+		stylesheet:        sheet,
 		animator:          cfg.Animator,
 		reducedMotion:     cfg.ReducedMotion,
 		errorReporter:     cfg.ErrorReporter,
@@ -149,6 +161,14 @@ func (a *App) Stylesheet() *style.Stylesheet {
 	return a.stylesheet
 }
 
+// Theme returns the active theme, if set.
+func (a *App) Theme() *theme.Theme {
+	if a == nil {
+		return nil
+	}
+	return a.theme
+}
+
 // Animator returns the app animator.
 func (a *App) Animator() *animation.Animator {
 	if a == nil {
@@ -167,6 +187,19 @@ func (a *App) SetStylesheet(sheet *style.Stylesheet) {
 		a.screen.relayout()
 	}
 	a.Invalidate()
+}
+
+// SetTheme replaces the active theme and rebuilds the stylesheet.
+func (a *App) SetTheme(th *theme.Theme) {
+	if a == nil {
+		return
+	}
+	a.theme = th
+	if th == nil {
+		a.SetStylesheet(nil)
+		return
+	}
+	a.SetStylesheet(theme.Stylesheet(th))
 }
 
 // Relayout recomputes layout and invalidates the render pass.

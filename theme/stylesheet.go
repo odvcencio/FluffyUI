@@ -4,7 +4,19 @@ import "github.com/odvcencio/fluffyui/style"
 
 // DefaultStylesheet returns the default stylesheet using the theme palette.
 func DefaultStylesheet() *style.Stylesheet {
-	t := DefaultTheme()
+	return Stylesheet(DefaultTheme())
+}
+
+// LightStylesheet returns the light palette stylesheet.
+func LightStylesheet() *style.Stylesheet {
+	return Stylesheet(LightTheme())
+}
+
+// Stylesheet builds a stylesheet from the provided theme.
+func Stylesheet(t *Theme) *style.Stylesheet {
+	if t == nil {
+		t = DefaultTheme()
+	}
 	return style.NewStylesheet().
 		Add(style.Select("*"), style.Style{
 			Foreground: t.TextPrimary.FG,

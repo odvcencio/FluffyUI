@@ -296,3 +296,5 @@ func encoderCellSize(encoder graphics.TerminalEncoder) (int, int) {
 		return graphics.DefaultKittyCellWidth, graphics.DefaultKittyCellHeight
 	}
 }
+
+var _ runtime.Widget = (*GPUCanvasWidget)(nil)

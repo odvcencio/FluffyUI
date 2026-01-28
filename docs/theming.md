@@ -109,6 +109,17 @@ app := runtime.NewApp(runtime.AppConfig{
 })
 ```
 
+You can also supply a theme directly and switch later:
+
+```go
+app := runtime.NewApp(runtime.AppConfig{
+    Root:  root,
+    Theme: theme.DefaultTheme(),
+})
+
+app.SetTheme(theme.LightTheme())
+```
+
 For full code + style reload during development, use:
 
 ```bash

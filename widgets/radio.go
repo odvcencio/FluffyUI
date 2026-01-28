@@ -252,3 +252,6 @@ func (r *Radio) syncState() {
 		r.Base.Role = accessibility.RoleRadio
 	}
 }
+
+var _ runtime.Widget = (*Radio)(nil)
+var _ runtime.Focusable = (*Radio)(nil)

@@ -135,3 +135,5 @@ func minInt(a, b int) int {
 	}
 	return b
 }
+
+var _ runtime.Widget = (*AnimatedGauge)(nil)

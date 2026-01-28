@@ -267,3 +267,6 @@ func (b *Breadcrumb) pathString() string {
 	}
 	return strings.Join(parts, sep)
 }
+
+var _ runtime.Widget = (*Breadcrumb)(nil)
+var _ runtime.Focusable = (*Breadcrumb)(nil)

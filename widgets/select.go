@@ -17,18 +17,32 @@ type SelectOption struct {
 	Disabled bool
 }
 
+// SelectMode controls how the select renders.
+type SelectMode int
+
+const (
+	SelectInline SelectMode = iota
+	SelectDropdown
+)
+
+// SelectModeOption configures select behavior.
+type SelectModeOption func(*Select)
+
 // Select is a dropdown-like selector (inline).
 type Select struct {
 	FocusableBase
 
-	options    []SelectOption
-	selected   int
-	onChange   func(option SelectOption)
-	label      string
-	style      backend.Style
-	focusStyle backend.Style
-	styleSet   bool
-	focusSet   bool
+	options      []SelectOption
+	selected     int
+	onChange     func(option SelectOption)
+	label        string
+	style        backend.Style
+	focusStyle   backend.Style
+	styleSet     bool
+	focusSet     bool
+	services     runtime.Services
+	mode         SelectMode
+	dropdownOpen bool
 }
 
 // NewSelect creates a select widget.
@@ -39,10 +53,65 @@ func NewSelect(options ...SelectOption) *Select {
 		label:      "Select",
 		style:      backend.DefaultStyle(),
 		focusStyle: backend.DefaultStyle().Reverse(true),
+		mode:       SelectInline,
 	}
 	s.Base.Role = accessibility.RoleList
 	s.syncState()
 	return s
+}
+
+// Apply configures the select with mode options.
+func (s *Select) Apply(opts ...SelectModeOption) *Select {
+	for _, opt := range opts {
+		if opt != nil {
+			opt(s)
+		}
+	}
+	return s
+}
+
+// WithDropdownMode enables dropdown overlay rendering.
+func WithDropdownMode() SelectModeOption {
+	return func(s *Select) {
+		if s == nil {
+			return
+		}
+		s.mode = SelectDropdown
+	}
+}
+
+// WithInlineMode forces inline rendering.
+func WithInlineMode() SelectModeOption {
+	return func(s *Select) {
+		if s == nil {
+			return
+		}
+		s.mode = SelectInline
+	}
+}
+
+// SetMode updates the select rendering mode.
+func (s *Select) SetMode(mode SelectMode) {
+	if s == nil {
+		return
+	}
+	s.mode = mode
+}
+
+// Bind attaches app services.
+func (s *Select) Bind(services runtime.Services) {
+	if s == nil {
+		return
+	}
+	s.services = services
+}
+
+// Unbind releases app services.
+func (s *Select) Unbind() {
+	if s == nil {
+		return
+	}
+	s.services = runtime.Services{}
 }
 
 // SetOnChange sets the change handler.
@@ -111,6 +180,7 @@ func (s *Select) SetSelected(index int) {
 	}
 	s.selected = index
 	s.syncState()
+	s.relayout()
 	if s.onChange != nil {
 		s.onChange(s.options[index])
 	}
@@ -143,15 +213,15 @@ func (s *Select) Render(ctx runtime.RenderContext) {
 	text := "[" + truncateString(label, available) + " v]"
 	style := s.style
 	resolved := ctx.ResolveStyle(s)
-		if !resolved.IsZero() {
-			final := resolved
-			if s.styleSet {
-				final = final.Merge(uistyle.FromBackend(s.style))
-			}
-			if s.focused && s.focusSet {
-				final = final.Merge(uistyle.FromBackend(s.focusStyle))
-			}
-			style = final.ToBackend()
+	if !resolved.IsZero() {
+		final := resolved
+		if s.styleSet {
+			final = final.Merge(uistyle.FromBackend(s.style))
+		}
+		if s.focused && s.focusSet {
+			final = final.Merge(uistyle.FromBackend(s.focusStyle))
+		}
+		style = final.ToBackend()
 	} else if s.focused {
 		style = s.focusStyle
 	}
@@ -164,7 +234,17 @@ func (s *Select) Render(ctx runtime.RenderContext) {
 
 // HandleMessage changes selection.
 func (s *Select) HandleMessage(msg runtime.Message) runtime.HandleResult {
-	if s == nil || !s.focused {
+	if s == nil {
+		return runtime.Unhandled()
+	}
+	if mouse, ok := msg.(runtime.MouseMsg); ok {
+		if s.mode == SelectDropdown && mouse.Action == runtime.MousePress && mouse.Button == runtime.MouseLeft {
+			if s.bounds.Contains(mouse.X, mouse.Y) {
+				return s.openDropdown()
+			}
+		}
+	}
+	if !s.focused {
 		return runtime.Unhandled()
 	}
 	key, ok := msg.(runtime.KeyMsg)
@@ -172,6 +252,10 @@ func (s *Select) HandleMessage(msg runtime.Message) runtime.HandleResult {
 		return runtime.Unhandled()
 	}
 	switch key.Key {
+	case terminal.KeyEnter:
+		if s.mode == SelectDropdown {
+			return s.openDropdown()
+		}
 	case terminal.KeyUp, terminal.KeyLeft:
 		if s.moveSelection(-1) {
 			return runtime.Handled()
@@ -188,6 +272,26 @@ func (s *Select) HandleMessage(msg runtime.Message) runtime.HandleResult {
 		return runtime.Handled()
 	}
 	return runtime.Unhandled()
+}
+
+func (s *Select) openDropdown() runtime.HandleResult {
+	if s == nil {
+		return runtime.Unhandled()
+	}
+	if s.dropdownOpen {
+		return runtime.Handled()
+	}
+	s.dropdownOpen = true
+	dropdown := newSelectDropdown(s)
+	popover := NewPopover(s.bounds, dropdown,
+		WithPopoverMatchAnchorWidth(true),
+		WithPopoverDismissOnOutside(true),
+		WithPopoverDismissOnEscape(true),
+		WithPopoverOnClose(func() {
+			s.dropdownOpen = false
+		}),
+	)
+	return runtime.WithCommand(runtime.PushOverlay{Widget: popover, Modal: true})
 }
 
 func (s *Select) moveSelection(delta int) bool {
@@ -235,3 +339,16 @@ func (s *Select) syncState() {
 		s.Base.Value = nil
 	}
 }
+
+func (s *Select) relayout() {
+	if s == nil {
+		return
+	}
+	s.Invalidate()
+	s.services.Relayout()
+}
+
+var _ runtime.Widget = (*Select)(nil)
+var _ runtime.Focusable = (*Select)(nil)
+var _ runtime.Bindable = (*Select)(nil)
+var _ runtime.Unbindable = (*Select)(nil)

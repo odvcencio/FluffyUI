@@ -199,3 +199,5 @@ func (s *Splitter) syncA11y() {
 		s.Base.Description = "horizontal split"
 	}
 }
+
+var _ runtime.Widget = (*Splitter)(nil)

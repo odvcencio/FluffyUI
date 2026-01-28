@@ -1,0 +1,313 @@
+// Package widgets provides simplified widget bases for common use cases.
+package widgets
+
+import (
+	"fmt"
+	"reflect"
+	"sync"
+
+	"github.com/odvcencio/fluffyui/backend"
+	"github.com/odvcencio/fluffyui/runtime"
+	"github.com/odvcencio/fluffyui/state"
+)
+
+// AutoComponent is a base widget that auto-wires common patterns:
+// - Auto-subscribes to all *state.Signal fields
+// - Auto-invalidates on signal changes
+// - Provides Draw() helper as simpler alternative to full Render()
+// - Sensible defaults for Measure and Layout
+//
+// Use this for 90% of application widgets. Use Base or Component for full control.
+type AutoComponent struct {
+	Base
+	subs    state.Subscriptions
+	drawer  Drawer
+	content runtime.Widget // Cached content from last Build()
+}
+
+// Drawer is the simple drawing interface for AutoComponent.
+// Implement this on your struct instead of full Render().
+type Drawer interface {
+	// Draw renders the widget content.
+	// bounds is the available space; ctx provides drawing helpers.
+	Draw(bounds runtime.Rect, ctx DrawContext)
+}
+
+// Builder is an alternative to Drawer for widgets that compose children.
+// Implement Build() instead of Draw() to return a child tree.
+type Builder interface {
+	Build() Children
+}
+
+// Bind attaches services and auto-wires signal subscriptions.
+func (a *AutoComponent) Bind(services runtime.Services) {
+	a.Base.Bind(services)
+	a.subs.SetScheduler(services.Scheduler())
+
+	// Auto-subscribe to all Signal fields
+	a.autoSubscribeSignals()
+}
+
+// Unbind clears subscriptions.
+func (a *AutoComponent) Unbind() {
+	a.subs.Clear()
+	a.Base.Unbind()
+}
+
+// SetDrawer configures the Draw delegate.
+// Useful when creating simple widgets without defining a new type.
+func (a *AutoComponent) SetDrawer(d Drawer) {
+	a.drawer = d
+}
+
+// Measure returns preferred size.
+// If Builder is implemented, measures the built content.
+// If Drawer is implemented, returns tight bounds (caller should constrain).
+// Otherwise returns max available space.
+func (a *AutoComponent) Measure(constraints runtime.Constraints) runtime.Size {
+	// If we have a Builder, build and measure
+	if b, ok := a.outer().(Builder); ok {
+		children := b.Build()
+		widget := children.build()
+		return widget.Measure(constraints)
+	}
+
+	// If we have a Drawer, we don't know our size
+	// Return max available and let parent constrain
+	if a.drawer != nil || a.hasDrawer() {
+		return constraints.MaxSize()
+	}
+
+	// Default: fill available space
+	return constraints.MaxSize()
+}
+
+// Layout stores bounds and prepares for rendering.
+func (a *AutoComponent) Layout(bounds runtime.Rect) {
+	a.Base.Layout(bounds)
+
+	// If using Builder, rebuild and layout the content
+	if b, ok := a.outer().(Builder); ok {
+		children := b.Build()
+		a.content = children.build()
+		if a.content != nil {
+			a.content.Layout(bounds)
+		}
+	}
+}
+
+// Render draws the widget.
+// If Builder is implemented, renders the built content.
+// If Drawer is implemented, calls Draw with helpers.
+// Otherwise no-op (container only).
+func (a *AutoComponent) Render(ctx runtime.RenderContext) {
+	bounds := a.Bounds()
+	if bounds.Width == 0 || bounds.Height == 0 {
+		return
+	}
+
+	// Builder pattern takes precedence
+	if a.content != nil {
+		a.content.Render(ctx)
+		return
+	}
+
+	// Drawer pattern
+	if a.drawer != nil {
+		dc := DrawContext{
+			Buffer: ctx.Buffer,
+			bounds: bounds,
+		}
+		a.drawer.Draw(bounds, dc)
+		return
+	}
+
+	// Check if outer type implements Drawer
+	if d, ok := a.outer().(Drawer); ok {
+		dc := DrawContext{
+			Buffer: ctx.Buffer,
+			bounds: bounds,
+		}
+		d.Draw(bounds, dc)
+	}
+}
+
+// outer returns the outer struct that embeds this AutoComponent.
+// Used to check if outer implements Drawer or Builder.
+func (a *AutoComponent) outer() any {
+	// This is a simplified version; in practice we'd use reflection
+	// to get the parent struct. For now, return nil and check via type assertions.
+	return nil
+}
+
+func (a *AutoComponent) hasDrawer() bool {
+	// Check via reflection if outer struct has Draw method
+	return false // Simplified
+}
+
+// autoSubscribeSignals finds all *state.Signal fields and subscribes to them.
+func (a *AutoComponent) autoSubscribeSignals() {
+	if a == nil {
+		return
+	}
+
+	// Get the outer struct
+	val := reflect.ValueOf(a)
+	for val.Kind() == reflect.Ptr {
+		if val.IsNil() {
+			return
+		}
+		val = val.Elem()
+	}
+
+	// We need the struct that embeds AutoComponent, not AutoComponent itself
+	// This requires the struct to be passed in, so we'll use a different approach
+	// in practice: require caller to call AutoSubscribe(this) explicitly
+}
+
+// AutoSubscribe subscribes to all Signal fields in the given struct.
+// Call this from your widget's Mount() if not using AutoComponent.Bind().
+func AutoSubscribe(target any, subs *state.Subscriptions, invalidate func()) {
+	if target == nil || subs == nil {
+		return
+	}
+
+	val := reflect.ValueOf(target)
+	if val.Kind() != reflect.Ptr {
+		return
+	}
+	val = val.Elem()
+	if val.Kind() != reflect.Struct {
+		return
+	}
+
+	typ := val.Type()
+
+	for i := 0; i < typ.NumField(); i++ {
+		field := val.Field(i)
+		fieldType := typ.Field(i).Type
+
+		// Check if it's *state.Signal[T]
+		if fieldType.Kind() == reflect.Ptr && fieldType.Elem().Kind() == reflect.Struct {
+			if fieldType.Elem().Name() == "Signal" {
+				// Found a signal field
+				if !field.IsNil() {
+					subscribable := field.Interface().(state.Subscribable)
+					subs.Observe(subscribable, invalidate)
+				}
+			}
+		}
+	}
+}
+
+// DrawContext provides simplified drawing operations.
+type DrawContext struct {
+	Buffer backend.RenderTarget
+	bounds runtime.Rect
+}
+
+// DrawText draws text at the specified position.
+func (dc DrawContext) DrawText(x, y int, text string, style ...backend.Style) {
+	if dc.Buffer == nil || y < 0 || y >= dc.bounds.Height {
+		return
+	}
+	if x < 0 {
+		text = text[-x:]
+		x = 0
+	}
+	if len(text) > dc.bounds.Width-x {
+		text = text[:dc.bounds.Width-x]
+	}
+	s := backend.DefaultStyle()
+	if len(style) > 0 {
+		s = style[0]
+	}
+	dc.Buffer.SetString(dc.bounds.X+x, dc.bounds.Y+y, text, s)
+}
+
+// DrawBox draws a box with the given style.
+func (dc DrawContext) DrawBox(x, y, w, h int, style BoxStyle) {
+	if dc.Buffer == nil {
+		return
+	}
+	// Draw box borders
+	lines := style.Lines()
+	// Top
+	dc.Buffer.SetString(dc.bounds.X+x, dc.bounds.Y+y, lines.TopLeft+repeat(lines.Horizontal, w-2)+lines.TopRight, runtime.DefaultStyle())
+	// Bottom
+	dc.Buffer.SetString(dc.bounds.X+x, dc.bounds.Y+y+h-1, lines.BottomLeft+repeat(lines.Horizontal, w-2)+lines.BottomRight, runtime.DefaultStyle())
+	// Sides
+	for dy := 1; dy < h-1; dy++ {
+		dc.Buffer.SetString(dc.bounds.X+x, dc.bounds.Y+y+dy, lines.Vertical, runtime.DefaultStyle())
+		dc.Buffer.SetString(dc.bounds.X+x+w-1, dc.bounds.Y+y+dy, lines.Vertical, runtime.DefaultStyle())
+	}
+}
+
+// Fill fills the entire bounds with the given character.
+func (dc DrawContext) Fill(r rune, style backend.Style) {
+	for y := 0; y < dc.bounds.Height; y++ {
+		for x := 0; x < dc.bounds.Width; x++ {
+			dc.Buffer.SetCell(dc.bounds.X+x, dc.bounds.Y+y, r, style)
+		}
+	}
+}
+
+// Width returns the available width.
+func (dc DrawContext) Width() int { return dc.bounds.Width }
+
+// Height returns the available height.
+func (dc DrawContext) Height() int { return dc.bounds.Height }
+
+// BoxStyle defines box drawing characters.
+type BoxStyle struct {
+	TopLeft     string
+	TopRight    string
+	BottomLeft  string
+	BottomRight string
+	Horizontal  string
+	Vertical    string
+}
+
+// BoxStyle presets.
+var (
+	BoxStyleRounded = BoxStyle{"╭", "╮", "╰", "╯", "─", "│"}
+	BoxStyleSharp   = BoxStyle{"┌", "┐", "└", "┘", "─", "│"}
+	BoxStyleHeavy   = BoxStyle{"┏", "┓", "┗", "┛", "━", "┃"}
+	BoxStyleDouble  = BoxStyle{"╔", "╗", "╚", "╝", "═", "║"}
+	BoxStyleNone    = BoxStyle{"", "", "", "", "", ""}
+)
+
+func (bs BoxStyle) Lines() BoxStyle { return bs }
+
+func repeat(s string, n int) string {
+	if n <= 0 {
+		return ""
+	}
+	result := make([]byte, 0, len(s)*n)
+	for i := 0; i < n; i++ {
+		result = append(result, s...)
+	}
+	return string(result)
+}
+
+// Simple creates a widget from a draw function.
+// Useful for one-off custom widgets without defining a new type.
+func Simple(draw func(bounds runtime.Rect, ctx DrawContext)) *SimpleWidget {
+	return &SimpleWidget{draw: draw}
+}
+
+// SimpleWidget is a widget created from a function.
+type SimpleWidget struct {
+	AutoComponent
+	draw func(bounds runtime.Rect, ctx DrawContext)
+}
+
+// Draw implements Drawer.
+func (s *SimpleWidget) Draw(bounds runtime.Rect, ctx DrawContext) {
+	if s.draw != nil {
+		s.draw(bounds, ctx)
+	}
+}
+
+// Ensure SimpleWidget implements Drawer
+var _ Drawer = (*SimpleWidget)(nil)

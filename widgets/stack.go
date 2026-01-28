@@ -119,3 +119,5 @@ func (s *Stack) syncA11y() {
 	}
 	s.Base.Label = label
 }
+
+var _ runtime.Widget = (*Stack)(nil)

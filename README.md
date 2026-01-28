@@ -6,14 +6,6 @@ A batteries-included Terminal User Interface (TUI) framework for Go. Build inter
   <img src="docs/demos/hero.gif" alt="FluffyUI Demo" width="640">
 </p>
 
-<p align="center">
-  <img src="docs/demos/graphics.gif" alt="Canvas Graphics - Shapes, Curves, Transforms" width="640">
-</p>
-
-<p align="center">
-  <img src="docs/demos/fireworks.gif" alt="Fireworks Demo - 3D Particle Effects" width="640">
-</p>
-
 **Reactive. Accessible. Testable. Terminal UI for Go.**
 
 ```bash
@@ -142,12 +134,7 @@ go run ./scripts/agent-runner \
 
 <p align="center">
   <img src="docs/demos/buttons.gif" alt="Buttons Demo" width="400">
-  <img src="docs/demos/table.gif" alt="Table Demo" width="400">
-</p>
-
-<p align="center">
-  <img src="docs/demos/list.gif" alt="List Demo" width="400">
-  <img src="docs/demos/tabs.gif" alt="Tabs Demo" width="400">
+  <img src="docs/demos/input.gif" alt="Form Input Demo" width="400">
 </p>
 
 ### Layout Widgets
@@ -164,8 +151,7 @@ go run ./scripts/agent-runner \
 ### Input Widgets
 
 <p align="center">
-  <img src="docs/demos/input.gif" alt="Form Input Demo" width="400">
-  <img src="docs/demos/dialog.gif" alt="Dialog Demo" width="300">
+  <img src="docs/demos/dialog.gif" alt="Dialog Demo" width="400">
 </p>
 
 | Widget | Description |
@@ -179,6 +165,11 @@ go run ./scripts/agent-runner \
 
 ### Data Widgets
 
+<p align="center">
+  <img src="docs/demos/table.gif" alt="Table Demo" width="400">
+  <img src="docs/demos/list.gif" alt="List Demo" width="400">
+</p>
+
 | Widget | Description |
 |--------|-------------|
 | `List` | Scrollable list with selection |
@@ -187,6 +178,10 @@ go run ./scripts/agent-runner \
 | `SearchWidget` | Filterable search interface |
 
 ### Navigation Widgets
+
+<p align="center">
+  <img src="docs/demos/tabs.gif" alt="Tabs Demo" width="400">
+</p>
 
 | Widget | Description |
 |--------|-------------|
@@ -198,6 +193,11 @@ go run ./scripts/agent-runner \
 | `EnhancedPalette` | Extended command palette with categories |
 
 ### Feedback Widgets
+
+<p align="center">
+  <img src="docs/demos/progress.gif" alt="Progress Demo" width="400">
+  <img src="docs/demos/sparkline.gif" alt="Sparkline Chart" width="400">
+</p>
 
 | Widget | Description |
 |--------|-------------|
@@ -253,12 +253,7 @@ func (w *MyWidget) HandleMessage(msg runtime.Message) runtime.HandleResult {
 ## State Management
 
 <p align="center">
-  <img src="docs/demos/counter.gif" alt="Counter Demo" width="400">
-  <img src="docs/demos/progress.gif" alt="Progress Demo" width="400">
-</p>
-
-<p align="center">
-  <img src="docs/demos/sparkline.gif" alt="Sparkline Chart - Live Data Visualization" width="400">
+  <img src="docs/demos/counter.gif" alt="Counter Demo - Reactive Signals" width="500">
 </p>
 
 FluffyUI provides reactive state primitives for automatic UI updates:
@@ -295,6 +290,14 @@ func (c *MyWidget) Mount() {
 ## Graphics & Animation
 
 FluffyUI includes a powerful sub-cell graphics system and animation framework:
+
+<p align="center">
+  <img src="docs/demos/graphics.gif" alt="Canvas Graphics - Shapes, Curves, Transforms" width="640">
+</p>
+
+<p align="center">
+  <img src="docs/demos/fireworks.gif" alt="Fireworks Demo - 3D Particle Effects" width="640">
+</p>
 
 <p align="center">
   <img src="docs/demos/easing.gif" alt="Easing Functions Visualization" width="640">
@@ -361,6 +364,10 @@ type Accessible interface {
 ```
 
 ## Recording
+
+<p align="center">
+  <img src="docs/demos/video.gif" alt="Video Player Demo" width="400">
+</p>
 
 Capture terminal sessions as asciicast files or export to video:
 
@@ -449,6 +456,10 @@ go run ./examples/todo-app
 ```
 
 ### Candy Wars - Showcase Game
+
+<p align="center">
+  <img src="docs/demos/candy-wars-playback.gif" alt="Candy Wars Demo" width="640">
+</p>
 
 A complete trading game set in a middle school, demonstrating FluffyUI's capabilities:
 

@@ -203,3 +203,5 @@ func (g *Grid) syncA11y() {
 	}
 	g.Base.Label = label
 }
+
+var _ runtime.Widget = (*Grid)(nil)

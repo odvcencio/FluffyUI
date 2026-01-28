@@ -253,3 +253,6 @@ func (s *SearchWidget) syncA11y() {
 		s.Base.Description = ""
 	}
 }
+
+var _ runtime.Widget = (*SearchWidget)(nil)
+var _ runtime.Focusable = (*SearchWidget)(nil)

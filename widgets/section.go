@@ -293,3 +293,6 @@ func (s *Section) activeItemLabel() string {
 	}
 	return ""
 }
+
+var _ runtime.Widget = (*Section)(nil)
+var _ runtime.Focusable = (*Section)(nil)

@@ -385,3 +385,5 @@ func maxLineLen(lines []string) int {
 	}
 	return max
 }
+
+var _ runtime.Widget = (*ToastStack)(nil)

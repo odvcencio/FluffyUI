@@ -159,3 +159,5 @@ func (s *SignalLabel) syncA11y() {
 	s.Base.Label = label
 	s.Base.Value = nil
 }
+
+var _ runtime.Widget = (*SignalLabel)(nil)

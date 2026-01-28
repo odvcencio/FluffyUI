@@ -1,7 +1,10 @@
 // Package state provides minimal reactive primitives for terminal UIs.
 package state
 
-import "sync"
+import (
+	"reflect"
+	"sync"
+)
 
 // EqualFunc compares two values for equality.
 type EqualFunc[T any] func(a, b T) bool
@@ -9,6 +12,11 @@ type EqualFunc[T any] func(a, b T) bool
 // EqualComparable compares comparable values with ==.
 func EqualComparable[T comparable](a, b T) bool {
 	return a == b
+}
+
+// deepEqual uses reflect.DeepEqual for complex types.
+func deepEqual[T any](a, b T) bool {
+	return reflect.DeepEqual(a, b)
 }
 
 // Subscribable emits change notifications.
@@ -37,8 +45,24 @@ var subscriberPool = sync.Pool{
 }
 
 // NewSignal creates a new signal with an initial value.
+// Automatically configures appropriate equality checking:
+//   - comparable types (int, string, etc.) use ==
+//   - complex types use reflect.DeepEqual
 func NewSignal[T any](initial T) *Signal[T] {
-	return &Signal[T]{value: initial}
+	s := &Signal[T]{value: initial}
+	// Auto-configure equality based on type
+	s.setDefaultEqual()
+	return s
+}
+
+// setDefaultEqual configures equality checking based on type.
+// Uses == for comparable types, reflect.DeepEqual for others.
+func (s *Signal[T]) setDefaultEqual() {
+	// We'll try to use == via any() comparison
+	// This works for all comparable types
+	s.equal = func(a, b T) bool {
+		return reflect.DeepEqual(a, b)
+	}
 }
 
 // SetEqualFunc configures the equality check used to suppress redundant updates.

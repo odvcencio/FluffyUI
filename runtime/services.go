@@ -9,6 +9,7 @@ import (
 	"github.com/odvcencio/fluffyui/clipboard"
 	"github.com/odvcencio/fluffyui/state"
 	"github.com/odvcencio/fluffyui/style"
+	"github.com/odvcencio/fluffyui/theme"
 )
 
 // Services exposes app-level scheduling and messaging helpers.
@@ -63,6 +64,14 @@ func (s Services) Stylesheet() *style.Stylesheet {
 		return nil
 	}
 	return s.app.stylesheet
+}
+
+// Theme returns the active theme, if set.
+func (s Services) Theme() *theme.Theme {
+	if s.app == nil {
+		return nil
+	}
+	return s.app.theme
 }
 
 // Animator returns the app animator.

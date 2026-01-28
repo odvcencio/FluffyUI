@@ -693,3 +693,6 @@ func asVirtual(content runtime.Widget) scroll.VirtualContent {
 }
 
 var _ scroll.Controller = (*ScrollView)(nil)
+
+var _ runtime.Widget = (*ScrollView)(nil)
+var _ runtime.Focusable = (*ScrollView)(nil)

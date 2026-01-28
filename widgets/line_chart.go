@@ -186,3 +186,5 @@ func (c *LineChart) Measure(constraints runtime.Constraints) runtime.Size {
 		return contentConstraints.MaxSize()
 	})
 }
+
+var _ runtime.Widget = (*LineChart)(nil)

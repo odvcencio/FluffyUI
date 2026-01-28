@@ -115,6 +115,33 @@ func TestDefaultTheme(t *testing.T) {
 	}
 }
 
+func TestLightTheme(t *testing.T) {
+	th := LightTheme()
+
+	if th == nil {
+		t.Fatal("LightTheme() returned nil")
+	}
+	if th.Background == (compositor.Style{}) {
+		t.Error("Background style not set")
+	}
+	if th.TextPrimary == (compositor.Style{}) {
+		t.Error("TextPrimary style not set")
+	}
+	if th.Accent == (compositor.Style{}) {
+		t.Error("Accent style not set")
+	}
+	if th.Border == (compositor.Style{}) {
+		t.Error("Border style not set")
+	}
+}
+
+func TestLightStylesheet(t *testing.T) {
+	sheet := LightStylesheet()
+	if sheet == nil {
+		t.Fatal("LightStylesheet() returned nil")
+	}
+}
+
 func TestSymbols(t *testing.T) {
 	// Test bullets and markers
 	if Symbols.Bullet == "" {

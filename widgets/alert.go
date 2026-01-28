@@ -138,3 +138,5 @@ func (a *Alert) syncA11y() {
 		a.Base.Description = string(a.Variant)
 	}
 }
+
+var _ runtime.Widget = (*Alert)(nil)

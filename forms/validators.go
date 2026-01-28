@@ -1,6 +1,7 @@
 package forms
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"strings"
@@ -99,6 +100,28 @@ func Pattern(regex string, msg string) Validator {
 	})
 }
 
+// OneOf ensures the value matches one of the allowed strings.
+func OneOf(values ...string) Validator {
+	message := "Value must be one of the allowed options."
+	if len(values) > 0 {
+		message = fmt.Sprintf("Value must be one of: %s.", strings.Join(values, ", "))
+	}
+	allowed := make(map[string]struct{}, len(values))
+	for _, v := range values {
+		allowed[v] = struct{}{}
+	}
+	return validatorFunc(func(value any) *ValidationError {
+		text, ok := value.(string)
+		if !ok || strings.TrimSpace(text) == "" {
+			return nil
+		}
+		if _, ok := allowed[text]; !ok {
+			return &ValidationError{Message: message}
+		}
+		return nil
+	})
+}
+
 // Min enforces a minimum numeric value.
 func Min(n float64, msg string) Validator {
 	message := fallbackMessage(msg, fmt.Sprintf("Minimum value is %.2f.", n))
@@ -153,6 +176,22 @@ func URL(msg string) Validator {
 	})
 }
 
+// UUID validates a standard UUID string.
+func UUID() Validator {
+	re := regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$`)
+	message := "Invalid UUID."
+	return validatorFunc(func(value any) *ValidationError {
+		text, ok := value.(string)
+		if !ok || strings.TrimSpace(text) == "" {
+			return nil
+		}
+		if !re.MatchString(text) {
+			return &ValidationError{Message: message}
+		}
+		return nil
+	})
+}
+
 // Numeric ensures the value contains only digits.
 func Numeric(msg string) Validator {
 	re := regexp.MustCompile(`^\d+$`)
@@ -179,6 +218,29 @@ func AlphaNumeric(msg string) Validator {
 			return nil
 		}
 		if !re.MatchString(text) {
+			return &ValidationError{Message: message}
+		}
+		return nil
+	})
+}
+
+// JSON validates that the value is valid JSON.
+func JSON() Validator {
+	message := "Invalid JSON."
+	return validatorFunc(func(value any) *ValidationError {
+		var text string
+		switch v := value.(type) {
+		case string:
+			text = strings.TrimSpace(v)
+		case []byte:
+			text = strings.TrimSpace(string(v))
+		default:
+			return nil
+		}
+		if text == "" {
+			return nil
+		}
+		if !json.Valid([]byte(text)) {
 			return &ValidationError{Message: message}
 		}
 		return nil

@@ -142,3 +142,5 @@ func (s *Stepper) activeStep() string {
 	}
 	return ""
 }
+
+var _ runtime.Widget = (*Stepper)(nil)

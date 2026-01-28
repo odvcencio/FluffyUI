@@ -6,11 +6,11 @@ import (
 	"github.com/odvcencio/fluffyui/animation"
 )
 
-// Direction indicates a slide direction.
-type Direction int
+// SlideDirection indicates a slide direction.
+type SlideDirection int
 
 const (
-	DirectionLeft Direction = iota
+	DirectionLeft SlideDirection = iota
 	DirectionRight
 	DirectionUp
 	DirectionDown
@@ -104,7 +104,7 @@ func (w *AnimatedWidget) FadeOut(duration time.Duration, onComplete func()) {
 }
 
 // SlideIn animates the widget into place from a direction.
-func (w *AnimatedWidget) SlideIn(from Direction, distance int, duration time.Duration) {
+func (w *AnimatedWidget) SlideIn(from SlideDirection, distance int, duration time.Duration) {
 	if w == nil {
 		return
 	}

@@ -352,3 +352,6 @@ func (t *Tree) syncA11y() {
 }
 
 var _ scroll.Controller = (*Tree)(nil)
+
+var _ runtime.Widget = (*Tree)(nil)
+var _ runtime.Focusable = (*Tree)(nil)

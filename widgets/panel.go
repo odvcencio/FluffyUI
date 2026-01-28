@@ -322,3 +322,6 @@ func (b *Box) syncA11y() {
 	}
 	b.Base.Label = label
 }
+
+var _ runtime.Widget = (*Panel)(nil)
+var _ runtime.Widget = (*Box)(nil)

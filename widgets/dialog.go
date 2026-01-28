@@ -419,3 +419,6 @@ func (d *Dialog) syncA11y() {
 		d.Base.Value = nil
 	}
 }
+
+var _ runtime.Widget = (*Dialog)(nil)
+var _ runtime.Focusable = (*Dialog)(nil)

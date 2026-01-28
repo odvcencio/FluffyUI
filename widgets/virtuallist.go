@@ -684,3 +684,5 @@ func (v *VirtualList[T]) StyleType() string {
 
 var _ scroll.Controller = (*VirtualList[any])(nil)
 var _ runtime.Widget = (*VirtualList[any])(nil)
+
+var _ runtime.Focusable = (*VirtualList[any])(nil)

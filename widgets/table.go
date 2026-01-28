@@ -438,3 +438,6 @@ func (t *Table) ScrollToEnd() {
 }
 
 var _ scroll.Controller = (*Table)(nil)
+
+var _ runtime.Widget = (*Table)(nil)
+var _ runtime.Focusable = (*Table)(nil)

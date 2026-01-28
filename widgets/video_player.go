@@ -321,3 +321,5 @@ func (v *VideoPlayer) drawFrame(frame image.Image) {
 	offsetY := (canvasH - targetH) / 2
 	v.canvas.DrawImageScaled(offsetX, offsetY, targetW, targetH, frame)
 }
+
+var _ runtime.Widget = (*VideoPlayer)(nil)

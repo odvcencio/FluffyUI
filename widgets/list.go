@@ -390,3 +390,6 @@ func (l *List[T]) syncA11y() {
 }
 
 var _ scroll.Controller = (*List[any])(nil)
+
+var _ runtime.Widget = (*List[any])(nil)
+var _ runtime.Focusable = (*List[any])(nil)

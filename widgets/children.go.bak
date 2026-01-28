@@ -1,0 +1,306 @@
+// Package widgets provides declarative layout builders.
+package widgets
+
+import (
+	"github.com/odvcencio/fluffyui/runtime"
+)
+
+// Children represents a collection of child widgets with layout configuration.
+// Use Column(), Row(), or Stack() to create, then chain methods to configure.
+type Children struct {
+	direction Direction
+	children  []childSpec
+	gap       int
+	padding   int
+	align     LayoutAlignment
+	width     *int // nil = auto
+	height    *int // nil = auto
+}
+
+// Direction indicates layout direction.
+type Direction int
+
+const (
+	DirectionVertical Direction = iota
+	DirectionHorizontal
+)
+
+// LayoutAlignment indicates content alignment for layout containers.
+type LayoutAlignment int
+
+const (
+	LayoutAlignStart LayoutAlignment = iota
+	LayoutAlignCenter
+	LayoutAlignEnd
+	LayoutAlignStretch
+)
+
+// childSpec describes a child with layout properties.
+type childSpec struct {
+	widget    runtime.Widget
+	flex      float64 // 0 = fixed size
+	basis     int     // base size before flex
+	minSize   int
+	maxSize   int
+}
+
+// Column creates a vertical stack of children.
+func Column(children ...runtime.Widget) Children {
+	specs := make([]childSpec, len(children))
+	for i, c := range children {
+		specs[i] = childSpec{widget: c}
+	}
+	return Children{
+		direction: DirectionVertical,
+		children:  specs,
+	}
+}
+
+// Row creates a horizontal stack of children.
+func Row(children ...runtime.Widget) Children {
+	specs := make([]childSpec, len(children))
+	for i, c := range children {
+		specs[i] = childSpec{widget: c}
+	}
+	return Children{
+		direction: DirectionHorizontal,
+		children:  specs,
+	}
+}
+
+// Gap sets spacing between children.
+func (c Children) Gap(gap int) Children {
+	c.gap = gap
+	return c
+}
+
+// Padding sets padding around all children.
+func (c Children) Padding(padding int) Children {
+	c.padding = padding
+	return c
+}
+
+// Align sets the alignment of children.
+func (c Children) Align(align LayoutAlignment) Children {
+	c.align = align
+	return c
+}
+
+// Width sets a fixed width.
+func (c Children) Width(width int) Children {
+	c.width = &width
+	return c
+}
+
+// Height sets a fixed height.
+func (c Children) Height(height int) Children {
+	c.height = &height
+	return c
+}
+
+// Flex marks the last child as flexible (grows to fill space).
+func (c Children) Flex() Children {
+	if len(c.children) > 0 {
+		c.children[len(c.children)-1].flex = 1.0
+	}
+	return c
+}
+
+// Expanded wraps a widget to fill available space in its container.
+func Expanded(w runtime.Widget) runtime.Widget {
+	return &flexibleWrapper{widget: w, flex: 1.0}
+}
+
+// Fixed marks a child as fixed size (default).
+func Fixed(w runtime.Widget) runtime.Widget {
+	return w
+}
+
+// build constructs the actual widget tree from the declarative description.
+func (c Children) build() runtime.Widget {
+	if len(c.children) == 0 {
+		return nil
+	}
+
+	// Create a flex container
+	var flex *Flex
+	if c.direction == DirectionVertical {
+		flex = NewVBox()
+	} else {
+		flex = NewHBox()
+	}
+	flex.Gap = c.gap
+
+	// Add children with flex properties
+	for _, spec := range c.children {
+		if spec.widget == nil {
+			continue
+		}
+		if spec.flex > 0 {
+			flex.Add(Flexible(spec.widget, spec.flex))
+		} else {
+			flex.Add(runtime.Fixed(spec.widget))
+		}
+	}
+
+	// Wrap with padding if needed
+	result := runtime.Widget(flex)
+	if c.padding > 0 {
+		result = NewPanel(result).WithPadding(c.padding)
+	}
+
+	// Apply fixed dimensions via constraints wrapper
+	if c.width != nil || c.height != nil {
+		result = &sizedWrapper{
+			child:  result,
+			width:  c.width,
+			height: c.height,
+		}
+	}
+
+	return result
+}
+
+// Children implements Builder interface by returning itself.
+func (c Children) Build() Children {
+	return c
+}
+
+// flexibleWrapper marks a widget as flexible.
+type flexibleWrapper struct {
+	widget runtime.Widget
+	flex   float64
+}
+
+func (f *flexibleWrapper) Measure(constraints runtime.Constraints) runtime.Size {
+	return f.widget.Measure(constraints)
+}
+
+func (f *flexibleWrapper) Layout(bounds runtime.Rect) {
+	f.widget.Layout(bounds)
+}
+
+func (f *flexibleWrapper) Render(ctx runtime.RenderContext) {
+	f.widget.Render(ctx)
+}
+
+func (f *flexibleWrapper) HandleMessage(msg runtime.Message) runtime.HandleResult {
+	return f.widget.HandleMessage(msg)
+}
+
+// sizedWrapper enforces fixed dimensions.
+type sizedWrapper struct {
+	child  runtime.Widget
+	width  *int
+	height *int
+}
+
+func (s *sizedWrapper) Measure(constraints runtime.Constraints) runtime.Size {
+	size := s.child.Measure(constraints)
+	if s.width != nil {
+		size.Width = *s.width
+	}
+	if s.height != nil {
+		size.Height = *s.height
+	}
+	return constraints.Constrain(size)
+}
+
+func (s *sizedWrapper) Layout(bounds runtime.Rect) {
+	// Adjust bounds to our fixed size
+	if s.width != nil {
+		bounds.Width = *s.width
+	}
+	if s.height != nil {
+		bounds.Height = *s.height
+	}
+	s.child.Layout(bounds)
+}
+
+func (s *sizedWrapper) Render(ctx runtime.RenderContext) {
+	s.child.Render(ctx)
+}
+
+func (s *sizedWrapper) HandleMessage(msg runtime.Message) runtime.HandleResult {
+	return s.child.HandleMessage(msg)
+}
+
+func (s *sizedWrapper) ChildWidgets() []runtime.Widget {
+	return []runtime.Widget{s.child}
+}
+
+// Ensure interfaces
+var (
+	_ runtime.Widget       = (*sizedWrapper)(nil)
+	_ runtime.ChildProvider = (*sizedWrapper)(nil)
+)
+
+// VStack is an alias for Column (matches SwiftUI/Flutter naming).
+func VStack(children ...runtime.Widget) Children {
+	return Column(children...)
+}
+
+// HStack is an alias for Row.
+func HStack(children ...runtime.Widget) Children {
+	return Row(children...)
+}
+
+// Spacer creates empty space that expands.
+func Spacer() runtime.Widget {
+	return &spacerWidget{}
+}
+
+type spacerWidget struct{}
+
+func (s spacerWidget) Measure(c runtime.Constraints) runtime.Size {
+	if c.MaxWidth == 0 {
+		return runtime.Size{Width: 0, Height: 1}
+	}
+	return runtime.Size{Width: 1, Height: 0}
+}
+func (s spacerWidget) Layout(bounds runtime.Rect) {}
+func (s spacerWidget) Render(ctx runtime.RenderContext) {}
+func (s spacerWidget) HandleMessage(msg runtime.Message) runtime.HandleResult {
+	return runtime.Unhandled()
+}
+
+// Divider creates a horizontal or vertical line.
+func Divider(dir Direction) runtime.Widget {
+	return &dividerWidget{direction: dir}
+}
+
+type dividerWidget struct {
+	direction Direction
+}
+
+func (d *dividerWidget) Measure(c runtime.Constraints) runtime.Size {
+	if d.direction == DirectionHorizontal {
+		return runtime.Size{Width: 1, Height: 1}
+	}
+	return runtime.Size{Width: 1, Height: 1}
+}
+
+func (d *dividerWidget) Layout(bounds runtime.Rect) {}
+
+func (d *dividerWidget) Render(ctx runtime.RenderContext) {
+	bounds := ctx.Bounds
+	if bounds.Width == 0 || bounds.Height == 0 {
+		return
+	}
+	style := runtime.DefaultStyle()
+	if d.direction == DirectionHorizontal {
+		line := "─"
+		for x := 0; x < bounds.Width; x++ {
+			ctx.Buffer.SetCell(bounds.X+x, bounds.Y, []rune(line)[0], style)
+		}
+	} else {
+		line := "│"
+		for y := 0; y < bounds.Height; y++ {
+			ctx.Buffer.SetCell(bounds.X, bounds.Y+y, []rune(line)[0], style)
+		}
+	}
+}
+
+func (d *dividerWidget) HandleMessage(msg runtime.Message) runtime.HandleResult {
+	return runtime.Unhandled()
+}
