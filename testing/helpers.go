@@ -1,3 +1,5 @@
+//go:build !js
+
 // Package testing provides test utilities for FluffyUI applications.
 //
 // This package bridges the simulation backend with the runtime package,

@@ -527,22 +527,4 @@ func programInfoLog(program uint32) (string, error) {
 	return string(buf), nil
 }
 
-type layoutInfo struct {
-	stride    int
-	posSize   int
-	uvSize    int
-	colorSize int
-}
 
-func inferLayout(vertices []float32) layoutInfo {
-	if len(vertices)%8 == 0 {
-		return layoutInfo{stride: 8, posSize: 2, uvSize: 2, colorSize: 4}
-	}
-	if len(vertices)%6 == 0 {
-		return layoutInfo{stride: 6, posSize: 2, colorSize: 4}
-	}
-	if len(vertices)%4 == 0 {
-		return layoutInfo{stride: 4, posSize: 2, uvSize: 2}
-	}
-	return layoutInfo{stride: 2, posSize: 2}
-}

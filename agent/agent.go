@@ -1,3 +1,5 @@
+//go:build !js
+
 // Package agent provides AI-friendly interaction with FluffyUI applications.
 // It enables automated testing, AI agents, and scripted interactions by exposing
 // a semantic API over the widget tree rather than raw terminal I/O.

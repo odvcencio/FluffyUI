@@ -1,3 +1,5 @@
+//go:build !js
+
 // Package sim provides a simulation backend for testing.
 package sim
 

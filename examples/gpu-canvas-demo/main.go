@@ -42,6 +42,8 @@ func NewGPUCanvasDemo() *GPUCanvasDemo {
 			demo.GPUCanvasWidget.WithBackend(gpu.BackendOpenGL)
 		case "metal":
 			demo.GPUCanvasWidget.WithBackend(gpu.BackendMetal)
+		case "webgl":
+			demo.GPUCanvasWidget.WithBackend(gpu.BackendWebGL)
 		case "software", "cpu":
 			demo.GPUCanvasWidget.WithBackend(gpu.BackendSoftware)
 		}

@@ -1,5 +1,3 @@
-//go:build !js
-
 package gpu
 
 import (
@@ -77,10 +75,9 @@ func ensureEffectTexture(driver Driver, tex Texture) (Texture, bool, bool) {
 	if tex == nil || driver == nil {
 		return nil, false, false
 	}
-	if driver.Backend() == BackendOpenGL {
-		if gltex, ok := tex.(*openglTexture); ok {
-			return gltex, false, true
-		}
+	// Check if the texture is already native to the driver's backend
+	if isNativeTexture(tex, driver.Backend()) {
+		return tex, false, true
 	}
 	pixels, w, h, ok := texturePixels(tex, driver)
 	if !ok {
@@ -131,10 +128,8 @@ func copyTextureGPU(driver Driver, src Texture, dst Framebuffer) bool {
 	if driver == nil || src == nil || dst == nil {
 		return false
 	}
-	if driver.Backend() == BackendOpenGL {
-		if _, ok := dst.(*openglFramebuffer); !ok {
-			return false
-		}
+	if !isNativeFramebuffer(dst, driver.Backend()) {
+		return false
 	}
 	shader, err := getEffectShader(driver, "texture")
 	if err != nil {
@@ -150,10 +145,8 @@ func blurGPU(driver Driver, src Texture, dst Framebuffer, radius float32) bool {
 	if driver == nil || src == nil || dst == nil {
 		return false
 	}
-	if driver.Backend() == BackendOpenGL {
-		if _, ok := dst.(*openglFramebuffer); !ok {
-			return false
-		}
+	if !isNativeFramebuffer(dst, driver.Backend()) {
+		return false
 	}
 	if radius <= 0 {
 		return copyTextureGPU(driver, src, dst)
@@ -187,10 +180,8 @@ func glowGPU(driver Driver, src Texture, dst Framebuffer, radius float32, intens
 	if driver == nil || src == nil || dst == nil {
 		return false
 	}
-	if driver.Backend() == BackendOpenGL {
-		if _, ok := dst.(*openglFramebuffer); !ok {
-			return false
-		}
+	if !isNativeFramebuffer(dst, driver.Backend()) {
+		return false
 	}
 	w, h := dst.Size()
 	if w <= 0 || h <= 0 {
@@ -238,10 +229,8 @@ func shadowGPU(driver Driver, src Texture, dst Framebuffer, radius, offsetX, off
 	if driver == nil || src == nil || dst == nil {
 		return false
 	}
-	if driver.Backend() == BackendOpenGL {
-		if _, ok := dst.(*openglFramebuffer); !ok {
-			return false
-		}
+	if !isNativeFramebuffer(dst, driver.Backend()) {
+		return false
 	}
 	w, h := dst.Size()
 	if w <= 0 || h <= 0 {
@@ -278,10 +267,8 @@ func chromaticGPU(driver Driver, src Texture, dst Framebuffer, amount float32) b
 	if driver == nil || src == nil || dst == nil {
 		return false
 	}
-	if driver.Backend() == BackendOpenGL {
-		if _, ok := dst.(*openglFramebuffer); !ok {
-			return false
-		}
+	if !isNativeFramebuffer(dst, driver.Backend()) {
+		return false
 	}
 	w, h := dst.Size()
 	if w <= 0 || h <= 0 {
@@ -305,10 +292,8 @@ func vignetteGPU(driver Driver, src Texture, dst Framebuffer, radius, softness f
 	if driver == nil || src == nil || dst == nil {
 		return false
 	}
-	if driver.Backend() == BackendOpenGL {
-		if _, ok := dst.(*openglFramebuffer); !ok {
-			return false
-		}
+	if !isNativeFramebuffer(dst, driver.Backend()) {
+		return false
 	}
 	shader, err := getEffectShader(driver, "vignette")
 	if err != nil {
@@ -332,10 +317,8 @@ func pixelateGPU(driver Driver, src Texture, dst Framebuffer, size float32) bool
 	if driver == nil || src == nil || dst == nil {
 		return false
 	}
-	if driver.Backend() == BackendOpenGL {
-		if _, ok := dst.(*openglFramebuffer); !ok {
-			return false
-		}
+	if !isNativeFramebuffer(dst, driver.Backend()) {
+		return false
 	}
 	if size <= 1 {
 		return copyTextureGPU(driver, src, dst)
@@ -359,10 +342,8 @@ func colorGradeGPU(driver Driver, src Texture, dst Framebuffer, brightness, cont
 	if driver == nil || src == nil || dst == nil {
 		return false
 	}
-	if driver.Backend() == BackendOpenGL {
-		if _, ok := dst.(*openglFramebuffer); !ok {
-			return false
-		}
+	if !isNativeFramebuffer(dst, driver.Backend()) {
+		return false
 	}
 	shader, err := getEffectShader(driver, "colorgrade")
 	if err != nil {
@@ -382,10 +363,8 @@ func customEffectGPU(driver Driver, src Texture, dst Framebuffer, shader Shader,
 	if driver == nil || src == nil || dst == nil || shader == nil {
 		return false
 	}
-	if driver.Backend() == BackendOpenGL {
-		if _, ok := dst.(*openglFramebuffer); !ok {
-			return false
-		}
+	if !isNativeFramebuffer(dst, driver.Backend()) {
+		return false
 	}
 	shader.SetUniform("uTexture", 0)
 	shader.SetUniform("uTransform", Identity())
@@ -409,10 +388,8 @@ func ensureGPUFallback(driver Driver, src Texture, dst Framebuffer) (Texture, bo
 	if driver == nil || src == nil || dst == nil {
 		return nil, false, false, ErrUnsupported
 	}
-	if driver.Backend() == BackendOpenGL {
-		if _, ok := dst.(*openglFramebuffer); !ok {
-			return nil, false, false, ErrUnsupported
-		}
+	if !isNativeFramebuffer(dst, driver.Backend()) {
+		return nil, false, false, ErrUnsupported
 	}
 	tex, temp, ok := ensureEffectTexture(driver, src)
 	if !ok {

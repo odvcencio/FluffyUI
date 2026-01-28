@@ -14,6 +14,7 @@ const (
 	BackendOpenGL
 	BackendMetal
 	BackendSoftware
+	BackendWebGL
 )
 
 // ErrUnsupported is returned when a backend is unavailable.
@@ -43,19 +44,33 @@ func NewDriver(backend Backend) (Driver, error) {
 		return newOpenGLDriver()
 	case BackendMetal:
 		return newMetalDriver()
+	case BackendWebGL:
+		return newWebGLDriver()
 	case BackendSoftware:
 		return newSoftwareDriver(), nil
 	case BackendAuto:
-		if runtime.GOOS == "darwin" {
-			if drv, err := newMetalDriver(); err == nil {
-				return drv, nil
-			}
-		}
-		if drv, err := newOpenGLDriver(); err == nil {
-			return drv, nil
-		}
-		return newSoftwareDriver(), nil
+		return newAutoDriver()
 	default:
 		return newSoftwareDriver(), nil
 	}
+}
+
+// newAutoDriver selects the best available backend for the platform.
+func newAutoDriver() (Driver, error) {
+	if runtime.GOOS == "darwin" {
+		if drv, err := newMetalDriver(); err == nil {
+			return drv, nil
+		}
+	}
+	// Try WebGL first on JS/WASM platforms
+	if runtime.GOOS == "js" {
+		if drv, err := newWebGLDriver(); err == nil {
+			return drv, nil
+		}
+		return newSoftwareDriver(), nil
+	}
+	if drv, err := newOpenGLDriver(); err == nil {
+		return drv, nil
+	}
+	return newSoftwareDriver(), nil
 }

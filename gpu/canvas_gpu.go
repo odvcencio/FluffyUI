@@ -1,5 +1,3 @@
-//go:build !js
-
 package gpu
 
 import (
@@ -213,11 +211,11 @@ func (c *GPUCanvas) ensureGPUTexture(img Texture) (Texture, bool, bool) {
 	if img == nil || c.driver == nil {
 		return nil, false, false
 	}
-	if c.driver.Backend() == BackendOpenGL {
-		if tex, ok := img.(*openglTexture); ok {
-			return tex, false, true
-		}
+	// If the texture is already a GPU-native texture for this backend, use it directly
+	if isNativeTexture(img, c.driver.Backend()) {
+		return img, false, true
 	}
+	// Otherwise, upload the pixel data to a new texture
 	if pixels, w, h, ok := texturePixels(img, c.driver); ok {
 		tex, err := c.driver.NewTexture(w, h)
 		if err != nil {
@@ -234,6 +232,18 @@ func blendForColor(col color.RGBA) BlendMode {
 		return BlendAlpha
 	}
 	return BlendNone
+}
+
+// isNativeTexture checks if a texture is native to the given backend.
+// This function has platform-specific implementations.
+func isNativeTexture(img Texture, backend Backend) bool {
+	return isNativeTextureForPlatform(img, backend)
+}
+
+// isNativeFramebuffer checks if a framebuffer is native to the given backend.
+// This function has platform-specific implementations.
+func isNativeFramebuffer(fb Framebuffer, backend Backend) bool {
+	return isNativeFramebufferForPlatform(fb, backend)
 }
 
 func colorToFloat(col color.RGBA) (float32, float32, float32, float32) {
@@ -415,4 +425,26 @@ func sign(p, a, b vec2) float32 {
 
 func almostEqualVec(a, b vec2) bool {
 	return math.Abs(float64(a.x-b.x)) < 1e-4 && math.Abs(float64(a.y-b.y)) < 1e-4
+}
+
+// layoutInfo describes the structure of vertex data.
+type layoutInfo struct {
+	stride    int
+	posSize   int
+	uvSize    int
+	colorSize int
+}
+
+// inferLayout determines vertex layout from vertex data structure.
+func inferLayout(vertices []float32) layoutInfo {
+	if len(vertices)%8 == 0 {
+		return layoutInfo{stride: 8, posSize: 2, uvSize: 2, colorSize: 4}
+	}
+	if len(vertices)%6 == 0 {
+		return layoutInfo{stride: 6, posSize: 2, colorSize: 4}
+	}
+	if len(vertices)%4 == 0 {
+		return layoutInfo{stride: 4, posSize: 2, uvSize: 2}
+	}
+	return layoutInfo{stride: 2, posSize: 2}
 }

@@ -1,3 +1,5 @@
+//go:build !js
+
 package tcell
 
 // WriteFrame writes raw encoded bytes to the terminal.

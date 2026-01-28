@@ -1,3 +1,5 @@
+//go:build !js
+
 // Package tcell provides a Backend implementation using tcell.
 package tcell
 
