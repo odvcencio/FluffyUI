@@ -31,6 +31,10 @@ type (
 	PersistSnapshot = runtime.PersistSnapshot
 	KeyMsg          = runtime.KeyMsg
 	MouseMsg        = runtime.MouseMsg
+	ResizeMsg       = runtime.ResizeMsg
+	PasteMsg        = runtime.PasteMsg
+	TickMsg         = runtime.TickMsg
+	CustomMsg       = runtime.CustomMsg
 
 	FocusRegistrationMode = runtime.FocusRegistrationMode
 )

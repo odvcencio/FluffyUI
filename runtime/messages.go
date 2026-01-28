@@ -95,3 +95,27 @@ func (QueueFlushMsg) isMessage() {}
 type InvalidateMsg struct{}
 
 func (InvalidateMsg) isMessage() {}
+
+// CustomMsg allows applications to define their own message types.
+// The Value field can hold any application-specific data.
+//
+// Example usage:
+//
+//	type MyStreamChunk struct {
+//	    SessionID string
+//	    Text      string
+//	}
+//
+//	app.Post(runtime.CustomMsg{Value: MyStreamChunk{...}})
+//
+//	// In update function:
+//	case runtime.CustomMsg:
+//	    switch v := m.Value.(type) {
+//	    case MyStreamChunk:
+//	        // handle stream chunk
+//	    }
+type CustomMsg struct {
+	Value any
+}
+
+func (CustomMsg) isMessage() {}

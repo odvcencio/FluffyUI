@@ -2326,8 +2326,8 @@ func demoVideo() runtime.Widget {
 	videoPath := "testdata/sample.mp4"
 	player, err := widgets.NewVideoPlayer(videoPath)
 	if err != nil {
-		// Fallback to a placeholder if video not found
-		return &videoFallbackDemo{err: err}
+		// Fallback to simulated video if no sample video found
+		return &videoFallbackDemo{}
 	}
 	// Force SextantBlitter for better video rendering in recordings
 	player.WithBlitter(&graphics.SextantBlitter{})
@@ -2405,10 +2405,9 @@ func (v *videoDemo) HandleMessage(msg runtime.Message) runtime.HandleResult {
 	return runtime.Unhandled()
 }
 
-// videoFallbackDemo shows an error message if video can't be loaded
+// videoFallbackDemo simulates video playback with animated content when no video file is available
 type videoFallbackDemo struct {
 	widgets.Component
-	err   error
 	frame int
 }
 
@@ -2428,17 +2427,90 @@ func (v *videoFallbackDemo) Render(ctx runtime.RenderContext) {
 	titleStyle := backend.DefaultStyle().Bold(true).Foreground(backend.ColorBrightCyan)
 	ctx.Buffer.SetString(bounds.X+2, bounds.Y+1, "Video Player Demo", titleStyle)
 
-	// Error message
-	centerY := bounds.Y + bounds.Height/2
-	errStyle := backend.DefaultStyle().Foreground(backend.ColorBrightRed)
-	ctx.Buffer.SetString(bounds.X+4, centerY-1, "Video file not found", errStyle)
+	// Simulated "playing" status
+	statusStr := "Playing (Simulated)"
+	ctx.Buffer.SetString(bounds.X+bounds.Width-20, bounds.Y+1, statusStr, backend.DefaultStyle().Foreground(backend.ColorBrightGreen))
 
-	// Show spinning indicator to prove animation works
-	spinChars := []string{"◐", "◓", "◑", "◒"}
-	spinner := spinChars[v.frame%len(spinChars)]
-	ctx.Buffer.SetString(bounds.X+4, centerY+1, spinner+" Create testdata/sample.mp4 to see video", backend.DefaultStyle().Dim(true))
+	// Create a canvas for the simulated video content
+	videoBounds := runtime.Rect{
+		X:      bounds.X + 2,
+		Y:      bounds.Y + 3,
+		Width:  bounds.Width - 4,
+		Height: bounds.Height - 6,
+	}
+
+	// Simulated video content - animated scene
+	v.renderSimulatedVideo(ctx, videoBounds)
+
+	// Controls hint
+	y := bounds.Y + bounds.Height - 2
+	ctx.Buffer.SetString(bounds.X+2, y, "Space", backend.DefaultStyle().Foreground(backend.ColorBrightYellow))
+	ctx.Buffer.SetString(bounds.X+8, y, "Play/Pause", backend.DefaultStyle().Dim(true))
+
+	// Frame counter simulating video playback
+	frameStr := fmt.Sprintf("Frame: %d", v.frame)
+	ctx.Buffer.SetString(bounds.X+bounds.Width-len(frameStr)-2, y, frameStr, backend.DefaultStyle().Dim(true))
 
 	ctx.Buffer.DrawBox(bounds, backend.DefaultStyle())
+}
+
+func (v *videoFallbackDemo) renderSimulatedVideo(ctx runtime.RenderContext, bounds runtime.Rect) {
+	// Create a canvas for high-resolution sub-cell rendering
+	canvas := graphics.NewCanvasWithBlitter(bounds.Width, bounds.Height, &graphics.SextantBlitter{})
+	canvas.Clear()
+
+	w, h := canvas.Size()
+	if w == 0 || h == 0 {
+		return
+	}
+
+	// Animated background gradient
+	phase := float64(v.frame) * 0.02
+	for y := 0; y < h; y++ {
+		t := float64(y) / float64(h)
+		wave := math.Sin(t*math.Pi*2+phase) * 0.5 + 0.5
+		r := uint8(20 + wave*40)
+		g := uint8(30 + wave*30)
+		b := uint8(60 + wave*20)
+		canvas.SetStrokeColor(backend.ColorRGB(r, g, b))
+		canvas.DrawLine(0, y, w, y)
+	}
+
+	// Animated floating shapes
+	numShapes := 5
+	for i := 0; i < numShapes; i++ {
+		shapePhase := phase + float64(i)*math.Pi*0.4
+		x := int((math.Sin(shapePhase)*0.3 + 0.5) * float64(w))
+		y := int((math.Cos(shapePhase*0.7)*0.3 + 0.5) * float64(h))
+		size := 8 + i*3
+
+		colors := []backend.Color{
+			backend.ColorRGB(255, 100, 100),
+			backend.ColorRGB(100, 255, 100),
+			backend.ColorRGB(100, 100, 255),
+			backend.ColorRGB(255, 255, 100),
+			backend.ColorRGB(255, 100, 255),
+		}
+		canvas.SetFillColor(colors[i])
+
+		if i%2 == 0 {
+			canvas.FillCircle(x, y, size)
+		} else {
+			canvas.FillRect(x-size, y-size, size*2, size*2)
+		}
+	}
+
+	// Progress bar at bottom
+	progress := float64(v.frame%300) / 300.0
+	barY := h - 10
+	barHeight := 6
+	canvas.SetFillColor(backend.ColorRGB(40, 40, 40))
+	canvas.FillRect(20, barY, w-40, barHeight)
+	canvas.SetFillColor(backend.ColorRGB(0, 200, 100))
+	canvas.FillRect(20, barY, int(float64(w-40)*progress), barHeight)
+
+	// Render to buffer
+	canvas.Render(ctx.Buffer, bounds.X, bounds.Y)
 }
 
 func (v *videoFallbackDemo) HandleMessage(msg runtime.Message) runtime.HandleResult {
