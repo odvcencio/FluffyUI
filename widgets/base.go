@@ -16,14 +16,14 @@ import (
 // Embed this in widget structs to get default implementations.
 type Base struct {
 	accessibility.Base
-	outerBounds  runtime.Rect
-	bounds       runtime.Rect
-	layoutStyle  style.Style
+	outerBounds   runtime.Rect
+	bounds        runtime.Rect
+	layoutStyle   style.Style
 	layoutMetrics layoutMetrics
-	focused      bool
-	needsRender  bool
-	id           string
-	classes      []string
+	focused       bool
+	needsRender   bool
+	id            string
+	classes       []string
 }
 
 // Layout stores the assigned bounds.
@@ -106,6 +106,14 @@ func (b *Base) SetID(id string) {
 		return
 	}
 	b.id = strings.TrimSpace(id)
+}
+
+// SetKey assigns the stable widget identity (alias for SetID).
+func (b *Base) SetKey(key string) {
+	if b == nil {
+		return
+	}
+	b.id = strings.TrimSpace(key)
 }
 
 // SetClasses replaces the widget classes.

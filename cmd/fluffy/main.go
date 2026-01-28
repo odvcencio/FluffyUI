@@ -80,6 +80,7 @@ func usage() {
 
 usage:
   fluffy dev [--watch path] [--ext .go,.fss] [--debounce 200ms] -- <cmd> [args...]
+  fluffy dev [--watch path] [--ext .go,.fss] [--debounce 200ms] --run <pkg-or-file>
   fluffy create <name> [--template minimal|full|game] [--module path] [--force]
   fluffy add widget|page <Name> [--dir path] [--force]
   fluffy theme init|check|export [--path theme.yaml] [--output theme.css] [--force]
@@ -93,21 +94,34 @@ func runDev(args []string) error {
 	var watches stringSlice
 	var exts string
 	var debounce time.Duration
+	var runTarget string
 	fs.Var(&watches, "watch", "watch path (repeatable)")
 	fs.StringVar(&exts, "ext", ".go,.fss,.yaml,.json", "comma-separated extensions")
 	fs.DurationVar(&debounce, "debounce", 200*time.Millisecond, "restart debounce window")
+	fs.StringVar(&runTarget, "run", "", "go run target (package, file, or module)")
 	fs.SetOutput(os.Stderr)
 
 	split := indexOf(args, "--")
+	var cmdArgs []string
 	if split == -1 {
-		return errors.New("missing -- separator before command")
-	}
-	if err := fs.Parse(args[:split]); err != nil {
-		return err
-	}
-	cmdArgs := args[split+1:]
-	if len(cmdArgs) == 0 {
-		return errors.New("missing command after --")
+		if err := fs.Parse(args); err != nil {
+			return err
+		}
+		if runTarget == "" {
+			return errors.New("missing -- separator before command or --run target")
+		}
+		cmdArgs = []string{"go", "run", runTarget}
+	} else {
+		if err := fs.Parse(args[:split]); err != nil {
+			return err
+		}
+		if runTarget != "" {
+			return errors.New("use either --run or -- separator, not both")
+		}
+		cmdArgs = args[split+1:]
+		if len(cmdArgs) == 0 {
+			return errors.New("missing command after --")
+		}
 	}
 	if len(watches) == 0 {
 		watches = append(watches, ".")
