@@ -78,6 +78,14 @@ type TickMsg struct {
 
 func (TickMsg) isMessage() {}
 
+// FocusChangedMsg reports a focus transition.
+type FocusChangedMsg struct {
+	Prev Focusable
+	Next Focusable
+}
+
+func (FocusChangedMsg) isMessage() {}
+
 // QueueFlushMsg triggers a state queue flush in the update loop.
 type QueueFlushMsg struct{}
 

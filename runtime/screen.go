@@ -16,17 +16,17 @@ type Layer struct {
 
 // Screen manages the widget tree, modal stack, and rendering.
 type Screen struct {
-	width, height     int
-	layers            []*Layer
-	buffer            *Buffer
-	hitGrid           *HitGrid
-	hitGridModal      bool
-	services          Services
-	errorReporter     *ErrorReporter
-	autoRegisterFocus bool
-	hitGridDirty      bool
-	relayoutOnFocus   bool
-	styleResolver     *StyleResolver
+	width, height      int
+	layers             []*Layer
+	buffer             *Buffer
+	hitGrid            *HitGrid
+	hitGridModal       bool
+	services           Services
+	errorReporter      *ErrorReporter
+	autoRegisterFocus  bool
+	hitGridDirty       bool
+	relayoutOnFocus    bool
+	styleResolver      *StyleResolver
 	styleResolverSheet *style.Stylesheet
 	styleResolverRoots []Widget
 	styleResolverMedia style.MediaContext
@@ -408,6 +408,7 @@ func (s *Screen) configureFocusScope(scope *FocusScope) {
 			s.invalidateStyleResolver()
 		}
 		s.services.Invalidate()
+		_ = s.services.Post(FocusChangedMsg{Prev: prev, Next: next})
 	})
 }
 
@@ -640,8 +641,18 @@ func (s *Screen) addHitWidgets(widget Widget) {
 			for _, child := range children {
 				s.addHitWidgets(child)
 			}
+			if hitSelf, ok := widget.(HitSelfProvider); ok && hitSelf.HitSelf() {
+				s.addHitWidget(widget)
+			}
 			return
 		}
+	}
+	s.addHitWidget(widget)
+}
+
+func (s *Screen) addHitWidget(widget Widget) {
+	if s == nil || widget == nil {
+		return
 	}
 	boundsProvider, ok := widget.(BoundsProvider)
 	if !ok {

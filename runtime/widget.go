@@ -178,6 +178,12 @@ type ChildProvider interface {
 	ChildWidgets() []Widget
 }
 
+// HitSelfProvider allows containers to receive mouse hits for their own bounds.
+// When true, the container is added to the hit grid after its children.
+type HitSelfProvider interface {
+	HitSelf() bool
+}
+
 // PathSegmenter customizes widget path segments for error reporting.
 // Implementations can include child-specific context (e.g., Grid[row,col]).
 type PathSegmenter interface {

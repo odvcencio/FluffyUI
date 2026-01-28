@@ -158,6 +158,13 @@ func (s *Signal[T]) copySubscribersLocked() []subscriber {
 }
 
 func (s *Signal[T]) notify(subs []subscriber) {
+	if len(subs) == 0 {
+		return
+	}
+	if enqueueBatch(subs) {
+		releaseSubscribers(subs)
+		return
+	}
 	for _, sub := range subs {
 		if sub.fn == nil {
 			continue

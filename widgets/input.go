@@ -299,6 +299,9 @@ func (i *Input) HandleMessage(msg runtime.Message) runtime.HandleResult {
 			return runtime.Handled()
 		}
 	case terminal.KeyCtrlV:
+		if i.HasSelection() {
+			i.deleteSelection()
+		}
 		if i.pasteFromClipboard() {
 			return runtime.Handled()
 		}
@@ -310,6 +313,10 @@ func (i *Input) HandleMessage(msg runtime.Message) runtime.HandleResult {
 		return runtime.WithCommand(runtime.Submit{Text: i.text.String()})
 
 	case terminal.KeyBackspace:
+		if i.HasSelection() {
+			i.deleteSelection()
+			return runtime.Handled()
+		}
 		if i.cursorPos > 0 {
 			runes := i.textRunes()
 			if i.cursorPos > len(runes) {
@@ -323,6 +330,10 @@ func (i *Input) HandleMessage(msg runtime.Message) runtime.HandleResult {
 		return runtime.Handled()
 
 	case terminal.KeyDelete:
+		if i.HasSelection() {
+			i.deleteSelection()
+			return runtime.Handled()
+		}
 		runes := i.textRunes()
 		if i.cursorPos > len(runes) {
 			i.cursorPos = len(runes)
@@ -335,6 +346,9 @@ func (i *Input) HandleMessage(msg runtime.Message) runtime.HandleResult {
 		return runtime.Handled()
 
 	case terminal.KeyLeft:
+		if i.collapseSelection(true) {
+			return runtime.Handled()
+		}
 		if key.Ctrl {
 			// Word left
 			i.cursorPos = i.wordBoundaryLeft()
@@ -344,6 +358,9 @@ func (i *Input) HandleMessage(msg runtime.Message) runtime.HandleResult {
 		return runtime.Handled()
 
 	case terminal.KeyRight:
+		if i.collapseSelection(false) {
+			return runtime.Handled()
+		}
 		if key.Ctrl {
 			// Word right
 			i.cursorPos = i.wordBoundaryRight()
@@ -353,15 +370,24 @@ func (i *Input) HandleMessage(msg runtime.Message) runtime.HandleResult {
 		return runtime.Handled()
 
 	case terminal.KeyHome:
+		if i.HasSelection() {
+			i.selection = Selection{}
+		}
 		i.cursorPos = 0
 		return runtime.Handled()
 
 	case terminal.KeyEnd:
+		if i.HasSelection() {
+			i.selection = Selection{}
+		}
 		i.cursorPos = len(i.textRunes())
 		return runtime.Handled()
 
 	case terminal.KeyRune:
 		// Insert character
+		if i.HasSelection() {
+			i.deleteSelection()
+		}
 		runes := i.textRunes()
 		if i.cursorPos > len(runes) {
 			i.cursorPos = len(runes)
@@ -463,6 +489,9 @@ func (i *Input) ClipboardPaste(text string) bool {
 	if i == nil || text == "" {
 		return false
 	}
+	if i.HasSelection() {
+		i.deleteSelection()
+	}
 	i.insertText(text)
 	return true
 }
@@ -518,6 +547,20 @@ func (i *Input) insertText(text string) {
 	i.setTextRunes(current)
 	i.cursorPos += len(insertRunes)
 	i.notifyChange()
+}
+
+func (i *Input) collapseSelection(toStart bool) bool {
+	if i == nil || i.selection.IsEmpty() {
+		return false
+	}
+	sel := i.selection.Normalize()
+	if toStart {
+		i.cursorPos = sel.Start
+	} else {
+		i.cursorPos = sel.End
+	}
+	i.selection = Selection{}
+	return true
 }
 
 func (i *Input) textRunes() []rune {
@@ -1007,6 +1050,15 @@ func (m *MultilineInput) Render(ctx runtime.RenderContext) {
 	}
 
 	// Draw visible lines
+	selectionStyle := style.Reverse(true)
+	sel := m.selection.Normalize()
+	hasSelection := !m.selection.IsEmpty()
+	lineOffset := 0
+	if m.scrollY > 0 {
+		for i := 0; i < m.scrollY && i < len(m.lines); i++ {
+			lineOffset += runeCount(m.lines[i]) + 1
+		}
+	}
 	for i := 0; i < content.Height; i++ {
 		lineIdx := m.scrollY + i
 		if lineIdx >= len(m.lines) {
@@ -1014,11 +1066,22 @@ func (m *MultilineInput) Render(ctx runtime.RenderContext) {
 		}
 
 		line := m.lines[lineIdx]
-		if runeCount(line) > content.Width {
-			lineRunes := []rune(line)
-			line = string(lineRunes[:content.Width])
+		lineRunes := []rune(line)
+		visibleRunes := lineRunes
+		if len(visibleRunes) > content.Width {
+			visibleRunes = visibleRunes[:content.Width]
 		}
-		ctx.Buffer.SetString(content.X, content.Y+i, line, style)
+		for idx, ch := range visibleRunes {
+			charStyle := style
+			if hasSelection {
+				textIdx := lineOffset + idx
+				if textIdx >= sel.Start && textIdx < sel.End {
+					charStyle = selectionStyle
+				}
+			}
+			ctx.Buffer.Set(content.X+idx, content.Y+i, ch, charStyle)
+		}
+		lineOffset += len(lineRunes) + 1
 	}
 
 	// Draw cursor
@@ -1061,11 +1124,17 @@ func (m *MultilineInput) HandleMessage(msg runtime.Message) runtime.HandleResult
 			return runtime.Handled()
 		}
 	case terminal.KeyCtrlV:
+		if m.HasSelection() {
+			m.deleteSelection()
+		}
 		if m.pasteFromClipboard() {
 			return runtime.Handled()
 		}
 
 	case terminal.KeyEnter:
+		if m.HasSelection() {
+			m.deleteSelection()
+		}
 		if key.Ctrl && m.onSubmit != nil {
 			m.onSubmit(m.Text())
 			return runtime.WithCommand(runtime.Submit{Text: m.Text()})
@@ -1086,6 +1155,10 @@ func (m *MultilineInput) HandleMessage(msg runtime.Message) runtime.HandleResult
 		return runtime.Handled()
 
 	case terminal.KeyBackspace:
+		if m.HasSelection() {
+			m.deleteSelection()
+			return runtime.Handled()
+		}
 		if m.cursorX > 0 {
 			line := m.lines[m.cursorY]
 			lineRunes := []rune(line)
@@ -1106,7 +1179,30 @@ func (m *MultilineInput) HandleMessage(msg runtime.Message) runtime.HandleResult
 		m.notifyChange()
 		return runtime.Handled()
 
+	case terminal.KeyDelete:
+		if m.HasSelection() {
+			m.deleteSelection()
+			return runtime.Handled()
+		}
+		line := m.lines[m.cursorY]
+		lineRunes := []rune(line)
+		if m.cursorX > len(lineRunes) {
+			m.cursorX = len(lineRunes)
+		}
+		if m.cursorX < len(lineRunes) {
+			lineRunes = append(lineRunes[:m.cursorX], lineRunes[m.cursorX+1:]...)
+			m.lines[m.cursorY] = string(lineRunes)
+		} else if m.cursorY < len(m.lines)-1 {
+			m.lines[m.cursorY] = m.lines[m.cursorY] + m.lines[m.cursorY+1]
+			m.lines = append(m.lines[:m.cursorY+1], m.lines[m.cursorY+2:]...)
+		}
+		m.notifyChange()
+		return runtime.Handled()
+
 	case terminal.KeyUp:
+		if m.collapseSelection(true) {
+			return runtime.Handled()
+		}
 		if m.cursorY > 0 {
 			m.cursorY--
 			lineLen := runeCount(m.lines[m.cursorY])
@@ -1118,6 +1214,9 @@ func (m *MultilineInput) HandleMessage(msg runtime.Message) runtime.HandleResult
 		return runtime.Handled()
 
 	case terminal.KeyDown:
+		if m.collapseSelection(false) {
+			return runtime.Handled()
+		}
 		if m.cursorY < len(m.lines)-1 {
 			m.cursorY++
 			lineLen := runeCount(m.lines[m.cursorY])
@@ -1129,6 +1228,9 @@ func (m *MultilineInput) HandleMessage(msg runtime.Message) runtime.HandleResult
 		return runtime.Handled()
 
 	case terminal.KeyLeft:
+		if m.collapseSelection(true) {
+			return runtime.Handled()
+		}
 		if m.cursorX > 0 {
 			m.cursorX--
 		} else if m.cursorY > 0 {
@@ -1138,6 +1240,9 @@ func (m *MultilineInput) HandleMessage(msg runtime.Message) runtime.HandleResult
 		return runtime.Handled()
 
 	case terminal.KeyRight:
+		if m.collapseSelection(false) {
+			return runtime.Handled()
+		}
 		if m.cursorX < runeCount(m.lines[m.cursorY]) {
 			m.cursorX++
 		} else if m.cursorY < len(m.lines)-1 {
@@ -1147,6 +1252,9 @@ func (m *MultilineInput) HandleMessage(msg runtime.Message) runtime.HandleResult
 		return runtime.Handled()
 
 	case terminal.KeyRune:
+		if m.HasSelection() {
+			m.deleteSelection()
+		}
 		line := m.lines[m.cursorY]
 		lineRunes := []rune(line)
 		if m.cursorX > len(lineRunes) {
@@ -1252,6 +1360,9 @@ func (m *MultilineInput) ClipboardPaste(text string) bool {
 	if m == nil || text == "" {
 		return false
 	}
+	if m.HasSelection() {
+		m.deleteSelection()
+	}
 	m.insertText(text)
 	return true
 }
@@ -1336,6 +1447,20 @@ func (m *MultilineInput) insertText(text string) {
 	m.cursorX = runeCount(parts[len(parts)-1])
 	m.ensureCursorVisible()
 	m.notifyChange()
+}
+
+func (m *MultilineInput) collapseSelection(toStart bool) bool {
+	if m == nil || m.selection.IsEmpty() {
+		return false
+	}
+	sel := m.selection.Normalize()
+	if toStart {
+		m.SetCursorOffset(sel.Start)
+	} else {
+		m.SetCursorOffset(sel.End)
+	}
+	m.selection = Selection{}
+	return true
 }
 
 var _ clipboard.Target = (*MultilineInput)(nil)

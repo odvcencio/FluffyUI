@@ -19,13 +19,14 @@ const (
 type Popover struct {
 	Base
 
-	Child            runtime.Widget
-	Anchor           runtime.Rect
-	Placement        PopoverPlacement
-	Gap              int
-	MatchAnchorWidth bool
-	DismissOnOutside bool
-	DismissOnEscape  bool
+	Child                runtime.Widget
+	Anchor               runtime.Rect
+	Placement            PopoverPlacement
+	Gap                  int
+	MatchAnchorWidth     bool
+	DismissOnOutside     bool
+	DismissOnMoveOutside bool
+	DismissOnEscape      bool
 
 	childBounds runtime.Rect
 	onClose     func()
@@ -88,6 +89,16 @@ func WithPopoverDismissOnOutside(enabled bool) PopoverOption {
 			return
 		}
 		p.DismissOnOutside = enabled
+	}
+}
+
+// WithPopoverDismissOnMoveOutside sets whether to dismiss on mouse move outside.
+func WithPopoverDismissOnMoveOutside(enabled bool) PopoverOption {
+	return func(p *Popover) {
+		if p == nil {
+			return
+		}
+		p.DismissOnMoveOutside = enabled
 	}
 }
 
@@ -223,6 +234,12 @@ func (p *Popover) HandleMessage(msg runtime.Message) runtime.HandleResult {
 				return runtime.WithCommand(runtime.PopOverlay{})
 			}
 		}
+		if p.DismissOnMoveOutside && m.Action == runtime.MouseMove {
+			if !p.childBounds.Contains(m.X, m.Y) && !p.Anchor.Contains(m.X, m.Y) {
+				p.close()
+				return runtime.WithCommand(runtime.PopOverlay{})
+			}
+		}
 	case runtime.KeyMsg:
 		if p.DismissOnEscape && m.Key == terminal.KeyEscape {
 			p.close()
@@ -251,6 +268,11 @@ func (p *Popover) ChildWidgets() []runtime.Widget {
 	return []runtime.Widget{p.Child}
 }
 
+// HitSelf ensures the popover receives mouse events for its bounds.
+func (p *Popover) HitSelf() bool {
+	return true
+}
+
 func (p *Popover) close() {
 	if p == nil || p.closed {
 		return
@@ -264,3 +286,4 @@ func (p *Popover) close() {
 var _ runtime.Widget = (*Popover)(nil)
 var _ runtime.ChildProvider = (*Popover)(nil)
 var _ runtime.Lifecycle = (*Popover)(nil)
+var _ runtime.HitSelfProvider = (*Popover)(nil)

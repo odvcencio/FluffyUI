@@ -15,6 +15,7 @@ func TestMessages_ImplementsInterface(t *testing.T) {
 		MouseMsg{X: 10, Y: 20, Button: MouseLeft, Action: MousePress},
 		PasteMsg{Text: "pasted text"},
 		TickMsg{Time: time.Now()},
+		FocusChangedMsg{},
 		QueueFlushMsg{},
 		InvalidateMsg{},
 	}

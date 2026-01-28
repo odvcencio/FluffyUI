@@ -1,6 +1,11 @@
 package widgets
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/odvcencio/fluffyui/runtime"
+	"github.com/odvcencio/fluffyui/terminal"
+)
 
 func TestSelection(t *testing.T) {
 	t.Run("IsEmpty", func(t *testing.T) {
@@ -103,6 +108,16 @@ func TestInputSelection(t *testing.T) {
 			t.Errorf("SelectLine = %q, want %q", text, "hello world test")
 		}
 	})
+
+	t.Run("SelectionReplacedOnType", func(t *testing.T) {
+		input.SetText("hello")
+		input.Focus()
+		input.SetSelection(Selection{Start: 1, End: 4}) // "ell"
+		input.HandleMessage(runtime.KeyMsg{Key: terminal.KeyRune, Rune: 'X'})
+		if input.Text() != "hXo" {
+			t.Errorf("typed replace = %q, want %q", input.Text(), "hXo")
+		}
+	})
 }
 
 func TestMultilineInputSelection(t *testing.T) {
@@ -142,6 +157,16 @@ func TestMultilineInputSelection(t *testing.T) {
 		text := input.GetSelectedText()
 		if text != "line two" {
 			t.Errorf("SelectLine = %q, want %q", text, "line two")
+		}
+	})
+
+	t.Run("SelectionDeletedOnBackspace", func(t *testing.T) {
+		input.SetText("one\ntwo")
+		input.Focus()
+		input.SetSelection(Selection{Start: 0, End: 3}) // "one"
+		input.HandleMessage(runtime.KeyMsg{Key: terminal.KeyBackspace})
+		if input.Text() != "\ntwo" {
+			t.Errorf("backspace delete = %q, want %q", input.Text(), "\ntwo")
 		}
 	})
 }
