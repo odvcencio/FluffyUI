@@ -23,11 +23,16 @@ package main
 
 import (
     "context"
+    "log"
+
     "github.com/odvcencio/fluffyui/fluffy"
 )
 
 func main() {
-    app := fluffy.NewApp()
+    app, err := fluffy.NewApp()
+    if err != nil {
+        log.Fatal(err)
+    }
 
     // Build your widget tree
     root := fluffy.VStack(
@@ -48,7 +53,7 @@ Use `AppConfig.Update` to handle custom messages:
 ```go
 type CounterMsg struct{ Delta int }
 
-app := fluffy.NewApp(fluffy.WithUpdate(func(app *runtime.App, msg runtime.Message) bool {
+app, err := fluffy.NewApp(fluffy.WithUpdate(func(app *runtime.App, msg runtime.Message) bool {
         switch m := msg.(type) {
         case CounterMsg:
             counter.Increment(m.Delta)
@@ -56,6 +61,9 @@ app := fluffy.NewApp(fluffy.WithUpdate(func(app *runtime.App, msg runtime.Messag
         }
         return false
 }))
+if err != nil {
+    log.Fatal(err)
+}
 
 // Post messages from anywhere
 app.Post(CounterMsg{Delta: 1})
@@ -66,7 +74,7 @@ app.Post(CounterMsg{Delta: 1})
 Widgets emit commands for app-level actions:
 
 ```go
-app := fluffy.NewApp(fluffy.WithCommandHandler(func(cmd runtime.Command) bool {
+app, err := fluffy.NewApp(fluffy.WithCommandHandler(func(cmd runtime.Command) bool {
         switch c := cmd.(type) {
         case MyCustomCommand:
             handleCustomCommand(c)
@@ -75,6 +83,9 @@ app := fluffy.NewApp(fluffy.WithCommandHandler(func(cmd runtime.Command) bool {
         return false
     },
 }))
+if err != nil {
+    log.Fatal(err)
+}
 ```
 
 ## Pattern 2: Screen Only (Advanced)

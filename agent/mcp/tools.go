@@ -2151,17 +2151,6 @@ func (s *Server) widgetByID(ctx context.Context, req mcp.CallToolRequest) *Widge
 	return info
 }
 
-func (s *Server) widgetByExplicitOrID(ctx context.Context, id string) *WidgetInfo {
-	if strings.TrimSpace(id) == "" {
-		return nil
-	}
-	snap, err := s.currentSnapshot(ctx, false)
-	if err != nil {
-		return nil
-	}
-	return findWidgetByID(snap.Widgets, id, false)
-}
-
 func hasAction(widget WidgetInfo, name string) bool {
 	for _, action := range widget.Actions {
 		if action == name {

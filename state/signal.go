@@ -40,7 +40,8 @@ type Signal[T any] struct {
 
 var subscriberPool = sync.Pool{
 	New: func() any {
-		return make([]subscriber, 0, 8)
+		subs := make([]subscriber, 0, 8)
+		return &subs
 	},
 }
 
@@ -60,9 +61,7 @@ func NewSignal[T any](initial T) *Signal[T] {
 func (s *Signal[T]) setDefaultEqual() {
 	// We'll try to use == via any() comparison
 	// This works for all comparable types
-	s.equal = func(a, b T) bool {
-		return reflect.DeepEqual(a, b)
-	}
+	s.equal = deepEqual[T]
 }
 
 // SetEqualFunc configures the equality check used to suppress redundant updates.
@@ -183,8 +182,13 @@ func acquireSubscribers(size int) []subscriber {
 	if size <= 0 {
 		return nil
 	}
-	pooled, ok := subscriberPool.Get().([]subscriber)
-	if !ok || cap(pooled) < size {
+	pooledPtr, ok := subscriberPool.Get().(*[]subscriber)
+	if !ok || pooledPtr == nil {
+		return make([]subscriber, 0, size)
+	}
+	pooled := *pooledPtr
+	if cap(pooled) < size {
+		subscriberPool.Put(pooledPtr)
 		return make([]subscriber, 0, size)
 	}
 	return pooled[:0]
@@ -195,5 +199,5 @@ func releaseSubscribers(subs []subscriber) {
 		return
 	}
 	subs = subs[:0]
-	subscriberPool.Put(subs)
+	subscriberPool.Put(&subs)
 }

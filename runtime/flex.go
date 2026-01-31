@@ -410,14 +410,6 @@ func (f *Flex) mainSize(s Size) int {
 	return s.Width
 }
 
-// crossSize returns the size along the cross axis.
-func (f *Flex) crossSize(s Size) int {
-	if f.Direction == Column {
-		return s.Width
-	}
-	return s.Height
-}
-
 // sizeWithBasis creates a size with the basis on the main axis.
 func (f *Flex) sizeWithBasis(basis int) Size {
 	if f.Direction == Column {

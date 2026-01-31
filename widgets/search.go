@@ -89,6 +89,19 @@ func (s *SearchWidget) SetLabel(label string) {
 	s.syncA11y()
 }
 
+// SetQuery updates the search query and triggers search callback.
+func (s *SearchWidget) SetQuery(query string) {
+	if s == nil {
+		return
+	}
+	s.query = query
+	s.syncA11y()
+	if s.onSearch != nil {
+		s.onSearch(query)
+	}
+	s.Invalidate()
+}
+
 // Query returns the current search query.
 func (s *SearchWidget) Query() string {
 	return s.query
@@ -256,3 +269,4 @@ func (s *SearchWidget) syncA11y() {
 
 var _ runtime.Widget = (*SearchWidget)(nil)
 var _ runtime.Focusable = (*SearchWidget)(nil)
+var _ Searchable = (*SearchWidget)(nil)

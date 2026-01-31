@@ -7,10 +7,10 @@ import (
 	"strings"
 	"sync"
 
+	tcellv2 "github.com/gdamore/tcell/v2"
 	"github.com/odvcencio/fluffyui/backend"
 	"github.com/odvcencio/fluffyui/backend/tcell"
 	"github.com/odvcencio/fluffyui/terminal"
-	tcellv2 "github.com/gdamore/tcell/v2"
 )
 
 // Backend is a testable backend using tcell's simulation screen.
@@ -55,6 +55,16 @@ func (s *Backend) InjectKeyString(str string) {
 	}
 }
 
+// InjectMouse injects a mouse press event into the simulation.
+func (s *Backend) InjectMouse(x, y int, button terminal.MouseButton) {
+	s.InjectMouseAction(x, y, button, terminal.MousePress)
+}
+
+// InjectMouseAction injects a mouse event with a specific action.
+func (s *Backend) InjectMouseAction(x, y int, button terminal.MouseButton, action terminal.MouseAction) {
+	s.PostEvent(terminal.MouseEvent{X: x, Y: y, Button: button, Action: action})
+}
+
 // InjectResize injects a resize event.
 func (s *Backend) InjectResize(width, height int) {
 	s.mu.Lock()
@@ -74,12 +84,14 @@ func (s *Backend) Capture() string {
 	for y := 0; y < h; y++ {
 		var line strings.Builder
 		for x := 0; x < w; x++ {
-			mainc, comb, _, _ := s.screen.GetContent(x, y)
-			if mainc == 0 {
-				mainc = ' '
+			str, _, _ := s.screen.Get(x, y)
+			runes := []rune(str)
+			mainc := ' '
+			if len(runes) > 0 {
+				mainc = runes[0]
 			}
 			line.WriteRune(mainc)
-			for _, c := range comb {
+			for _, c := range runes[1:] {
 				line.WriteRune(c)
 			}
 		}
@@ -94,8 +106,12 @@ func (s *Backend) CaptureCell(x, y int) (mainc rune, comb []rune, style backend.
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	m, c, tcStyle, _ := s.screen.GetContent(x, y)
-	return m, c, convertTcellStyle(tcStyle)
+	str, tcStyle, _ := s.screen.Get(x, y)
+	runes := []rune(str)
+	if len(runes) == 0 {
+		return ' ', nil, convertTcellStyle(tcStyle)
+	}
+	return runes[0], runes[1:], convertTcellStyle(tcStyle)
 }
 
 // CaptureRegion captures a rectangular region of the screen.
@@ -107,9 +123,11 @@ func (s *Backend) CaptureRegion(x, y, w, h int) string {
 	for row := y; row < y+h; row++ {
 		var line strings.Builder
 		for col := x; col < x+w; col++ {
-			mainc, _, _, _ := s.screen.GetContent(col, row)
-			if mainc == 0 {
-				mainc = ' '
+			str, _, _ := s.screen.Get(col, row)
+			runes := []rune(str)
+			mainc := ' '
+			if len(runes) > 0 {
+				mainc = runes[0]
 			}
 			line.WriteRune(mainc)
 		}

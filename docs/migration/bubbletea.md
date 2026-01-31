@@ -27,7 +27,10 @@ func (m model) View() string {
 FluffyUI:
 
 ```go
-app := fluffy.NewApp()
+app, err := fluffy.NewApp()
+if err != nil {
+    log.Fatal(err)
+}
 app.SetRoot(fluffy.NewLabel("Hello"))
 app.Run(context.Background())
 ```
@@ -51,7 +54,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 FluffyUI (custom update):
 
 ```go
-app := fluffy.NewApp(fluffy.WithUpdate(func(app *runtime.App, msg runtime.Message) bool {
+app, err := fluffy.NewApp(fluffy.WithUpdate(func(app *runtime.App, msg runtime.Message) bool {
     switch m := msg.(type) {
     case runtime.KeyMsg:
         if m.Rune == 'q' {
@@ -61,6 +64,9 @@ app := fluffy.NewApp(fluffy.WithUpdate(func(app *runtime.App, msg runtime.Messag
     }
     return false
 }))
+if err != nil {
+    log.Fatal(err)
+}
 ```
 
 ## Components / widgets
@@ -82,13 +88,16 @@ Bubble Tea commands return from `Update`. In FluffyUI, widgets emit
 commands via `CommandHandler` or built-in routing (e.g., focus changes).
 
 ```go
-app := fluffy.NewApp(fluffy.WithCommandHandler(func(cmd runtime.Command) bool {
+app, err := fluffy.NewApp(fluffy.WithCommandHandler(func(cmd runtime.Command) bool {
     switch cmd.(type) {
     case runtime.Quit:
         return false
     }
     return false
 }))
+if err != nil {
+    log.Fatal(err)
+}
 ```
 
 ## Focus and input

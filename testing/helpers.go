@@ -7,6 +7,8 @@
 package testing
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -74,12 +76,22 @@ func RenderTo(be *sim.Backend, w runtime.Widget, width, height int) {
 
 // RenderWidget renders a widget to a newly created simulation backend.
 // Returns the backend for further inspection.
-func RenderWidget(w runtime.Widget, width, height int) *sim.Backend {
+func RenderWidget(w runtime.Widget, width, height int) (*sim.Backend, error) {
 	be := sim.New(width, height)
 	if err := be.Init(); err != nil {
-		panic("failed to init sim backend: " + err.Error())
+		return nil, err
 	}
 	RenderTo(be, w, width, height)
+	return be, nil
+}
+
+// RenderWidgetOrFail renders a widget and fails the test on error.
+func RenderWidgetOrFail(t *testing.T, w runtime.Widget, width, height int) *sim.Backend {
+	t.Helper()
+	be, err := RenderWidget(w, width, height)
+	if err != nil {
+		t.Fatalf("failed to init sim backend: %v", err)
+	}
 	return be
 }
 
@@ -196,6 +208,47 @@ func CaptureWidget(w runtime.Widget, width, height int) string {
 // MeasureWidget measures a widget and returns its preferred size.
 func MeasureWidget(w runtime.Widget, maxWidth, maxHeight int) runtime.Size {
 	return w.Measure(runtime.Constraints{MaxWidth: maxWidth, MaxHeight: maxHeight})
+}
+
+// UpdateSnapshots reports whether golden snapshots should be updated.
+func UpdateSnapshots() bool {
+	switch strings.ToLower(strings.TrimSpace(os.Getenv("FLUFFYUI_UPDATE_SNAPSHOTS"))) {
+	case "1", "true", "yes", "on":
+		return true
+	default:
+		return false
+	}
+}
+
+// AssertGolden compares actual output with the golden file at path.
+// When FLUFFYUI_UPDATE_SNAPSHOTS is set, it overwrites the golden file.
+func AssertGolden(t *testing.T, path string, actual string) {
+	t.Helper()
+	if path == "" {
+		t.Fatalf("golden path is empty")
+	}
+	if UpdateSnapshots() {
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatalf("failed to create golden dir: %v", err)
+		}
+		if err := os.WriteFile(path, []byte(actual), 0o644); err != nil {
+			t.Fatalf("failed to write golden file: %v", err)
+		}
+		return
+	}
+	expected, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("failed to read golden file: %v", err)
+	}
+	if actual != string(expected) {
+		t.Fatalf("snapshot mismatch:\n--- Expected ---\n%s\n--- Actual ---\n%s", string(expected), actual)
+	}
+}
+
+// AssertWidgetGolden renders a widget and compares against a golden file.
+func AssertWidgetGolden(t *testing.T, w runtime.Widget, width, height int, path string) {
+	t.Helper()
+	AssertGolden(t, path, RenderToString(w, width, height))
 }
 
 // LayoutAndRender performs the full measure-layout-render cycle on a widget.

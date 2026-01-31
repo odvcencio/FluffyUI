@@ -25,11 +25,11 @@ func ParseFile(path string) (*Stylesheet, error) {
 	return Parse(string(data))
 }
 
-// MustParse parses a FSS string or panics.
+// MustParse parses a FSS string and returns nil on error.
 func MustParse(data string) *Stylesheet {
 	sheet, err := Parse(data)
 	if err != nil {
-		panic(err)
+		return nil
 	}
 	return sheet
 }
@@ -900,18 +900,4 @@ func readIdent(s string, start int) (string, int) {
 		idx++
 	}
 	return s[start:idx], idx
-}
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }

@@ -56,8 +56,11 @@ func (a *Alert) StyleType() string {
 
 // StyleClasses returns selector classes including the variant.
 func (a *Alert) StyleClasses() []string {
+	if a == nil {
+		return nil
+	}
 	classes := a.Base.StyleClasses()
-	if a == nil || a.Variant == "" {
+	if a.Variant == "" {
 		return classes
 	}
 	variant := string(a.Variant)

@@ -133,11 +133,9 @@ func (v *GameView) tradeDialogA11y() runtime.Widget {
 	}
 	title := fmt.Sprintf("%s %s", action, v.tradeCandy)
 
-	price := v.game.Prices.Get()[v.tradeCandy]
+	price := v.game.sellPrice(v.tradeCandy)
 	if v.tradeIsBuy {
 		price = v.game.buyPrice(v.tradeCandy)
-	} else {
-		price = v.game.sellPrice(v.tradeCandy)
 	}
 
 	width := v.tradeDialogRect(v.Bounds()).Width - 4

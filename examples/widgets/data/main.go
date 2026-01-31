@@ -30,6 +30,8 @@ type DataView struct {
 	header   *widgets.Label
 	list     *widgets.List[string]
 	table    *widgets.Table
+	grid     *widgets.DataGrid
+	richText *widgets.RichText
 	tree     *widgets.Tree
 	splitter *widgets.Splitter
 }
@@ -57,6 +59,14 @@ func NewDataView() *DataView {
 	)
 	view.table.SetRows([][]string{{"One", "1"}, {"Two", "2"}, {"Three", "3"}, {"Four", "4"}})
 
+	view.grid = widgets.NewDataGrid(
+		widgets.TableColumn{Title: "Key"},
+		widgets.TableColumn{Title: "Value"},
+	)
+	view.grid.SetRows([][]string{{"Alpha", "10"}, {"Beta", "20"}, {"Gamma", "30"}})
+
+	view.richText = widgets.NewRichText("## Notes\n- Fast grid editing\n- Styled markdown\n")
+
 	root := &widgets.TreeNode{
 		Label:    "Root",
 		Expanded: true,
@@ -69,9 +79,13 @@ func NewDataView() *DataView {
 
 	tablePanel := widgets.NewPanel(view.table).WithBorder(backend.DefaultStyle())
 	tablePanel.SetTitle("Table")
+	gridPanel := widgets.NewPanel(view.grid).WithBorder(backend.DefaultStyle())
+	gridPanel.SetTitle("DataGrid")
 	treePanel := widgets.NewPanel(view.tree).WithBorder(backend.DefaultStyle())
 	treePanel.SetTitle("Tree")
-	rightColumn := demo.NewVBox(tablePanel, treePanel)
+	richPanel := widgets.NewPanel(view.richText).WithBorder(backend.DefaultStyle())
+	richPanel.SetTitle("RichText")
+	rightColumn := demo.NewVBox(tablePanel, gridPanel, treePanel, richPanel)
 	rightColumn.Gap = 1
 
 	view.splitter = widgets.NewSplitter(leftPanel, rightColumn)

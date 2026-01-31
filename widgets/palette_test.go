@@ -277,7 +277,7 @@ func TestPaletteWidget_SelectedItem(t *testing.T) {
 
 	item := p.SelectedItem()
 	if item == nil {
-		t.Error("expected non-nil selected item")
+		t.Fatal("expected non-nil selected item")
 	}
 	if item.ID != "1" {
 		t.Errorf("expected ID '1', got '%s'", item.ID)
@@ -286,6 +286,9 @@ func TestPaletteWidget_SelectedItem(t *testing.T) {
 	// Select second
 	p.HandleMessage(runtime.KeyMsg{Key: terminal.KeyDown})
 	item = p.SelectedItem()
+	if item == nil {
+		t.Fatal("expected non-nil selected item after selection")
+	}
 	if item.ID != "2" {
 		t.Errorf("expected ID '2', got '%s'", item.ID)
 	}

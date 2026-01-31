@@ -14,7 +14,6 @@ type uniformValue struct {
 	f    [4]float32
 	m    [9]float32
 	i    int32
-	ptr  []float32
 }
 
 type uniformKind uint8

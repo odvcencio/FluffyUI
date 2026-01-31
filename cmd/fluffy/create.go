@@ -144,7 +144,7 @@ func gameTemplate() projectTemplate {
 
 const goModTemplate = `module {{.ModulePath}}
 
-go 1.22
+go 1.24
 `
 
 const fluffyTomlTemplate = `name = "{{.AppName}}"
@@ -163,7 +163,11 @@ import (
 )
 
 func main() {
-	app := fluffy.NewApp()
+	app, err := fluffy.NewApp()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "app init failed: %v\n", err)
+		os.Exit(1)
+	}
 	app.SetRoot(fluffy.NewLabel("{{.AppTitle}}"))
 
 	if err := app.Run(context.Background()); err != nil && err != context.Canceled {
@@ -188,7 +192,11 @@ import (
 )
 
 func main() {
-	app := fluffy.NewApp()
+	app, err := fluffy.NewApp()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "app init failed: %v\n", err)
+		os.Exit(1)
+	}
 	app.SetRoot(NewDashboard())
 
 	if err := app.Run(context.Background()); err != nil && err != context.Canceled {
@@ -309,7 +317,11 @@ import (
 )
 
 func main() {
-	app := fluffy.NewApp(fluffy.WithTickRate(time.Second / 60))
+	app, err := fluffy.NewApp(fluffy.WithTickRate(time.Second / 60))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "app init failed: %v\n", err)
+		os.Exit(1)
+	}
 	app.SetRoot(NewBouncer())
 
 	if err := app.Run(context.Background()); err != nil && err != context.Canceled {

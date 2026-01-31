@@ -98,14 +98,14 @@ func mcpOptionsFromEnv() (MCPOptions, bool, error) {
 		return MCPOptions{}, false, nil
 	}
 	opts := MCPOptions{
-		AllowText:      envBool("FLUFFY_MCP_ALLOW_TEXT"),
-		AllowClipboard: envBool("FLUFFY_MCP_ALLOW_CLIPBOARD"),
-		Token:          strings.TrimSpace(os.Getenv("FLUFFY_MCP_TOKEN")),
-		RateLimit:      envInt("FLUFFY_MCP_RATE_LIMIT"),
-		BurstLimit:     envInt("FLUFFY_MCP_BURST_LIMIT"),
-		MaxSessions:    envInt("FLUFFY_MCP_MAX_SESSIONS"),
-		MaxPendingEvents: envInt("FLUFFY_MCP_MAX_PENDING_EVENTS"),
-		SlowClientPolicy: strings.TrimSpace(os.Getenv("FLUFFY_MCP_SLOW_CLIENT_POLICY")),
+		AllowText:           envBool("FLUFFY_MCP_ALLOW_TEXT"),
+		AllowClipboard:      envBool("FLUFFY_MCP_ALLOW_CLIPBOARD"),
+		Token:               strings.TrimSpace(os.Getenv("FLUFFY_MCP_TOKEN")),
+		RateLimit:           envInt("FLUFFY_MCP_RATE_LIMIT"),
+		BurstLimit:          envInt("FLUFFY_MCP_BURST_LIMIT"),
+		MaxSessions:         envInt("FLUFFY_MCP_MAX_SESSIONS"),
+		MaxPendingEvents:    envInt("FLUFFY_MCP_MAX_PENDING_EVENTS"),
+		SlowClientPolicy:    strings.TrimSpace(os.Getenv("FLUFFY_MCP_SLOW_CLIENT_POLICY")),
 		StrictLabelMatching: envBool("FLUFFY_MCP_STRICT_LABELS"),
 	}
 	if timeout, ok, err := envDuration("FLUFFY_MCP_SESSION_TIMEOUT"); err != nil {
@@ -210,7 +210,9 @@ func normalizeMCPOptions(opts MCPOptions) (MCPOptions, error) {
 	if transport == "unix" && strings.TrimSpace(opts.Addr) == "" {
 		opts.Addr = defaultUnixSocketPath()
 	}
-	opts.validateTestFlags()
+	if err := opts.validateTestFlags(); err != nil {
+		return MCPOptions{}, err
+	}
 	return opts, nil
 }
 

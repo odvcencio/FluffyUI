@@ -15,13 +15,6 @@ func openLibrary(name string) (uintptr, error) {
 	return purego.Dlopen(name, purego.RTLD_NOW|purego.RTLD_LOCAL)
 }
 
-func closeLibrary(handle uintptr) error {
-	if handle == 0 {
-		return nil
-	}
-	return purego.Dlclose(handle)
-}
-
 func loadSymbol(handle uintptr, name string) (uintptr, error) {
 	return purego.Dlsym(handle, name)
 }

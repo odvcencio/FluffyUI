@@ -2,7 +2,6 @@ package effects
 
 import (
 	"math"
-	"math/rand"
 	"testing"
 
 	"github.com/odvcencio/fluffyui/animation"
@@ -127,7 +126,6 @@ func TestShimmer(t *testing.T) {
 }
 
 func TestConfettiAndSparkleCounts(t *testing.T) {
-	rand.Seed(1)
 	ps := animation.NewParticleSystem(50)
 
 	Confetti(ps, 5, 5, 10)

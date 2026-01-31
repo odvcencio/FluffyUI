@@ -47,6 +47,25 @@ table := widgets.NewTable(
 table.SetRows([][]string{{"A", "1"}, {"B", "2"}})
 ```
 
+## DataGrid
+
+`DataGrid` extends table behavior with per-cell selection and inline editing.
+
+API notes:
+- `NewDataGrid(columns...)` creates the grid.
+- `SetSelected(row, col)` controls selection.
+- `StartEditing` and `CommitEditing` drive inline edits.
+
+Example:
+
+```go
+grid := widgets.NewDataGrid(
+    widgets.TableColumn{Title: "Name"},
+    widgets.TableColumn{Title: "Value"},
+)
+grid.SetRows([][]string{{"Alpha", "1"}, {"Beta", "2"}})
+```
+
 ## Tree
 
 `Tree` renders hierarchical data with expand/collapse state.
@@ -63,6 +82,20 @@ root := &widgets.TreeNode{Label: "Root", Expanded: true}
 root.Children = []*widgets.TreeNode{{Label: "Child"}}
 
 view := widgets.NewTree(root)
+```
+
+## RichText
+
+`RichText` renders styled markdown content with scrolling.
+
+API notes:
+- `NewRichText(content)` parses markdown content.
+- `SetContent` updates the markdown.
+
+Example:
+
+```go
+doc := widgets.NewRichText("# Title\nSome **bold** text.")
 ```
 
 ## SearchWidget

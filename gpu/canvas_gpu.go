@@ -125,22 +125,20 @@ func (c *GPUCanvas) drawTextGPU(text string, x, y float32, font *Font) {
 	cursorX := x
 	for _, r := range text {
 		glyph := pxFont.Glyph(r)
-		if glyph != nil {
-			for gy, row := range glyph {
-				for gx := 0; gx < len(row); gx++ {
-					if row[gx] != '#' {
-						continue
-					}
-					p0 := c.applyTransform(vec2{x: cursorX + float32(gx), y: y + float32(gy)})
-					p1 := c.applyTransform(vec2{x: cursorX + float32(gx+1), y: y + float32(gy)})
-					p2 := c.applyTransform(vec2{x: cursorX + float32(gx+1), y: y + float32(gy+1)})
-					p3 := c.applyTransform(vec2{x: cursorX + float32(gx), y: y + float32(gy+1)})
-					if !appendSolidQuad(&verts, &inds, p0, p1, p2, p3, c.fillColor) {
-						c.drawSolid(verts, inds, blendForColor(c.fillColor), c.gpuFb)
-						verts = verts[:0]
-						inds = inds[:0]
-						appendSolidQuad(&verts, &inds, p0, p1, p2, p3, c.fillColor)
-					}
+		for gy, row := range glyph {
+			for gx := 0; gx < len(row); gx++ {
+				if row[gx] != '#' {
+					continue
+				}
+				p0 := c.applyTransform(vec2{x: cursorX + float32(gx), y: y + float32(gy)})
+				p1 := c.applyTransform(vec2{x: cursorX + float32(gx+1), y: y + float32(gy)})
+				p2 := c.applyTransform(vec2{x: cursorX + float32(gx+1), y: y + float32(gy+1)})
+				p3 := c.applyTransform(vec2{x: cursorX + float32(gx), y: y + float32(gy+1)})
+				if !appendSolidQuad(&verts, &inds, p0, p1, p2, p3, c.fillColor) {
+					c.drawSolid(verts, inds, blendForColor(c.fillColor), c.gpuFb)
+					verts = verts[:0]
+					inds = inds[:0]
+					appendSolidQuad(&verts, &inds, p0, p1, p2, p3, c.fillColor)
 				}
 			}
 		}

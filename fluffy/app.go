@@ -38,13 +38,10 @@ type appBuilder struct {
 	router   *keybind.KeyRouter
 }
 
-// NewApp creates a default app with sensible defaults and panics on setup error.
-func NewApp(opts ...AppOption) *runtime.App {
-	app, err := NewAppWithError(opts...)
-	if err != nil {
-		panic(err)
-	}
-	return app
+// NewApp creates a default app with sensible defaults.
+// Returns an error if setup fails.
+func NewApp(opts ...AppOption) (*runtime.App, error) {
+	return NewAppWithError(opts...)
 }
 
 // NewAppWithError creates a default app and returns any setup error.

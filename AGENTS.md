@@ -13,7 +13,7 @@ FluffyUI is a comprehensive terminal UI framework featuring:
 - **Built-in accessibility** with screen reader support
 - **Agent integration** via MCP protocol
 
-**Go Version:** 1.22+
+**Go Version:** 1.24+
 
 ---
 
@@ -414,7 +414,8 @@ func TestLabel(t *testing.T) {
 | Function | Purpose |
 |----------|---------|
 | `RenderToString(widget, w, h)` | Render widget to string |
-| `RenderWidget(widget, w, h)` | Render to sim backend |
+| `RenderWidget(widget, w, h)` | Render to sim backend (returns `(*sim.Backend, error)`) |
+| `RenderWidgetOrFail(t, widget, w, h)` | Render to sim backend and fail test on error |
 | `AssertContains(t, be, text)` | Assert text present |
 | `AssertNotContains(t, be, text)` | Assert text absent |
 | `AssertTextAt(t, be, x, y, text)` | Assert text at position |
@@ -424,7 +425,7 @@ func TestLabel(t *testing.T) {
 ```go
 be := sim.New(80, 24)
 be.InjectKey(terminal.KeyEnter, 0, 0)  // Simulate Enter key
-be.InjectMouse(10, 5, terminal.ButtonLeft)  // Simulate click
+be.InjectMouse(10, 5, terminal.MouseLeft)  // Simulate click
 ```
 
 ---

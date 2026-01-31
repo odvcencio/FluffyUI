@@ -1,6 +1,8 @@
 package testing
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -20,7 +22,7 @@ func TestRenderToString(t *testing.T) {
 
 func TestRenderWidget(t *testing.T) {
 	label := widgets.NewLabel("Test")
-	be := RenderWidget(label, 20, 1)
+	be := RenderWidgetOrFail(t, label, 20, 1)
 	defer be.Fini()
 
 	if !be.ContainsText("Test") {
@@ -84,6 +86,24 @@ func TestLayoutAndRender(t *testing.T) {
 	cell := buf.Get(0, 0)
 	if cell.Rune != 'X' {
 		t.Errorf("expected 'X' at (0,0), got %c", cell.Rune)
+	}
+}
+
+func TestAssertGolden(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "golden.txt")
+
+	t.Setenv("FLUFFYUI_UPDATE_SNAPSHOTS", "1")
+	AssertGolden(t, path, "hello")
+
+	t.Setenv("FLUFFYUI_UPDATE_SNAPSHOTS", "")
+	AssertGolden(t, path, "hello")
+
+	if err := os.WriteFile(path, []byte("bye"), 0o644); err != nil {
+		t.Fatalf("failed to update golden: %v", err)
+	}
+	if UpdateSnapshots() {
+		t.Fatalf("expected UpdateSnapshots to be false")
 	}
 }
 

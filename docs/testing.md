@@ -72,7 +72,30 @@ func TestWithAssertions(t *testing.T) {
 
     fluffytest.AssertContains(t, be, "expected text")
     fluffytest.AssertNotContains(t, be, "error")
-    fluffytest.AssertTextAt(t, be, 0, 0, "Header")
+fluffytest.AssertTextAt(t, be, 0, 0, "Header")
+}
+```
+
+### Widget Test Harness
+
+For interaction-heavy widgets, use the widget test harness which runs a
+background app with a simulation backend:
+
+```go
+import (
+    "strings"
+    "time"
+
+    "github.com/odvcencio/fluffyui/testing/widgettest"
+    "github.com/odvcencio/fluffyui/widgets"
+)
+
+h := widgettest.New(t, widgets.NewInput(), 40, 3)
+h.InjectKeyString("hello")
+h.Wait(50 * time.Millisecond)
+
+if !strings.Contains(h.Capture(), "hello") {
+    t.Fatal("expected text in capture")
 }
 ```
 
@@ -322,7 +345,7 @@ test:
     - uses: actions/checkout@v4
     - uses: actions/setup-go@v5
       with:
-        go-version: '1.22'
+        go-version: '1.24'
     - run: go test ./...
 ```
 

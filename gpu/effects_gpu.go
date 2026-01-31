@@ -1,7 +1,6 @@
 package gpu
 
 import (
-	"errors"
 	"image"
 	"image/color"
 	"reflect"
@@ -382,18 +381,4 @@ func effectQuadSize(dst Framebuffer) ([]float32, []uint16) {
 	}
 	w, h := dst.Size()
 	return effectQuad(w, h, 0, 0)
-}
-
-func ensureGPUFallback(driver Driver, src Texture, dst Framebuffer) (Texture, bool, bool, error) {
-	if driver == nil || src == nil || dst == nil {
-		return nil, false, false, ErrUnsupported
-	}
-	if !isNativeFramebuffer(dst, driver.Backend()) {
-		return nil, false, false, ErrUnsupported
-	}
-	tex, temp, ok := ensureEffectTexture(driver, src)
-	if !ok {
-		return nil, false, false, errors.New("gpu: texture conversion failed")
-	}
-	return tex, temp, true, nil
 }

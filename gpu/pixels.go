@@ -89,24 +89,6 @@ func blendRGBA(dr, dg, db, da, sr, sg, sb, sa uint8) (uint8, uint8, uint8, uint8
 	return floatToByte(outR), floatToByte(outG), floatToByte(outB), floatToByte(outA)
 }
 
-func copyPixels(dst []byte, dstW, dstH int, src []byte, srcW, srcH int, offsetX, offsetY int) {
-	if len(dst) == 0 || len(src) == 0 {
-		return
-	}
-	for y := 0; y < srcH; y++ {
-		for x := 0; x < srcW; x++ {
-			dx := offsetX + x
-			dy := offsetY + y
-			if dx < 0 || dy < 0 || dx >= dstW || dy >= dstH {
-				continue
-			}
-			dstIdx := (dy*dstW + dx) * 4
-			srcIdx := (y*srcW + x) * 4
-			copy(dst[dstIdx:dstIdx+4], src[srcIdx:srcIdx+4])
-		}
-	}
-}
-
 func scalePixels(src []byte, srcW, srcH, dstW, dstH int) []byte {
 	if dstW <= 0 || dstH <= 0 || srcW <= 0 || srcH <= 0 {
 		return nil

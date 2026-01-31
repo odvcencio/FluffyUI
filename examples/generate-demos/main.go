@@ -198,7 +198,7 @@ func (q *quickstartDemo) Render(ctx runtime.RenderContext) {
 	}
 
 	titleX := (bounds.Width - len(title)) / 2
-	titleY := bounds.Height / 2 - 1
+	titleY := bounds.Height/2 - 1
 
 	// Draw visible characters with rainbow effect
 	for i := 0; i < visibleChars; i++ {
@@ -231,7 +231,7 @@ func (q *quickstartDemo) Render(ctx runtime.RenderContext) {
 
 	// Animated border sparkles - flows clockwise around the perimeter
 	borderChars := []rune{'·', '•', '◦', '○', '◌'}
-	perimeter := 2*(bounds.Width+bounds.Height-2)
+	perimeter := 2 * (bounds.Width + bounds.Height - 2)
 	if perimeter <= 0 {
 		perimeter = 1
 	}
@@ -573,11 +573,11 @@ func demoTable() runtime.Widget {
 
 type tableDemo struct {
 	widgets.Component
-	frame     int
-	selected  int
-	sortCol   int
-	sortAsc   bool
-	hoverCol  int
+	frame    int
+	selected int
+	sortCol  int
+	sortAsc  bool
+	hoverCol int
 }
 
 func (t *tableDemo) Measure(constraints runtime.Constraints) runtime.Size {
@@ -754,9 +754,7 @@ func demoProgress() runtime.Widget {
 
 type progressDemo struct {
 	widgets.Component
-	frame   int
-	values  []float64
-	current int
+	frame int
 }
 
 func (p *progressDemo) Measure(constraints runtime.Constraints) runtime.Size {
@@ -864,7 +862,6 @@ type listDemo struct {
 	frame    int
 	selected int
 	checked  map[int]bool
-	phase    int // 0=navigating, 1=selecting items, 2=show selected count
 }
 
 func (l *listDemo) Measure(constraints runtime.Constraints) runtime.Size {
@@ -990,10 +987,9 @@ func demoDialog() runtime.Widget {
 
 type dialogDemo struct {
 	widgets.Component
-	frame       int
-	phase       int // 0=appearing, 1=focus cancel, 2=focus confirm, 3=confirming, 4=success, 5=fade out
-	dialogScale float64
-	focusedBtn  int
+	frame      int
+	phase      int // 0=appearing, 1=focus cancel, 2=focus confirm, 3=confirming, 4=success, 5=fade out
+	focusedBtn int
 }
 
 func (d *dialogDemo) Measure(constraints runtime.Constraints) runtime.Size {
@@ -1284,7 +1280,7 @@ func demoTabs() runtime.Widget {
 
 type tabsDemo struct {
 	widgets.Component
-	frame    int
+	frame     int
 	activeTab int
 }
 
@@ -1765,9 +1761,9 @@ func (d *easingDemo) ensureCanvas(bounds runtime.Rect) {
 }
 
 type easingEntry struct {
-	name   string
-	fn     func(float64) float64
-	color  backend.Color
+	name  string
+	fn    func(float64) float64
+	color backend.Color
 }
 
 var easingFuncs = []easingEntry{
@@ -2052,20 +2048,6 @@ func (h *heroDemo) HandleMessage(msg runtime.Message) runtime.HandleResult {
 	return runtime.Unhandled()
 }
 
-func minInt(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-func maxInt(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
-
 // =============================================================================
 // Fireworks Demo - 3D particle effects with perspective projection
 // =============================================================================
@@ -2123,13 +2105,13 @@ func (p *particle3D) project(cameraZ, cameraDist, centerX, centerY float64) (int
 }
 
 type firework3D struct {
-	x, y, z       float64
-	vx, vy, vz    float64
-	r, g, b       uint8
-	exploded      bool
-	particles     []particle3D
-	trail         [][2]float64
-	apexTime      float64
+	x, y, z    float64
+	vx, vy, vz float64
+	r, g, b    uint8
+	exploded   bool
+	particles  []particle3D
+	trail      [][2]float64
+	apexTime   float64
 }
 
 func newFirework3D(canvasW, canvasH int, cameraZ float64) *firework3D {
@@ -2468,7 +2450,7 @@ func (v *videoFallbackDemo) renderSimulatedVideo(ctx runtime.RenderContext, boun
 	phase := float64(v.frame) * 0.02
 	for y := 0; y < h; y++ {
 		t := float64(y) / float64(h)
-		wave := math.Sin(t*math.Pi*2+phase) * 0.5 + 0.5
+		wave := math.Sin(t*math.Pi*2+phase)*0.5 + 0.5
 		r := uint8(20 + wave*40)
 		g := uint8(30 + wave*30)
 		b := uint8(60 + wave*20)

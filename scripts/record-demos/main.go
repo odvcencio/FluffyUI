@@ -6,7 +6,7 @@
 //	go run ./scripts/record-demos --duration 5s --out docs/demos
 //
 // Requirements:
-//   - Go 1.22+
+//   - Go 1.24+
 //   - Optional: agg (for GIF conversion)
 //   - Optional: ffmpeg (for MP4 conversion)
 //

@@ -288,7 +288,7 @@ FLUFFYUI_BACKEND=sim go run ./examples/quickstart
 ```
 
 ### Build Errors
-Ensure Go 1.22+ is installed:
+Ensure Go 1.24+ is installed:
 ```bash
 go version
 ```

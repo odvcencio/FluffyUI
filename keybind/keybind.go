@@ -122,11 +122,11 @@ func ParseKeySequence(input string) (Key, error) {
 	return Key{Sequence: sequence}, nil
 }
 
-// MustParseKeySequence parses a key sequence and panics on error.
+// MustParseKeySequence parses a key sequence and returns an empty Key on error.
 func MustParseKeySequence(input string) Key {
 	key, err := ParseKeySequence(input)
 	if err != nil {
-		panic(err)
+		return Key{}
 	}
 	return key
 }

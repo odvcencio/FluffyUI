@@ -154,6 +154,8 @@ func (b *Button) SetVariant(variant Variant) {
 }
 
 // Primary applies the primary variant and returns the button for chaining.
+//
+// Deprecated: prefer WithVariant(VariantPrimary) during construction.
 func (b *Button) Primary() *Button {
 	if b != nil {
 		b.variant = VariantPrimary
@@ -162,6 +164,8 @@ func (b *Button) Primary() *Button {
 }
 
 // Secondary applies the secondary variant and returns the button for chaining.
+//
+// Deprecated: prefer WithVariant(VariantSecondary) during construction.
 func (b *Button) Secondary() *Button {
 	if b != nil {
 		b.variant = VariantSecondary
@@ -170,6 +174,8 @@ func (b *Button) Secondary() *Button {
 }
 
 // Danger applies the danger variant and returns the button for chaining.
+//
+// Deprecated: prefer WithVariant(VariantDanger) during construction.
 func (b *Button) Danger() *Button {
 	if b != nil {
 		b.variant = VariantDanger
@@ -178,6 +184,8 @@ func (b *Button) Danger() *Button {
 }
 
 // Disabled sets the disabled signal and returns the button for chaining.
+//
+// Deprecated: prefer WithDisabled during construction.
 func (b *Button) Disabled(disabled *state.Signal[bool]) *Button {
 	if b != nil && disabled != nil {
 		b.disabled = disabled
@@ -186,6 +194,8 @@ func (b *Button) Disabled(disabled *state.Signal[bool]) *Button {
 }
 
 // Loading sets the loading signal and returns the button for chaining.
+//
+// Deprecated: prefer WithLoading during construction.
 func (b *Button) Loading(loading *state.Signal[bool]) *Button {
 	if b != nil && loading != nil {
 		b.loading = loading
@@ -193,7 +203,17 @@ func (b *Button) Loading(loading *state.Signal[bool]) *Button {
 	return b
 }
 
+// SetOnClick sets the click handler.
+func (b *Button) SetOnClick(fn func()) {
+	if b == nil {
+		return
+	}
+	b.onClick = fn
+}
+
 // OnClick sets the click handler and returns the button for chaining.
+//
+// Deprecated: prefer WithOnClick during construction or SetOnClick for mutation.
 func (b *Button) OnClick(fn func()) *Button {
 	if b != nil {
 		b.onClick = fn
@@ -202,6 +222,8 @@ func (b *Button) OnClick(fn func()) *Button {
 }
 
 // Class adds a style class and returns the button for chaining.
+//
+// Deprecated: prefer WithClass during construction.
 func (b *Button) Class(class string) *Button {
 	if b != nil {
 		b.AddClass(class)
@@ -210,6 +232,8 @@ func (b *Button) Class(class string) *Button {
 }
 
 // Classes adds style classes and returns the button for chaining.
+//
+// Deprecated: prefer WithClasses during construction.
 func (b *Button) Classes(classes ...string) *Button {
 	if b != nil {
 		b.AddClasses(classes...)
@@ -261,8 +285,11 @@ func (b *Button) StyleType() string {
 
 // StyleClasses returns selector classes including the variant.
 func (b *Button) StyleClasses() []string {
+	if b == nil {
+		return nil
+	}
 	classes := b.Base.StyleClasses()
-	if b == nil || b.variant == "" {
+	if b.variant == "" {
 		return classes
 	}
 	variant := string(b.variant)

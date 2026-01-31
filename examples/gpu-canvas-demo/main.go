@@ -110,17 +110,3 @@ func lerpColor(a, b color.RGBA, t float32) color.RGBA {
 		A: uint8(float32(a.A) + (float32(b.A)-float32(a.A))*t),
 	}
 }
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}

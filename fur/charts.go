@@ -28,7 +28,7 @@ func (s sparklineRenderable) Render(width int) []Line {
 	if len(s.values) == 0 {
 		return nil
 	}
-	
+
 	w := s.width
 	if w <= 0 {
 		w = width
@@ -36,7 +36,7 @@ func (s sparklineRenderable) Render(width int) []Line {
 	if w <= 0 {
 		w = 40
 	}
-	
+
 	// Find min/max
 	minVal, maxVal := s.values[0], s.values[0]
 	for _, v := range s.values {
@@ -47,14 +47,14 @@ func (s sparklineRenderable) Render(width int) []Line {
 			maxVal = v
 		}
 	}
-	
+
 	if minVal == maxVal {
 		maxVal = minVal + 1
 	}
-	
+
 	// Sparkline characters (from low to high)
 	blocks := []string{"▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"}
-	
+
 	// Sample or aggregate values to fit width
 	var displayValues []float64
 	if len(s.values) <= w {
@@ -82,13 +82,13 @@ func (s sparklineRenderable) Render(width int) []Line {
 			}
 		}
 	}
-	
+
 	// Convert to characters
 	style := s.style
 	if style == (Style{}) {
 		style = DefaultStyle()
 	}
-	
+
 	var chars []string
 	for _, v := range displayValues {
 		normalized := (v - minVal) / (maxVal - minVal)
@@ -101,7 +101,7 @@ func (s sparklineRenderable) Render(width int) []Line {
 		}
 		chars = append(chars, blocks[idx])
 	}
-	
+
 	return []Line{{{Text: strings.Join(chars, ""), Style: style}}}
 }
 
@@ -115,10 +115,10 @@ func BarChart(labels []string, values []float64, maxWidth int) Renderable {
 }
 
 type barChartRenderable struct {
-	labels    []string
-	values    []float64
-	maxWidth  int
-	barStyle  Style
+	labels     []string
+	values     []float64
+	maxWidth   int
+	barStyle   Style
 	labelStyle Style
 }
 
@@ -138,7 +138,7 @@ func (b barChartRenderable) Render(width int) []Line {
 	if len(b.values) == 0 || len(b.labels) != len(b.values) {
 		return nil
 	}
-	
+
 	maxW := b.maxWidth
 	if maxW <= 0 {
 		maxW = width - 20
@@ -146,7 +146,7 @@ func (b barChartRenderable) Render(width int) []Line {
 	if maxW <= 0 {
 		maxW = 40
 	}
-	
+
 	// Find max value
 	maxVal := b.values[0]
 	for _, v := range b.values {
@@ -157,7 +157,7 @@ func (b barChartRenderable) Render(width int) []Line {
 	if maxVal == 0 {
 		maxVal = 1
 	}
-	
+
 	// Find max label width
 	maxLabelWidth := 0
 	for _, label := range b.labels {
@@ -165,7 +165,7 @@ func (b barChartRenderable) Render(width int) []Line {
 			maxLabelWidth = w
 		}
 	}
-	
+
 	barStyle := b.barStyle
 	if barStyle == (Style{}) {
 		barStyle = Style{}.Foreground(ColorGreen)
@@ -174,7 +174,7 @@ func (b barChartRenderable) Render(width int) []Line {
 	if labelStyle == (Style{}) {
 		labelStyle = DefaultStyle()
 	}
-	
+
 	// Bar characters
 	fullBlock := "█"
 	// sevenEighths := "▉"
@@ -184,27 +184,27 @@ func (b barChartRenderable) Render(width int) []Line {
 	// threeEighths := "▍"
 	// quarterBlock := "▎"
 	// oneEighth := "▏"
-	
+
 	var lines []Line
 	for i, value := range b.values {
 		label := b.labels[i]
 		if len(b.labels) > i {
 			label = b.labels[i]
 		}
-		
+
 		// Calculate bar length
 		ratio := value / maxVal
 		barLength := int(ratio * float64(maxW))
-		
+
 		// Pad label
 		labelPadding := strings.Repeat(" ", maxLabelWidth-stringWidth(label))
-		
+
 		// Build bar
 		bar := strings.Repeat(fullBlock, barLength)
-		
+
 		// Format value
 		valueStr := fmt.Sprintf(" %.1f", value)
-		
+
 		line := Line{
 			{Text: label + labelPadding + " ", Style: labelStyle},
 			{Text: bar, Style: barStyle},
@@ -212,7 +212,7 @@ func (b barChartRenderable) Render(width int) []Line {
 		}
 		lines = append(lines, line)
 	}
-	
+
 	return lines
 }
 
@@ -230,7 +230,7 @@ func (p pieChartRenderable) Render(width int) []Line {
 	if len(p.values) == 0 {
 		return nil
 	}
-	
+
 	// Calculate total
 	total := 0.0
 	for _, v := range p.values {
@@ -239,34 +239,34 @@ func (p pieChartRenderable) Render(width int) []Line {
 	if total == 0 {
 		total = 1
 	}
-	
+
 	// Calculate percentages
 	var lines []Line
 	for i, v := range p.values {
 		percent := (v / total) * 100
-		
+
 		// Create simple bar representation
 		filled := int(percent / 5) // 20 chars = 100%
 		if filled > 20 {
 			filled = 20
 		}
 		bar := strings.Repeat("█", filled) + strings.Repeat("░", 20-filled)
-		
+
 		label := fmt.Sprintf("%.0f%%", percent)
 		if i < len(p.labels) {
 			label = fmt.Sprintf("%s %.0f%%", p.labels[i], percent)
 		}
-		
+
 		// Color based on index
 		colors := []Color{ColorGreen, ColorBlue, ColorYellow, ColorRed, ColorMagenta, ColorCyan}
 		color := colors[i%len(colors)]
-		
+
 		lines = append(lines, Line{
 			{Text: label + " ", Style: DefaultStyle()},
 			{Text: bar, Style: Style{}.Foreground(color)},
 		})
 	}
-	
+
 	return lines
 }
 
@@ -284,7 +284,7 @@ func (h heatmapRenderable) Render(width int) []Line {
 	if len(h.data) == 0 {
 		return nil
 	}
-	
+
 	// Find min/max
 	minVal, maxVal := h.data[0][0], h.data[0][0]
 	for _, row := range h.data {
@@ -300,10 +300,10 @@ func (h heatmapRenderable) Render(width int) []Line {
 	if minVal == maxVal {
 		maxVal = minVal + 1
 	}
-	
+
 	// Heatmap characters (density)
 	blocks := []string{"░", "▒", "▓", "█"}
-	
+
 	// Colors for heat (blue to red)
 	colors := []Color{
 		ColorBlue,
@@ -312,13 +312,13 @@ func (h heatmapRenderable) Render(width int) []Line {
 		ColorYellow,
 		ColorRed,
 	}
-	
+
 	var lines []Line
 	for _, row := range h.data {
 		var line Line
 		for _, v := range row {
 			normalized := (v - minVal) / (maxVal - minVal)
-			
+
 			charIdx := int(normalized * float64(len(blocks)-1))
 			if charIdx < 0 {
 				charIdx = 0
@@ -326,7 +326,7 @@ func (h heatmapRenderable) Render(width int) []Line {
 			if charIdx >= len(blocks) {
 				charIdx = len(blocks) - 1
 			}
-			
+
 			colorIdx := int(normalized * float64(len(colors)-1))
 			if colorIdx < 0 {
 				colorIdx = 0
@@ -334,7 +334,7 @@ func (h heatmapRenderable) Render(width int) []Line {
 			if colorIdx >= len(colors) {
 				colorIdx = len(colors) - 1
 			}
-			
+
 			line = append(line, Span{
 				Text:  blocks[charIdx],
 				Style: Style{}.Foreground(colors[colorIdx]),
@@ -342,7 +342,7 @@ func (h heatmapRenderable) Render(width int) []Line {
 		}
 		lines = append(lines, line)
 	}
-	
+
 	return lines
 }
 
@@ -376,7 +376,7 @@ func (p progressBarRenderable) Render(width int) []Line {
 	if w <= 0 {
 		w = 30
 	}
-	
+
 	percent := 0.0
 	if p.total > 0 {
 		percent = p.current / p.total
@@ -387,12 +387,12 @@ func (p progressBarRenderable) Render(width int) []Line {
 	if percent > 1 {
 		percent = 1
 	}
-	
+
 	filled := int(percent * float64(w))
 	empty := w - filled
-	
+
 	barChars := []string{"█", "▉", "▊", "▋", "▌", "▍", "▎", "▏"}
-	
+
 	// Determine color based on progress
 	style := p.style
 	if style == (Style{}) {
@@ -404,12 +404,12 @@ func (p progressBarRenderable) Render(width int) []Line {
 			style = Style{}.Foreground(ColorGreen)
 		}
 	}
-	
+
 	var bar strings.Builder
 	for i := 0; i < filled; i++ {
 		bar.WriteString("█")
 	}
-	
+
 	// Partial block for fractional part
 	fraction := (percent * float64(w)) - float64(filled)
 	if fraction > 0 && filled < w {
@@ -420,13 +420,13 @@ func (p progressBarRenderable) Render(width int) []Line {
 		bar.WriteString(barChars[partialIdx])
 		empty--
 	}
-	
+
 	for i := 0; i < empty; i++ {
 		bar.WriteString("░")
 	}
-	
+
 	percentStr := fmt.Sprintf(" %3.0f%%", percent*100)
-	
+
 	return []Line{{
 		{Text: "[", Style: DefaultStyle()},
 		{Text: bar.String(), Style: style},
@@ -461,21 +461,21 @@ func (g gaugeRenderable) Render(width int) []Line {
 	if v > g.max {
 		v = g.max
 	}
-	
+
 	// Calculate percentage
 	percent := 0.0
 	if g.max > g.min {
 		percent = (v - g.min) / (g.max - g.min)
 	}
-	
+
 	// Draw a horizontal gauge with ticks
 	w := g.width
 	if w <= 0 {
 		w = 40
 	}
-	
+
 	position := int(percent * float64(w-1))
-	
+
 	var bar strings.Builder
 	bar.WriteString("|")
 	for i := 0; i < w-2; i++ {
@@ -488,9 +488,9 @@ func (g gaugeRenderable) Render(width int) []Line {
 		}
 	}
 	bar.WriteString("|")
-	
+
 	valueStr := fmt.Sprintf(" %.1f", v)
-	
+
 	return []Line{{
 		{Text: bar.String(), Style: DefaultStyle()},
 		{Text: valueStr, Style: Style{}.Bold()},
@@ -519,11 +519,11 @@ func (b bulletGraphRenderable) Render(width int) []Line {
 	if w <= 0 {
 		w = 40
 	}
-	
+
 	// Calculate positions
 	actualPos := int((b.actual / b.max) * float64(w-1))
 	targetPos := int((b.target / b.max) * float64(w-1))
-	
+
 	if actualPos < 0 {
 		actualPos = 0
 	}
@@ -536,7 +536,7 @@ func (b bulletGraphRenderable) Render(width int) []Line {
 	if targetPos >= w {
 		targetPos = w - 1
 	}
-	
+
 	// Build the bar
 	var bar strings.Builder
 	for i := 0; i < w; i++ {
@@ -553,39 +553,11 @@ func (b bulletGraphRenderable) Render(width int) []Line {
 			bar.WriteString("░") // Empty
 		}
 	}
-	
+
 	return []Line{{
 		{Text: bar.String(), Style: DefaultStyle()},
 		{Text: fmt.Sprintf(" %.0f/%.0f", b.actual, b.target), Style: Style{}.Dim()},
 	}}
-}
-
-// normalize normalizes a slice of values to 0-1 range
-func normalize(values []float64) []float64 {
-	if len(values) == 0 {
-		return nil
-	}
-	
-	minVal, maxVal := values[0], values[0]
-	for _, v := range values {
-		if v < minVal {
-			minVal = v
-		}
-		if v > maxVal {
-			maxVal = v
-		}
-	}
-	
-	range_val := maxVal - minVal
-	if range_val == 0 {
-		range_val = 1
-	}
-	
-	result := make([]float64, len(values))
-	for i, v := range values {
-		result[i] = (v - minVal) / range_val
-	}
-	return result
 }
 
 // Statistics calculates and displays statistics for a dataset.
@@ -593,7 +565,7 @@ func Statistics(values []float64) Renderable {
 	if len(values) == 0 {
 		return Text("No data")
 	}
-	
+
 	// Calculate statistics
 	min, max := values[0], values[0]
 	sum := 0.0
@@ -607,7 +579,7 @@ func Statistics(values []float64) Renderable {
 		sum += v
 	}
 	mean := sum / float64(len(values))
-	
+
 	// Calculate standard deviation
 	variance := 0.0
 	for _, v := range values {
@@ -615,7 +587,7 @@ func Statistics(values []float64) Renderable {
 		variance += diff * diff
 	}
 	stdDev := math.Sqrt(variance / float64(len(values)))
-	
+
 	// Render
 	return Group(
 		Markup(fmt.Sprintf("[bold]Count:[-]    %d", len(values))),

@@ -63,6 +63,21 @@ selecter := widgets.NewSelect(
 )
 ```
 
+## AutoComplete
+
+`AutoComplete` combines an input with inline suggestions.
+
+API notes:
+- `SetOptions` or `SetProvider` populates suggestions.
+- `SetOnSelect` fires when a suggestion is chosen.
+
+Example:
+
+```go
+ac := widgets.NewAutoComplete()
+ac.SetOptions([]string{"Alpha", "Beta", "Gamma"})
+```
+
 ## Input
 
 `Input` is a single-line text editor with cursor support.
@@ -79,6 +94,23 @@ input.SetPlaceholder("Search")
 input.OnSubmit(func(text string) { fmt.Println(text) })
 ```
 
+## MultiSelect
+
+`MultiSelect` allows selecting multiple options in a list.
+
+API notes:
+- `SetOptions` updates choices.
+- `SetOnChange` receives selected options.
+
+Example:
+
+```go
+ms := widgets.NewMultiSelect(
+    widgets.MultiSelectOption{Label: "One"},
+    widgets.MultiSelectOption{Label: "Two"},
+)
+```
+
 ## TextArea
 
 `TextArea` is a multi-line text editor with scrolling.
@@ -93,4 +125,33 @@ Example:
 ```go
 area := widgets.NewTextArea()
 area.SetText("Multi-line\ninput")
+```
+
+## DateRangePicker
+
+`DateRangePicker` combines two inputs with a range-select calendar.
+
+API notes:
+- `SetRange` updates the current range.
+- `OnRangeSelect` fires on calendar selection.
+
+Example:
+
+```go
+picker := widgets.NewDateRangePicker()
+```
+
+## TimePicker
+
+`TimePicker` provides a time-of-day picker with keyboard input.
+
+API notes:
+- `SetShowSeconds` toggles second display.
+- `SetTime` updates the selection.
+
+Example:
+
+```go
+tp := widgets.NewTimePicker()
+tp.SetShowSeconds(true)
 ```

@@ -17,7 +17,6 @@ type GameView struct {
 
 	// UI elements
 	header       *widgets.Label
-	statusPanel  *widgets.Panel
 	tabs         *widgets.Tabs
 	tradeTab     *TradeTabContent
 	inventoryTab *InventoryTabContent
@@ -91,7 +90,6 @@ type GameView struct {
 	stashInput *widgets.Input
 
 	// Layout
-	focusIndex   int
 	style        backend.Style
 	dimStyle     backend.Style
 	accentStyle  backend.Style
@@ -659,11 +657,9 @@ func (v *GameView) renderTradeDialog(ctx runtime.RenderContext) {
 	title := fmt.Sprintf(" %s %s ", action, v.tradeCandy)
 	ctx.Buffer.SetString(rect.X+2, rect.Y, title, v.accentStyle)
 
-	price := v.game.Prices.Get()[v.tradeCandy]
+	price := v.game.sellPrice(v.tradeCandy)
 	if v.tradeIsBuy {
 		price = v.game.buyPrice(v.tradeCandy)
-	} else {
-		price = v.game.sellPrice(v.tradeCandy)
 	}
 	inv := v.game.Inventory.Get()
 	owned := inv[v.tradeCandy]

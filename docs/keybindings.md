@@ -34,6 +34,9 @@ keymap := &keybind.Keymap{
 Keymaps can be stacked, and you can define multiple modes using a
 `keybind.ModeManager`.
 
+If you need explicit error handling, use `ParseKeySequence` and handle the
+returned error before constructing bindings.
+
 ## Conditions
 
 Use conditions to gate bindings based on context:

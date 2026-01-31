@@ -77,14 +77,6 @@ func baseStyleForSource(source string, t *theme.Theme) compositor.Style {
 	}
 }
 
-func (r *Renderer) renderWithConfig(content string, cfg *StyleConfig) []StyledLine {
-	if cfg == nil {
-		return nil
-	}
-	root := r.parser.ParseString(content)
-	return r.renderASTWithConfig(root, []byte(content), cfg)
-}
-
 // RenderAST renders a pre-parsed markdown AST.
 func (r *Renderer) RenderAST(source string, root ast.Node, content string) []StyledLine {
 	cfg := r.configForSource(source)
@@ -276,11 +268,11 @@ func (r *Renderer) renderBlock(node ast.Node, state *renderState, tight bool) {
 		}
 
 	case *ast.FencedCodeBlock:
-		r.renderCodeBlock(state, n.Text(state.source), string(n.Language(state.source)))
+		r.renderCodeBlock(state, n.Lines().Value(state.source), string(n.Language(state.source)))
 		state.addSpacer()
 
 	case *ast.CodeBlock:
-		r.renderCodeBlock(state, n.Text(state.source), "")
+		r.renderCodeBlock(state, n.Lines().Value(state.source), "")
 		state.addSpacer()
 
 	case *ast.ThematicBreak:

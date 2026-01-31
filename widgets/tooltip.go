@@ -88,8 +88,11 @@ func (t *Tooltip) Measure(constraints runtime.Constraints) runtime.Size {
 
 // Layout assigns bounds to the target.
 func (t *Tooltip) Layout(bounds runtime.Rect) {
+	if t == nil {
+		return
+	}
 	t.Base.Layout(bounds)
-	if t == nil || t.target == nil {
+	if t.target == nil {
 		return
 	}
 	content := t.ContentBounds()
@@ -98,6 +101,9 @@ func (t *Tooltip) Layout(bounds runtime.Rect) {
 
 // Render draws the target.
 func (t *Tooltip) Render(ctx runtime.RenderContext) {
+	if t == nil {
+		return
+	}
 	runtime.RenderChild(ctx, t.target)
 }
 

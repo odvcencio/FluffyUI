@@ -30,7 +30,7 @@ go get github.com/odvcencio/fluffyui@latest
 go get github.com/odvcencio/fluffyui@latest
 ```
 
-**Requirements:** Go 1.22 or later
+**Requirements:** Go 1.24 or later
 
 Import path is the GitHub module path above (vanity domain is not set up yet).
 
@@ -45,13 +45,17 @@ package main
 
 import (
     "context"
+    "log"
 
     "github.com/odvcencio/fluffyui/fluffy"
 )
 
 func main() {
     // Create the application with defaults
-    app := fluffy.NewApp()
+    app, err := fluffy.NewApp()
+    if err != nil {
+        log.Fatal(err)
+    }
 
     // Set root widget and run
     app.SetRoot(fluffy.NewLabel("Hello from FluffyUI!"))

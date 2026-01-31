@@ -23,7 +23,11 @@ import (
 )
 
 func main() {
-    app := fluffy.NewApp()
+    app, err := fluffy.NewApp()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "app init failed: %v\n", err)
+        os.Exit(1)
+    }
     app.SetRoot(fluffy.NewLabel("Hello from FluffyUI"))
 
     if err := app.Run(context.Background()); err != nil && err != context.Canceled {

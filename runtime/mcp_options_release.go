@@ -2,11 +2,14 @@
 
 package runtime
 
-func (o *MCPOptions) validateTestFlags() {
+import "fmt"
+
+func (o *MCPOptions) validateTestFlags() error {
 	if o == nil {
-		return
+		return nil
 	}
 	if o.TestBypassTextGating || o.TestBypassClipboardGating {
-		panic("test bypass flags cannot be used in release builds")
+		return fmt.Errorf("test bypass flags cannot be used in release builds")
 	}
+	return nil
 }

@@ -106,7 +106,7 @@ func (g *AnimatedGauge) drawGauge(canvas *graphics.Canvas) {
 		return
 	}
 	cx, cy := w/2, h/2
-	radius := minInt(w, h)/2 - 3
+	radius := min(w, h)/2 - 3
 	if radius <= 0 {
 		return
 	}
@@ -127,13 +127,6 @@ func (g *AnimatedGauge) drawGauge(canvas *graphics.Canvas) {
 	endX := cx + int(math.Round(float64(radius)*math.Cos(angle)))
 	endY := cy + int(math.Round(float64(radius)*math.Sin(angle)))
 	effects.Glow(canvas, endX, endY, 3, g.colors.Glow, 0.5)
-}
-
-func minInt(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }
 
 var _ runtime.Widget = (*AnimatedGauge)(nil)

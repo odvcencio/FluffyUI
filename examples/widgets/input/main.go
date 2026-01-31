@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/odvcencio/fluffyui/backend"
 	"github.com/odvcencio/fluffyui/examples/internal/demo"
@@ -30,6 +31,10 @@ type InputView struct {
 	header    *widgets.Label
 	input     *widgets.Input
 	textarea  *widgets.TextArea
+	autoComp  *widgets.AutoComplete
+	multiSel  *widgets.MultiSelect
+	dateRange *widgets.DateRangePicker
+	timePick  *widgets.TimePicker
 	checkbox  *widgets.Checkbox
 	selecter  *widgets.Select
 	radioFast *widgets.Radio
@@ -46,6 +51,16 @@ func NewInputView() *InputView {
 	view.textarea = widgets.NewTextArea()
 	view.textarea.SetLabel("Notes")
 	view.textarea.SetText("Multi-line input\nwith scrolling")
+	view.autoComp = widgets.NewAutoComplete()
+	view.autoComp.SetOptions([]string{"Alpha", "Beta", "Gamma", "Delta"})
+	view.multiSel = widgets.NewMultiSelect(
+		widgets.MultiSelectOption{Label: "One"},
+		widgets.MultiSelectOption{Label: "Two"},
+		widgets.MultiSelectOption{Label: "Three"},
+	)
+	view.dateRange = widgets.NewDateRangePicker()
+	view.timePick = widgets.NewTimePicker()
+	view.timePick.SetShowSeconds(true)
 	view.checkbox = widgets.NewCheckbox("Enable feature")
 	view.selecter = widgets.NewSelect(
 		widgets.SelectOption{Label: "Low"},
@@ -82,6 +97,26 @@ func NewInputView() *InputView {
 		view.Invalidate()
 	})
 
+	view.autoComp.SetOnSelect(func(value string) {
+		view.status.SetText("AutoComplete: " + value)
+		view.Invalidate()
+	})
+
+	view.multiSel.SetOnChange(func(selected []widgets.MultiSelectOption) {
+		view.status.SetText(fmt.Sprintf("MultiSelect: %d selected", len(selected)))
+		view.Invalidate()
+	})
+
+	view.dateRange.OnRangeSelect(func(start, end time.Time) {
+		view.status.SetText(fmt.Sprintf("Range: %s - %s", start.Format("Jan 2"), end.Format("Jan 2")))
+		view.Invalidate()
+	})
+
+	view.timePick.SetOnChange(func(value time.Time) {
+		view.status.SetText("Time: " + value.Format("15:04:05"))
+		view.Invalidate()
+	})
+
 	group.OnChange(func(index int) {
 		label := "-"
 		if index == 0 {
@@ -111,10 +146,28 @@ func (i *InputView) Layout(bounds runtime.Rect) {
 		w.Layout(runtime.Rect{X: bounds.X, Y: y, Width: bounds.Width, Height: height})
 		y += height
 	}
+	measure := func(w runtime.Widget) int {
+		if w == nil {
+			return 0
+		}
+		remaining := bounds.Height - (y - bounds.Y)
+		if remaining < 1 {
+			remaining = 1
+		}
+		size := w.Measure(runtime.Constraints{MinWidth: bounds.Width, MaxWidth: bounds.Width, MinHeight: 0, MaxHeight: remaining})
+		if size.Height < 1 {
+			size.Height = 1
+		}
+		return size.Height
+	}
 
 	line(i.header, 1)
 	line(i.input, 1)
 	line(i.textarea, 4)
+	line(i.autoComp, measure(i.autoComp))
+	line(i.multiSel, measure(i.multiSel))
+	line(i.timePick, measure(i.timePick))
+	line(i.dateRange, measure(i.dateRange))
 	line(i.checkbox, 1)
 	line(i.selecter, 1)
 	line(i.radioFast, 1)
@@ -156,6 +209,18 @@ func (i *InputView) ChildWidgets() []runtime.Widget {
 	}
 	if i.textarea != nil {
 		children = append(children, i.textarea)
+	}
+	if i.autoComp != nil {
+		children = append(children, i.autoComp)
+	}
+	if i.multiSel != nil {
+		children = append(children, i.multiSel)
+	}
+	if i.timePick != nil {
+		children = append(children, i.timePick)
+	}
+	if i.dateRange != nil {
+		children = append(children, i.dateRange)
 	}
 	if i.checkbox != nil {
 		children = append(children, i.checkbox)

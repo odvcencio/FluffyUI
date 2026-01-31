@@ -6,6 +6,7 @@ import (
 	"github.com/odvcencio/fluffyui/accessibility"
 	"github.com/odvcencio/fluffyui/backend"
 	"github.com/odvcencio/fluffyui/clipboard"
+	"github.com/odvcencio/fluffyui/forms"
 	"github.com/odvcencio/fluffyui/runtime"
 	uistyle "github.com/odvcencio/fluffyui/style"
 	"github.com/odvcencio/fluffyui/terminal"
@@ -15,16 +16,19 @@ import (
 type TextArea struct {
 	FocusableBase
 
-	text       []rune
-	cursor     int
-	scrollY    int
-	label      string
-	style      backend.Style
-	focusStyle backend.Style
-	onChange   func(text string)
-	services   runtime.Services
-	styleSet   bool
-	focusSet   bool
+	text        []rune
+	cursor      int
+	scrollY     int
+	label       string
+	style       backend.Style
+	focusStyle  backend.Style
+	onChange    func(text string)
+	services    runtime.Services
+	styleSet    bool
+	focusSet    bool
+	validators  []forms.Validator
+	valErrors   []forms.ValidationError
+	valMessages []string
 }
 
 // NewTextArea creates a new text area.
@@ -153,6 +157,49 @@ func (t *TextArea) OnChange(fn func(text string)) {
 	t.onChange = fn
 }
 
+// SetValidators updates validation rules for the text area.
+func (t *TextArea) SetValidators(validators ...forms.Validator) {
+	if t == nil {
+		return
+	}
+	t.validators = validators
+}
+
+// Validate runs validation rules and returns validation errors.
+func (t *TextArea) Validate() []forms.ValidationError {
+	if t == nil {
+		return nil
+	}
+	errs, messages := validateValue(t.Text(), t.validators)
+	t.valErrors = errs
+	t.valMessages = messages
+	return errs
+}
+
+// Errors returns the latest validation error messages.
+func (t *TextArea) Errors() []string {
+	if t == nil {
+		return nil
+	}
+	if len(t.validators) > 0 {
+		t.Validate()
+	}
+	if len(t.valMessages) == 0 {
+		return nil
+	}
+	out := make([]string, len(t.valMessages))
+	copy(out, t.valMessages)
+	return out
+}
+
+// Valid reports whether validation passes.
+func (t *TextArea) Valid() bool {
+	if t == nil {
+		return true
+	}
+	return len(t.Validate()) == 0
+}
+
 // SetLabel updates the accessibility label.
 func (t *TextArea) SetLabel(label string) {
 	if t == nil {
@@ -204,15 +251,15 @@ func (t *TextArea) Render(ctx runtime.RenderContext) {
 	}
 	style := t.style
 	resolved := ctx.ResolveStyle(t)
-		if !resolved.IsZero() {
-			final := resolved
-			if t.styleSet {
-				final = final.Merge(uistyle.FromBackend(t.style))
-			}
-			if t.focused && t.focusSet {
-				final = final.Merge(uistyle.FromBackend(t.focusStyle))
-			}
-			style = final.ToBackend()
+	if !resolved.IsZero() {
+		final := resolved
+		if t.styleSet {
+			final = final.Merge(uistyle.FromBackend(t.style))
+		}
+		if t.focused && t.focusSet {
+			final = final.Merge(uistyle.FromBackend(t.focusStyle))
+		}
+		style = final.ToBackend()
 	} else if t.focused {
 		style = t.focusStyle
 	}
@@ -569,3 +616,4 @@ var _ clipboard.Target = (*TextArea)(nil)
 
 var _ runtime.Widget = (*TextArea)(nil)
 var _ runtime.Focusable = (*TextArea)(nil)
+var _ Validatable = (*TextArea)(nil)

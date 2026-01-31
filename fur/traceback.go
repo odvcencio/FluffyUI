@@ -3,6 +3,7 @@ package fur
 import (
 	"errors"
 	"fmt"
+	"go/build"
 	"os"
 	"runtime"
 	"runtime/debug"
@@ -171,7 +172,7 @@ func isInternalFrame(frame runtime.Frame) bool {
 }
 
 func isStdlibFrame(frame runtime.Frame) bool {
-	root := runtime.GOROOT()
+	root := build.Default.GOROOT
 	if root != "" {
 		if strings.HasPrefix(frame.File, root+string(os.PathSeparator)) {
 			return true

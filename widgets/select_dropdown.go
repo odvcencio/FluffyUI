@@ -92,7 +92,7 @@ func (d *selectDropdown) Render(ctx runtime.RenderContext) {
 	d.ensureSelectable()
 	d.ensureVisible(content.Height)
 
-	selectedStyle := d.selectedStyle
+	var selectedStyle backend.Style
 	if d.selectedSet {
 		selectedStyle = mergeBackendStyles(baseStyle, d.selectedStyle)
 	} else {

@@ -55,6 +55,11 @@ type VirtualList[T any] struct {
 	itemPool      *runtime.WidgetPool[runtime.Widget]
 	itemCache     map[int]runtime.Widget
 	poolMax       int
+	lazyLoad      func(start, end, total int)
+	lazyThreshold int
+	lastLazyStart int
+	lastLazyEnd   int
+	lastLazyTotal int
 }
 
 // NewVirtualList creates a virtual list widget.
@@ -65,6 +70,7 @@ func NewVirtualList[T any](adapter VirtualListAdapter[T]) *VirtualList[T] {
 		style:         backend.DefaultStyle(),
 		selectedStyle: backend.DefaultStyle().Reverse(true),
 		behavior:      scroll.ScrollBehavior{Vertical: scroll.ScrollAuto, Horizontal: scroll.ScrollNever, MouseWheel: 3, PageSize: 1},
+		lazyThreshold: 2,
 	}
 	v.list = scroll.NewVirtualList(0, 1, nil)
 	v.list.SetOverscan(2)
@@ -97,6 +103,25 @@ func (v *VirtualList[T]) SetAdapter(adapter VirtualListAdapter[T]) {
 	v.applyHeightProvider()
 	v.syncA11y()
 	v.Invalidate()
+}
+
+// SetLazyLoad registers a lazy-load callback for visible ranges.
+func (v *VirtualList[T]) SetLazyLoad(fn func(start, end, total int)) {
+	if v == nil {
+		return
+	}
+	v.lazyLoad = fn
+}
+
+// SetLazyLoadThreshold sets the item count threshold for triggering lazy loads.
+func (v *VirtualList[T]) SetLazyLoadThreshold(threshold int) {
+	if v == nil {
+		return
+	}
+	if threshold < 0 {
+		threshold = 0
+	}
+	v.lazyThreshold = threshold
 }
 
 // SetStyle updates the list base style.
@@ -265,8 +290,11 @@ func (v *VirtualList[T]) Measure(constraints runtime.Constraints) runtime.Size {
 
 // Layout stores bounds and updates viewport height.
 func (v *VirtualList[T]) Layout(bounds runtime.Rect) {
+	if v == nil {
+		return
+	}
 	v.FocusableBase.Layout(bounds)
-	if v == nil || v.list == nil {
+	if v.list == nil {
 		return
 	}
 	content := v.ContentBounds()
@@ -312,6 +340,7 @@ func (v *VirtualList[T]) Render(ctx runtime.RenderContext) {
 		return
 	}
 	v.refreshMetrics(content)
+	v.maybeLazyLoad()
 	if v.widgetFactory != nil {
 		v.renderWidgetItems(ctx, content)
 		return
@@ -462,6 +491,30 @@ func (v *VirtualList[T]) refreshMetrics(content runtime.Rect) {
 		v.list.SetItemCount(0)
 	}
 	v.list.SetViewportHeight(content.Height)
+}
+
+func (v *VirtualList[T]) maybeLazyLoad() {
+	if v == nil || v.list == nil || v.lazyLoad == nil {
+		return
+	}
+	start, end := v.list.GetVisibleRange()
+	total := 0
+	if v.adapter != nil {
+		total = v.adapter.Count()
+	}
+	if total <= 0 {
+		return
+	}
+	if start > v.lazyThreshold && total-end > v.lazyThreshold {
+		return
+	}
+	if start == v.lastLazyStart && end == v.lastLazyEnd && total == v.lastLazyTotal {
+		return
+	}
+	v.lastLazyStart = start
+	v.lastLazyEnd = end
+	v.lastLazyTotal = total
+	v.lazyLoad(start, end, total)
 }
 
 func (v *VirtualList[T]) renderAdapterItems(ctx runtime.RenderContext, content runtime.Rect) {
@@ -686,3 +739,4 @@ var _ scroll.Controller = (*VirtualList[any])(nil)
 var _ runtime.Widget = (*VirtualList[any])(nil)
 
 var _ runtime.Focusable = (*VirtualList[any])(nil)
+var _ LazyLoadable = (*VirtualList[any])(nil)

@@ -558,15 +558,13 @@ func (c *GPUCanvas) DrawText(text string, x, y float32, font *Font) {
 	cursorX := x
 	for _, r := range text {
 		glyph := pxFont.Glyph(r)
-		if glyph != nil {
-			for gy, row := range glyph {
-				for gx := 0; gx < len(row); gx++ {
-					if row[gx] != '#' {
-						continue
-					}
-					p := c.applyTransform(vec2{x: cursorX + float32(gx), y: y + float32(gy)})
-					c.setPixelAt(p, c.fillColor)
+		for gy, row := range glyph {
+			for gx := 0; gx < len(row); gx++ {
+				if row[gx] != '#' {
+					continue
 				}
+				p := c.applyTransform(vec2{x: cursorX + float32(gx), y: y + float32(gy)})
+				c.setPixelAt(p, c.fillColor)
 			}
 		}
 		cursorX += float32(pxFont.Width + pxFont.Spacing)

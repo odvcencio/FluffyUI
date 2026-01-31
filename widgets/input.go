@@ -6,6 +6,7 @@ import (
 	"github.com/odvcencio/fluffyui/accessibility"
 	"github.com/odvcencio/fluffyui/backend"
 	"github.com/odvcencio/fluffyui/clipboard"
+	"github.com/odvcencio/fluffyui/forms"
 	"github.com/odvcencio/fluffyui/runtime"
 	uistyle "github.com/odvcencio/fluffyui/style"
 	"github.com/odvcencio/fluffyui/terminal"
@@ -25,6 +26,9 @@ type Input struct {
 	services    runtime.Services
 	styleSet    bool
 	focusSet    bool
+	validators  []forms.Validator
+	valErrors   []forms.ValidationError
+	valMessages []string
 
 	// Callbacks
 	onSubmit func(text string)
@@ -75,14 +79,73 @@ func (i *Input) StyleType() string {
 	return "Input"
 }
 
-// OnSubmit sets the callback for when Enter is pressed.
-func (i *Input) OnSubmit(fn func(text string)) {
+// SetOnSubmit sets the callback for when Enter is pressed.
+func (i *Input) SetOnSubmit(fn func(text string)) {
+	if i == nil {
+		return
+	}
 	i.onSubmit = fn
 }
 
-// OnChange sets the callback for when text changes.
-func (i *Input) OnChange(fn func(text string)) {
+// Deprecated: use SetOnSubmit instead.
+func (i *Input) OnSubmit(fn func(text string)) {
+	i.SetOnSubmit(fn)
+}
+
+// SetOnChange sets the callback for when text changes.
+func (i *Input) SetOnChange(fn func(text string)) {
+	if i == nil {
+		return
+	}
 	i.onChange = fn
+}
+
+// Deprecated: use SetOnChange instead.
+func (i *Input) OnChange(fn func(text string)) {
+	i.SetOnChange(fn)
+}
+
+// SetValidators updates validation rules for the input.
+func (i *Input) SetValidators(validators ...forms.Validator) {
+	if i == nil {
+		return
+	}
+	i.validators = validators
+}
+
+// Validate runs validation rules and returns validation errors.
+func (i *Input) Validate() []forms.ValidationError {
+	if i == nil {
+		return nil
+	}
+	errs, messages := validateValue(i.Text(), i.validators)
+	i.valErrors = errs
+	i.valMessages = messages
+	return errs
+}
+
+// Errors returns the latest validation error messages.
+func (i *Input) Errors() []string {
+	if i == nil {
+		return nil
+	}
+	if len(i.validators) > 0 {
+		i.Validate()
+	}
+	if len(i.valMessages) == 0 {
+		return nil
+	}
+	out := make([]string, len(i.valMessages))
+	copy(out, i.valMessages)
+	return out
+}
+
+// Valid reports whether validation passes.
+func (i *Input) Valid() bool {
+	if i == nil {
+		return true
+	}
+	return len(i.Validate()) == 0
 }
 
 // SetLabel sets the accessibility label for the input.
@@ -1575,5 +1638,6 @@ var _ Selectable = (*MultilineInput)(nil)
 
 var _ runtime.Widget = (*Input)(nil)
 var _ runtime.Focusable = (*Input)(nil)
+var _ Validatable = (*Input)(nil)
 var _ runtime.Widget = (*MultilineInput)(nil)
 var _ runtime.Focusable = (*MultilineInput)(nil)

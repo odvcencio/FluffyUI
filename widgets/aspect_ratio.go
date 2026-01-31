@@ -61,8 +61,11 @@ func (a *AspectRatio) Measure(constraints runtime.Constraints) runtime.Size {
 
 // Layout assigns bounds and centers the child within the ratio box.
 func (a *AspectRatio) Layout(bounds runtime.Rect) {
+	if a == nil {
+		return
+	}
 	a.Base.Layout(bounds)
-	if a == nil || a.child == nil {
+	if a.child == nil {
 		return
 	}
 	content := a.ContentBounds()
@@ -79,6 +82,9 @@ func (a *AspectRatio) Layout(bounds runtime.Rect) {
 
 // Render draws the child.
 func (a *AspectRatio) Render(ctx runtime.RenderContext) {
+	if a == nil {
+		return
+	}
 	a.syncA11y()
 	runtime.RenderChild(ctx, a.child)
 }

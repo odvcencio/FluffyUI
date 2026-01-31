@@ -247,6 +247,22 @@ func (c *Calendar) DisplayedMonthSignal() *state.Signal[time.Time] {
 	return c.displayedMonth
 }
 
+// RangeStartSignal returns the range start signal.
+func (c *Calendar) RangeStartSignal() *state.Signal[*time.Time] {
+	if c == nil {
+		return nil
+	}
+	return c.rangeStart
+}
+
+// RangeEndSignal returns the range end signal.
+func (c *Calendar) RangeEndSignal() *state.Signal[*time.Time] {
+	if c == nil {
+		return nil
+	}
+	return c.rangeEnd
+}
+
 // SelectedDate returns the selected date.
 func (c *Calendar) SelectedDate() time.Time {
 	if c == nil || c.selectedDate == nil {
@@ -269,6 +285,45 @@ func (c *Calendar) DisplayedMonth() time.Time {
 		return time.Time{}
 	}
 	return c.displayedMonth.Get()
+}
+
+// RangeStart returns the current range start date.
+func (c *Calendar) RangeStart() *time.Time {
+	if c == nil || c.rangeStart == nil {
+		return nil
+	}
+	return c.rangeStart.Get()
+}
+
+// RangeEnd returns the current range end date.
+func (c *Calendar) RangeEnd() *time.Time {
+	if c == nil || c.rangeEnd == nil {
+		return nil
+	}
+	return c.rangeEnd.Get()
+}
+
+// SetRange updates the selected date range.
+func (c *Calendar) SetRange(start, end *time.Time) {
+	if c == nil {
+		return
+	}
+	if start != nil {
+		s := normalizeDate(*start)
+		c.rangeStart.Set(&s)
+	} else {
+		c.rangeStart.Set(nil)
+	}
+	if end != nil {
+		e := normalizeDate(*end)
+		c.rangeEnd.Set(&e)
+	} else {
+		c.rangeEnd.Set(nil)
+	}
+	if start != nil {
+		c.displayedMonth.Set(monthStart(*start))
+	}
+	c.invalidate()
 }
 
 // SetDisplayedMonth changes the visible month.

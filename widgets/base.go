@@ -265,41 +265,6 @@ func (f *FocusableBase) CanFocus() bool {
 	return true
 }
 
-// drawText is a helper to draw text with word wrapping.
-func drawText(buf *runtime.Buffer, bounds runtime.Rect, text string, style backend.Style) {
-	x := bounds.X
-	y := bounds.Y
-	maxX := bounds.X + bounds.Width
-	maxY := bounds.Y + bounds.Height
-
-	for _, r := range text {
-		if r == '\n' {
-			x = bounds.X
-			y++
-			if y >= maxY {
-				break
-			}
-			continue
-		}
-
-		if x >= maxX {
-			x = bounds.X
-			y++
-			if y >= maxY {
-				break
-			}
-		}
-
-		buf.Set(x, y, r, style)
-		x++
-	}
-}
-
-// fillRect fills a rectangle with a character.
-func fillRect(buf *runtime.Buffer, bounds runtime.Rect, ch rune, style backend.Style) {
-	buf.Fill(bounds, ch, style)
-}
-
 func textWidth(s string) int {
 	return runewidth.StringWidth(s)
 }
@@ -377,20 +342,6 @@ func writePadded(buf *runtime.Buffer, x, y, width int, text string, style backen
 	if pad := width - runewidth.StringWidth(text); pad > 0 {
 		buf.Fill(runtime.Rect{X: x + runewidth.StringWidth(text), Y: y, Width: pad, Height: 1}, ' ', style)
 	}
-}
-
-// centerString centers a string within the given width.
-func centerString(s string, width int) string {
-	if width <= 0 {
-		return ""
-	}
-	if textWidth(s) >= width {
-		return runewidth.Truncate(s, width, "")
-	}
-	pad := width - textWidth(s)
-	left := pad / 2
-	right := pad - left
-	return strings.Repeat(" ", left) + s + strings.Repeat(" ", right)
 }
 
 func resolveBaseStyle(ctx runtime.RenderContext, widget runtime.Widget, fallback backend.Style, fallbackSet bool) backend.Style {

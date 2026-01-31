@@ -21,7 +21,11 @@ func main() {
 	recordPath := os.Getenv("FLUFFYUI_RECORD")
 	exportPath := os.Getenv("FLUFFYUI_RECORD_EXPORT")
 	audioService, audioStatus := setupAudio()
-	app := fluffy.NewApp(fluffy.WithAudio(audioService))
+	app, err := fluffy.NewApp(fluffy.WithAudio(audioService))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "app init failed: %v\n", err)
+		os.Exit(1)
+	}
 
 	count := state.NewSignal(0)
 	count.SetEqualFunc(state.EqualComparable[int])
