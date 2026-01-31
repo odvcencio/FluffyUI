@@ -19,9 +19,12 @@ go get github.com/odvcencio/fluffyui@latest
 - **Reactive State Management** - Signals and computed values with automatic UI updates
 - **Flexible Keybindings** - Registry-based commands with modes, stacking, and conditions
 - **Accessibility Built-In** - Screen reader support, focus management, ARIA-like roles
+- **Performance Dashboard** - Render sampler + live FPS/dirty stats
 - **Recording & Export** - Capture terminal sessions as asciicast or video
 - **Simulation Backend** - Deterministic testing without a real terminal
 - **Audio Hooks** - Opinionated music and SFX service for apps
+- **Plugin Registry** - Lightweight discovery for third-party widgets
+- **i18n Support** - Simple localization bundle and runtime wiring
 - **Comprehensive Documentation** - Guides, examples, and GoDoc for every component
 
 ## Installation
@@ -76,6 +79,21 @@ go run ./cmd/fluffy dev -- go run ./examples/quickstart
 ```
 
 Audio note: the quickstart ships with tiny WAVs in `examples/quickstart/assets/audio` and auto-detects a player. Override with `FLUFFYUI_AUDIO_ASSETS=/path` or disable via `FLUFFYUI_AUDIO_ASSETS=off`.
+
+## Documentation
+
+- `docs/architecture.md` — design overview
+- `docs/widgets/overview.md` — widget catalog
+- `docs/testing.md` — testing guide
+- `docs/api-stability.md` — stability and deprecation policy
+- `docs/advanced-patterns.md` — custom widgets, performance, and scaling
+- `docs/performance.md` — profiling and optimization tips
+- `docs/i18n.md` — internationalization helpers
+- `docs/plugins.md` — plugin registry
+- `docs/showcase.md` — widget showcase overview
+- `docs/migration/` — migration guides
+
+Contributing: see `CONTRIBUTING.md` and `CODE_OF_CONDUCT.md`.
 
 ## Agent Interaction (Out-of-Process)
 

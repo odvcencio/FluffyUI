@@ -20,7 +20,7 @@ type DebugOverlay struct {
 }
 
 // DebugOverlayOption configures a debug overlay.
-type DebugOverlayOption func(*DebugOverlay)
+type DebugOverlayOption = Option[DebugOverlay]
 
 // NewDebugOverlay creates a debug overlay for the provided root widget.
 func NewDebugOverlay(root runtime.Widget, opts ...DebugOverlayOption) *DebugOverlay {

@@ -36,7 +36,7 @@ type GalleryView struct {
 
 func NewGalleryView() *GalleryView {
 	view := &GalleryView{}
-	view.title = widgets.NewLabel("Widget Gallery").WithStyle(backend.DefaultStyle().Bold(true))
+	view.title = widgets.NewLabel("Widget Gallery", widgets.WithLabelStyle(backend.DefaultStyle().Bold(true)))
 	view.left = newGalleryLeft()
 	view.right = newGalleryRight()
 	view.splitter = widgets.NewSplitter(view.left, view.right)

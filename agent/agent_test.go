@@ -1,7 +1,6 @@
 package agent
 
 import (
-	"context"
 	"strings"
 	"testing"
 	"time"
@@ -154,17 +153,7 @@ func TestAgentSnapshotAndActions(t *testing.T) {
 
 	agt := New(Config{App: app})
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	done := make(chan error, 1)
-	go func() {
-		done <- app.Run(ctx)
-	}()
-	defer func() {
-		app.ExecuteCommand(runtime.Quit{})
-		<-done
-	}()
+	runAppForTest(t, app)
 
 	if err := agt.WaitForWidget("Name", time.Second); err != nil {
 		t.Fatalf("wait for widget: %v", err)

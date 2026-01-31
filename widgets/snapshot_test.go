@@ -6,9 +6,11 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/odvcencio/fluffyui/backend"
 	"github.com/odvcencio/fluffyui/runtime"
+	"github.com/odvcencio/fluffyui/terminal"
 )
 
 var updateSnapshots = flag.Bool("update-snapshots", false, "Update golden snapshot files")
@@ -96,4 +98,64 @@ func TestSnapshot_Palette(t *testing.T) {
 
 	output := renderToString(p, 60, 12)
 	assertSnapshot(t, "palette", output)
+}
+
+func TestSnapshot_RichText(t *testing.T) {
+	view := NewRichText("# Title\n\n- One\n- Two\n\n**Bold** text.")
+	output := renderToString(view, 30, 10)
+	assertSnapshot(t, "rich_text", output)
+}
+
+func TestSnapshot_DataGrid(t *testing.T) {
+	grid := NewDataGrid(
+		TableColumn{Title: "Name"},
+		TableColumn{Title: "Value"},
+	)
+	grid.SetRows([][]string{{"Alpha", "1"}, {"Beta", "2"}, {"Gamma", "3"}})
+	grid.SetSelected(1, 1)
+	output := renderToString(grid, 30, 6)
+	assertSnapshot(t, "data_grid", output)
+}
+
+func TestSnapshot_DateRangePicker(t *testing.T) {
+	picker := NewDateRangePicker()
+	now := time.Date(2026, time.January, 2, 0, 0, 0, 0, time.UTC)
+	picker.calendar.now = func() time.Time { return now }
+	start := time.Date(2026, time.January, 2, 0, 0, 0, 0, time.UTC)
+	end := time.Date(2026, time.January, 5, 0, 0, 0, 0, time.UTC)
+	picker.SetRange(&start, &end)
+	output := renderToString(picker, 34, 10)
+	assertSnapshot(t, "date_range_picker", output)
+}
+
+func TestSnapshot_TimePicker(t *testing.T) {
+	picker := NewTimePicker()
+	picker.SetShowSeconds(true)
+	picker.SetTime(time.Date(2026, time.January, 2, 9, 30, 15, 0, time.UTC))
+	output := renderToString(picker, 10, 1)
+	assertSnapshot(t, "time_picker", output)
+}
+
+func TestSnapshot_AutoComplete(t *testing.T) {
+	ac := NewAutoComplete()
+	ac.SetOptions([]string{"Alpha", "Beta", "Gamma", "Delta"})
+	ac.SetQuery("a")
+	ac.Focus()
+	ac.HandleMessage(runtime.KeyMsg{Key: terminal.KeyDown})
+	output := renderToString(ac, 20, 6)
+	assertSnapshot(t, "autocomplete", output)
+}
+
+func TestSnapshot_MultiSelect(t *testing.T) {
+	ms := NewMultiSelect(
+		MultiSelectOption{Label: "Red"},
+		MultiSelectOption{Label: "Blue"},
+		MultiSelectOption{Label: "Green"},
+	)
+	ms.Focus()
+	ms.HandleMessage(runtime.KeyMsg{Key: terminal.KeyRune, Rune: ' '})
+	ms.HandleMessage(runtime.KeyMsg{Key: terminal.KeyDown})
+	ms.HandleMessage(runtime.KeyMsg{Key: terminal.KeyRune, Rune: ' '})
+	output := renderToString(ms, 20, 4)
+	assertSnapshot(t, "multiselect", output)
 }

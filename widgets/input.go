@@ -876,6 +876,10 @@ type MultilineInput struct {
 
 	onSubmit func(text string)
 	onChange func(text string)
+
+	validators  []forms.Validator
+	valErrors   []forms.ValidationError
+	valMessages []string
 }
 
 // NewMultilineInput creates a new multiline input widget.
@@ -1033,14 +1037,73 @@ func (m *MultilineInput) Clear() {
 	m.syncA11y()
 }
 
-// OnSubmit sets the callback (Ctrl+Enter to submit).
-func (m *MultilineInput) OnSubmit(fn func(text string)) {
+// SetOnSubmit sets the callback (Ctrl+Enter to submit).
+func (m *MultilineInput) SetOnSubmit(fn func(text string)) {
+	if m == nil {
+		return
+	}
 	m.onSubmit = fn
 }
 
-// OnChange sets the callback for when text changes.
-func (m *MultilineInput) OnChange(fn func(text string)) {
+// Deprecated: use SetOnSubmit instead.
+func (m *MultilineInput) OnSubmit(fn func(text string)) {
+	m.SetOnSubmit(fn)
+}
+
+// SetOnChange sets the callback for when text changes.
+func (m *MultilineInput) SetOnChange(fn func(text string)) {
+	if m == nil {
+		return
+	}
 	m.onChange = fn
+}
+
+// Deprecated: use SetOnChange instead.
+func (m *MultilineInput) OnChange(fn func(text string)) {
+	m.SetOnChange(fn)
+}
+
+// SetValidators updates validation rules for the multiline input.
+func (m *MultilineInput) SetValidators(validators ...forms.Validator) {
+	if m == nil {
+		return
+	}
+	m.validators = validators
+}
+
+// Validate runs validation rules and returns validation errors.
+func (m *MultilineInput) Validate() []forms.ValidationError {
+	if m == nil {
+		return nil
+	}
+	errs, messages := validateValue(m.Text(), m.validators)
+	m.valErrors = errs
+	m.valMessages = messages
+	return errs
+}
+
+// Errors returns the latest validation error messages.
+func (m *MultilineInput) Errors() []string {
+	if m == nil {
+		return nil
+	}
+	if len(m.validators) > 0 {
+		m.Validate()
+	}
+	if len(m.valMessages) == 0 {
+		return nil
+	}
+	out := make([]string, len(m.valMessages))
+	copy(out, m.valMessages)
+	return out
+}
+
+// Valid reports whether validation passes.
+func (m *MultilineInput) Valid() bool {
+	if m == nil {
+		return true
+	}
+	return len(m.Validate()) == 0
 }
 
 // SetLabel sets the accessibility label.
@@ -1641,3 +1704,4 @@ var _ runtime.Focusable = (*Input)(nil)
 var _ Validatable = (*Input)(nil)
 var _ runtime.Widget = (*MultilineInput)(nil)
 var _ runtime.Focusable = (*MultilineInput)(nil)
+var _ Validatable = (*MultilineInput)(nil)

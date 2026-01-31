@@ -29,6 +29,12 @@ Complete catalog of all 35+ widgets organized by category:
 - Navigation widgets (Tabs, Menu, Palette)
 - Feedback widgets (Dialog, Toast, Progress)
 
+### Showcase Tabs
+```bash
+go run ./examples/showcase
+```
+Curated widget showcase with multiple tabs (overview, inputs, data).
+
 ### Widget Categories
 ```bash
 go run ./examples/widgets/layout     # Layout demonstrations
@@ -190,6 +196,15 @@ Session recording and export:
 - Video export
 - Playback
 
+### Performance Dashboard
+```bash
+go run ./examples/perf-dashboard
+```
+Live render performance summary:
+- FPS and render/flush timing
+- Dirty cell ratios
+- Layer count sampling
+
 ## Furry Formats (FUR)
 
 ### FUR Demo
@@ -201,6 +216,11 @@ Rich text and formatting:
 - Styled text
 - Inline images
 - Color support
+
+## Community Examples
+
+Community examples live under `examples/community` and will eventually be
+mirrored from a dedicated `fluffyui-examples` repository.
 
 ## Custom Implementations
 

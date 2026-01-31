@@ -24,7 +24,9 @@ See `docs/widgets/data.md` and `examples/widgets/data`.
 
 - List
 - Table
+- DataGrid
 - Tree
+- RichText
 - SearchWidget
 
 ## Input
@@ -35,8 +37,12 @@ See `docs/widgets/input.md` and `examples/widgets/input`.
 - Checkbox
 - Radio
 - Select
+- AutoComplete
+- MultiSelect
 - Input
 - TextArea
+- DateRangePicker
+- TimePicker
 
 ## Navigation
 

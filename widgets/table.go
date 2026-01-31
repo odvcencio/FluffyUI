@@ -22,6 +22,7 @@ type Table struct {
 	FocusableBase
 	Columns       []TableColumn
 	Rows          [][]string
+	dataSource    TabularDataSource
 	selected      int
 	offset        int
 	label         string
@@ -81,8 +82,27 @@ func (t *Table) SetRows(rows [][]string) {
 	if t == nil {
 		return
 	}
+	t.dataSource = nil
 	t.Rows = rows
 	t.syncA11y()
+}
+
+// SetDataSource sets a virtualized data source for large datasets.
+func (t *Table) SetDataSource(source TabularDataSource) {
+	if t == nil {
+		return
+	}
+	t.dataSource = source
+	t.syncA11y()
+	t.Invalidate()
+}
+
+// DataSource returns the active data source.
+func (t *Table) DataSource() TabularDataSource {
+	if t == nil {
+		return nil
+	}
+	return t.dataSource
 }
 
 // SetLabel updates the accessibility label.
@@ -115,7 +135,7 @@ func (t *Table) RowCount() int {
 	if t == nil {
 		return 0
 	}
-	return len(t.Rows)
+	return t.rowCount()
 }
 
 // ColumnCount returns the number of columns.
@@ -128,7 +148,13 @@ func (t *Table) ColumnCount() int {
 
 // SelectedRow returns the currently selected row data, or nil if no selection.
 func (t *Table) SelectedRow() []string {
-	if t == nil || t.selected < 0 || t.selected >= len(t.Rows) {
+	if t == nil || t.selected < 0 || t.selected >= t.rowCount() {
+		return nil
+	}
+	if provider, ok := t.dataSource.(TabularRowProvider); ok {
+		return provider.Row(t.selected)
+	}
+	if t.dataSource != nil {
 		return nil
 	}
 	return t.Rows[t.selected]
@@ -136,8 +162,11 @@ func (t *Table) SelectedRow() []string {
 
 // GetCell returns the cell value at the given row and column.
 func (t *Table) GetCell(row, col int) string {
-	if t == nil || row < 0 || row >= len(t.Rows) {
+	if t == nil || row < 0 || row >= t.rowCount() {
 		return ""
+	}
+	if t.dataSource != nil {
+		return t.dataSource.Cell(row, col)
 	}
 	if col < 0 || col >= len(t.Rows[row]) {
 		return ""
@@ -147,7 +176,14 @@ func (t *Table) GetCell(row, col int) string {
 
 // SetCell updates a cell value at the given row and column.
 func (t *Table) SetCell(row, col int, value string) {
-	if t == nil || row < 0 || row >= len(t.Rows) {
+	if t == nil || row < 0 || row >= t.rowCount() {
+		return
+	}
+	if editable, ok := t.dataSource.(TabularEditable); ok {
+		editable.SetCell(row, col, value)
+		return
+	}
+	if t.dataSource != nil {
 		return
 	}
 	// Expand row if needed
@@ -160,7 +196,7 @@ func (t *Table) SetCell(row, col int, value string) {
 // Measure returns the desired size.
 func (t *Table) Measure(constraints runtime.Constraints) runtime.Size {
 	return t.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {
-		height := min(len(t.Rows)+1, contentConstraints.MaxHeight)
+		height := min(t.rowCount()+1, contentConstraints.MaxHeight)
 		if height <= 0 {
 			height = contentConstraints.MinHeight
 		}
@@ -206,11 +242,12 @@ func (t *Table) Render(ctx runtime.RenderContext) {
 	if rowArea <= 0 {
 		return
 	}
+	rowCount := t.rowCount()
 	if t.selected < 0 {
 		t.selected = 0
 	}
-	if t.selected >= len(t.Rows) {
-		t.selected = len(t.Rows) - 1
+	if t.selected >= rowCount {
+		t.selected = rowCount - 1
 	}
 	if t.selected < t.offset {
 		t.offset = t.selected
@@ -220,7 +257,7 @@ func (t *Table) Render(ctx runtime.RenderContext) {
 	}
 	for row := 0; row < rowArea; row++ {
 		rowIndex := t.offset + row
-		if rowIndex < 0 || rowIndex >= len(t.Rows) {
+		if rowIndex < 0 || rowIndex >= rowCount {
 			break
 		}
 		style := baseStyle
@@ -232,10 +269,7 @@ func (t *Table) Render(ctx runtime.RenderContext) {
 			if x >= content.X+content.Width {
 				break
 			}
-			cell := ""
-			if colIndex < len(t.Rows[rowIndex]) {
-				cell = t.Rows[rowIndex][colIndex]
-			}
+			cell := t.GetCell(rowIndex, colIndex)
 			cell = truncateString(cell, width)
 			writePadded(ctx.Buffer, x, content.Y+1+row, width, cell, style)
 			x += width + 1
@@ -269,7 +303,7 @@ func (t *Table) HandleMessage(msg runtime.Message) runtime.HandleResult {
 		t.setSelected(0)
 		return runtime.Handled()
 	case terminal.KeyEnd:
-		t.setSelected(len(t.Rows) - 1)
+		t.setSelected(t.rowCount() - 1)
 		return runtime.Handled()
 	}
 	return runtime.Unhandled()
@@ -279,15 +313,16 @@ func (t *Table) setSelected(index int) {
 	if t == nil {
 		return
 	}
-	if len(t.Rows) == 0 {
+	rowCount := t.rowCount()
+	if rowCount == 0 {
 		t.selected = 0
 		return
 	}
 	if index < 0 {
 		index = 0
 	}
-	if index >= len(t.Rows) {
-		index = len(t.Rows) - 1
+	if index >= rowCount {
+		index = rowCount - 1
 	}
 	t.selected = index
 	t.syncA11y()
@@ -305,8 +340,8 @@ func (t *Table) syncA11y() {
 		label = "Table"
 	}
 	t.Base.Label = label
-	t.Base.Description = fmt.Sprintf("%d rows, %d columns", len(t.Rows), len(t.Columns))
-	if t.selected >= 0 && t.selected < len(t.Rows) {
+	t.Base.Description = fmt.Sprintf("%d rows, %d columns", t.rowCount(), len(t.Columns))
+	if t.selected >= 0 && t.selected < t.rowCount() {
 		t.Base.Value = &accessibility.ValueInfo{Text: t.selectedRowSummary()}
 	} else {
 		t.Base.Value = nil
@@ -314,10 +349,40 @@ func (t *Table) syncA11y() {
 }
 
 func (t *Table) selectedRowSummary() string {
-	if t == nil || t.selected < 0 || t.selected >= len(t.Rows) {
+	if t == nil || t.selected < 0 || t.selected >= t.rowCount() {
 		return ""
 	}
-	row := t.Rows[t.selected]
+	if provider, ok := t.dataSource.(TabularRowProvider); ok {
+		return summarizeRow(provider.Row(t.selected))
+	}
+	if t.dataSource != nil {
+		cells := make([]string, 0, len(t.Columns))
+		for col := range t.Columns {
+			cell := strings.TrimSpace(t.dataSource.Cell(t.selected, col))
+			if cell == "" {
+				continue
+			}
+			cells = append(cells, cell)
+		}
+		return strings.Join(cells, " | ")
+	}
+	return summarizeRow(t.Rows[t.selected])
+}
+
+func (t *Table) rowCount() int {
+	if t == nil {
+		return 0
+	}
+	if t.dataSource != nil {
+		if count := t.dataSource.RowCount(); count > 0 {
+			return count
+		}
+		return 0
+	}
+	return len(t.Rows)
+}
+
+func summarizeRow(row []string) string {
 	if len(row) == 0 {
 		return ""
 	}
@@ -390,7 +455,7 @@ func (t *Table) columnsSignature() uint32 {
 
 // ScrollBy scrolls selection by delta.
 func (t *Table) ScrollBy(dx, dy int) {
-	if t == nil || len(t.Rows) == 0 || dy == 0 {
+	if t == nil || t.rowCount() == 0 || dy == 0 {
 		return
 	}
 	t.setSelected(t.selected + dy)
@@ -399,7 +464,7 @@ func (t *Table) ScrollBy(dx, dy int) {
 
 // ScrollTo scrolls to an absolute row index.
 func (t *Table) ScrollTo(x, y int) {
-	if t == nil || len(t.Rows) == 0 {
+	if t == nil || t.rowCount() == 0 {
 		return
 	}
 	t.setSelected(y)
@@ -408,7 +473,7 @@ func (t *Table) ScrollTo(x, y int) {
 
 // PageBy scrolls by a number of pages.
 func (t *Table) PageBy(pages int) {
-	if t == nil || len(t.Rows) == 0 {
+	if t == nil || t.rowCount() == 0 {
 		return
 	}
 	pageSize := t.bounds.Height - 1
@@ -421,7 +486,7 @@ func (t *Table) PageBy(pages int) {
 
 // ScrollToStart scrolls to the first row.
 func (t *Table) ScrollToStart() {
-	if t == nil || len(t.Rows) == 0 {
+	if t == nil || t.rowCount() == 0 {
 		return
 	}
 	t.setSelected(0)
@@ -430,10 +495,10 @@ func (t *Table) ScrollToStart() {
 
 // ScrollToEnd scrolls to the last row.
 func (t *Table) ScrollToEnd() {
-	if t == nil || len(t.Rows) == 0 {
+	if t == nil || t.rowCount() == 0 {
 		return
 	}
-	t.setSelected(len(t.Rows) - 1)
+	t.setSelected(t.rowCount() - 1)
 	t.Invalidate()
 }
 

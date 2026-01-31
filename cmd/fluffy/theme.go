@@ -28,7 +28,7 @@ type colorRGB struct {
 
 func runTheme(args []string) error {
 	if len(args) < 1 {
-		return errors.New("usage: fluffy theme init|check|export [flags]")
+		return errors.New("usage: fluffy theme init|check|export|list|install [flags]")
 	}
 	switch args[0] {
 	case "init":
@@ -37,6 +37,10 @@ func runTheme(args []string) error {
 		return runThemeCheck(args[1:])
 	case "export":
 		return runThemeExport(args[1:])
+	case "list":
+		return runThemeList(args[1:])
+	case "install":
+		return runThemeInstall(args[1:])
 	default:
 		return fmt.Errorf("unknown theme command: %s", args[0])
 	}
@@ -96,6 +100,90 @@ func runThemeExport(args []string) error {
 		return err
 	}
 	return writeFile(*outPath, []byte(css), 0o644, *force)
+}
+
+type themeCatalog struct {
+	Themes []themeCatalogEntry `yaml:"themes"`
+}
+
+type themeCatalogEntry struct {
+	Name        string `yaml:"name"`
+	Path        string `yaml:"path"`
+	Description string `yaml:"description"`
+}
+
+func runThemeList(args []string) error {
+	fs := flag.NewFlagSet("theme list", flag.ContinueOnError)
+	dir := fs.String("dir", "themes", "themes directory")
+	catalogPath := fs.String("catalog", "", "optional catalog file")
+	fs.SetOutput(os.Stderr)
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	if *catalogPath != "" {
+		raw, err := os.ReadFile(*catalogPath)
+		if err != nil {
+			return err
+		}
+		var catalog themeCatalog
+		if err := yaml.Unmarshal(raw, &catalog); err != nil {
+			return fmt.Errorf("parse catalog: %w", err)
+		}
+		for _, entry := range catalog.Themes {
+			name := strings.TrimSpace(entry.Name)
+			if name == "" {
+				name = entry.Path
+			}
+			if entry.Description != "" {
+				fmt.Fprintf(os.Stdout, "%s - %s\n", name, entry.Description)
+			} else {
+				fmt.Fprintln(os.Stdout, name)
+			}
+		}
+		return nil
+	}
+
+	entries, err := os.ReadDir(*dir)
+	if err != nil {
+		return err
+	}
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		if strings.HasSuffix(name, ".yaml") || strings.HasSuffix(name, ".yml") {
+			fmt.Fprintln(os.Stdout, name)
+		}
+	}
+	return nil
+}
+
+func runThemeInstall(args []string) error {
+	fs := flag.NewFlagSet("theme install", flag.ContinueOnError)
+	source := fs.String("source", "", "source theme file")
+	dir := fs.String("dir", "themes", "destination directory")
+	force := fs.Bool("force", false, "overwrite existing file")
+	fs.SetOutput(os.Stderr)
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if strings.TrimSpace(*source) == "" {
+		return errors.New("missing --source theme file")
+	}
+	if _, err := loadTheme(*source); err != nil {
+		return err
+	}
+	if err := ensureDir(*dir); err != nil {
+		return err
+	}
+	target := filepath.Join(*dir, filepath.Base(*source))
+	content, err := os.ReadFile(*source)
+	if err != nil {
+		return err
+	}
+	return writeFile(target, content, 0o644, *force)
 }
 
 func loadTheme(path string) (themeFile, error) {

@@ -13,8 +13,9 @@ refactored widgets should follow these conventions for consistency.
 ## Options Pattern
 
 - Define a `FooOption` type and `With*` helpers:
-  - `type ButtonOption func(*Button)`
+  - `type ButtonOption = Option[Button]`
   - `func WithVariant(v Variant) ButtonOption { ... }`
+- Prefer the shared `widgets.Option[T]` alias for new option types.
 - Options should be nil-safe and idempotent.
 
 ## Event Handlers

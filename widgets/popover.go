@@ -34,7 +34,7 @@ type Popover struct {
 }
 
 // PopoverOption configures a popover.
-type PopoverOption func(*Popover)
+type PopoverOption = Option[Popover]
 
 // NewPopover creates a popover anchored to the given rect.
 func NewPopover(anchor runtime.Rect, child runtime.Widget, opts ...PopoverOption) *Popover {

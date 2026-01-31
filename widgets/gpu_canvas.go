@@ -25,41 +25,108 @@ type GPUCanvasWidget struct {
 	pixelHeight int
 	driver      gpu.Driver
 	backend     gpu.Backend
+
+	autoEncoder    graphics.TerminalEncoder
+	encoderChecked bool
+	fallbackCanvas *graphics.Canvas
+	fallbackWidth  int
+	fallbackHeight int
+}
+
+// GPUCanvasOption configures a GPUCanvasWidget.
+type GPUCanvasOption = Option[GPUCanvasWidget]
+
+// WithGPUCanvasEncoder sets a specific terminal encoder.
+func WithGPUCanvasEncoder(encoder graphics.TerminalEncoder) GPUCanvasOption {
+	return func(w *GPUCanvasWidget) {
+		if w == nil {
+			return
+		}
+		w.encoder = encoder
+		w.blitter = nil
+	}
+}
+
+// WithGPUCanvasBackend sets the GPU backend used by the canvas.
+func WithGPUCanvasBackend(backend gpu.Backend) GPUCanvasOption {
+	return func(w *GPUCanvasWidget) {
+		if w == nil {
+			return
+		}
+		w.backend = backend
+		w.driver = nil
+		w.canvas = nil
+	}
+}
+
+// WithGPUCanvasDriver sets a specific driver instance.
+func WithGPUCanvasDriver(driver gpu.Driver) GPUCanvasOption {
+	return func(w *GPUCanvasWidget) {
+		if w == nil {
+			return
+		}
+		w.driver = driver
+		w.canvas = nil
+	}
 }
 
 // NewGPUCanvasWidget creates a GPUCanvasWidget with the draw callback.
-func NewGPUCanvasWidget(draw func(canvas *gpu.GPUCanvas)) *GPUCanvasWidget {
-	return &GPUCanvasWidget{draw: draw, backend: gpu.BackendAuto}
+func NewGPUCanvasWidget(draw func(canvas *gpu.GPUCanvas), opts ...GPUCanvasOption) *GPUCanvasWidget {
+	widget := &GPUCanvasWidget{draw: draw, backend: gpu.BackendAuto}
+	for _, opt := range opts {
+		if opt == nil {
+			continue
+		}
+		opt(widget)
+	}
+	return widget
 }
 
-// WithEncoder sets a specific terminal encoder.
-func (w *GPUCanvasWidget) WithEncoder(encoder graphics.TerminalEncoder) *GPUCanvasWidget {
+// SetEncoder sets a specific terminal encoder.
+func (w *GPUCanvasWidget) SetEncoder(encoder graphics.TerminalEncoder) {
 	if w == nil {
-		return w
+		return
 	}
 	w.encoder = encoder
 	w.blitter = nil
-	return w
+	w.autoEncoder = nil
+	w.encoderChecked = false
 }
 
-// WithBackend sets the GPU backend used by the canvas.
-func (w *GPUCanvasWidget) WithBackend(backend gpu.Backend) *GPUCanvasWidget {
+// SetBackend sets the GPU backend used by the canvas.
+func (w *GPUCanvasWidget) SetBackend(backend gpu.Backend) {
 	if w == nil {
-		return w
+		return
 	}
 	w.backend = backend
 	w.driver = nil
 	w.canvas = nil
-	return w
 }
 
-// WithDriver sets a specific driver instance.
-func (w *GPUCanvasWidget) WithDriver(driver gpu.Driver) *GPUCanvasWidget {
+// SetDriver sets a specific driver instance.
+func (w *GPUCanvasWidget) SetDriver(driver gpu.Driver) {
 	if w == nil {
-		return w
+		return
 	}
 	w.driver = driver
 	w.canvas = nil
+}
+
+// Deprecated: prefer WithGPUCanvasEncoder during construction or SetEncoder for mutation.
+func (w *GPUCanvasWidget) WithEncoder(encoder graphics.TerminalEncoder) *GPUCanvasWidget {
+	w.SetEncoder(encoder)
+	return w
+}
+
+// Deprecated: prefer WithGPUCanvasBackend during construction or SetBackend for mutation.
+func (w *GPUCanvasWidget) WithBackend(backend gpu.Backend) *GPUCanvasWidget {
+	w.SetBackend(backend)
+	return w
+}
+
+// Deprecated: prefer WithGPUCanvasDriver during construction or SetDriver for mutation.
+func (w *GPUCanvasWidget) WithDriver(driver gpu.Driver) *GPUCanvasWidget {
+	w.SetDriver(driver)
 	return w
 }
 
@@ -101,6 +168,7 @@ func (w *GPUCanvasWidget) Unbind() {
 		w.canvas.Dispose()
 		w.canvas = nil
 	}
+	w.fallbackCanvas = nil
 }
 
 // Render draws the GPU canvas.
@@ -114,11 +182,17 @@ func (w *GPUCanvasWidget) Render(ctx runtime.RenderContext) {
 	}
 	encoder := w.encoder
 	if encoder == nil {
-		caps := terminal.DetectCapabilities()
-		if caps.Kitty {
-			encoder = graphics.KittyEncoder{}
-		} else if caps.Sixel {
-			encoder = graphics.SixelEncoder{}
+		if w.encoderChecked {
+			encoder = w.autoEncoder
+		} else {
+			caps := terminal.DetectCapabilities()
+			if caps.Kitty {
+				encoder = graphics.KittyEncoder{}
+			} else if caps.Sixel {
+				encoder = graphics.SixelEncoder{}
+			}
+			w.autoEncoder = encoder
+			w.encoderChecked = true
 		}
 	}
 	if encoder == nil {
@@ -221,7 +295,14 @@ func (w *GPUCanvasWidget) renderBrailleFallback(ctx runtime.RenderContext, bound
 	if len(pixels) == 0 {
 		return
 	}
-	fallback := graphics.NewCanvasWithBlitter(bounds.Width, bounds.Height, blitter)
+	if w.fallbackCanvas == nil || w.fallbackWidth != bounds.Width || w.fallbackHeight != bounds.Height {
+		w.fallbackCanvas = graphics.NewCanvasWithBlitter(bounds.Width, bounds.Height, blitter)
+		w.fallbackWidth = bounds.Width
+		w.fallbackHeight = bounds.Height
+	} else {
+		w.fallbackCanvas.Clear()
+	}
+	fallback := w.fallbackCanvas
 	dstW, dstH := fallback.Size()
 	srcW := w.pixelWidth
 	srcH := w.pixelHeight

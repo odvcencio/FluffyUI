@@ -51,7 +51,7 @@ func main() {
 	list.SetOverscan(4)
 	list.SetLabel("Virtual Items")
 
-	panel := widgets.NewPanel(list).WithBorder(backend.DefaultStyle())
+	panel := widgets.NewPanel(list, widgets.WithPanelBorder(backend.DefaultStyle()))
 	panel.SetTitle(fmt.Sprintf("Virtual List (%d items)", count))
 
 	bundle, err := demo.NewApp(panel, demo.Options{})

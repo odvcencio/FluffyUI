@@ -42,7 +42,7 @@ type Button struct {
 }
 
 // ButtonOption configures a button.
-type ButtonOption func(*Button)
+type ButtonOption = Option[Button]
 
 // NewButton creates a new button.
 func NewButton(label string, opts ...ButtonOption) *Button {

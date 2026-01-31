@@ -67,7 +67,7 @@ type AgentDemoView struct {
 
 func NewAgentDemoView(addr string) *AgentDemoView {
 	view := &AgentDemoView{}
-	view.title = widgets.NewLabel("AI Agent Demo").WithStyle(backend.DefaultStyle().Bold(true))
+	view.title = widgets.NewLabel("AI Agent Demo", widgets.WithLabelStyle(backend.DefaultStyle().Bold(true)))
 	view.addr = widgets.NewLabel("Agent server: " + addr)
 	view.help = widgets.NewLabel("Run: python examples/ai-agent-demo/agent.py")
 
@@ -75,13 +75,13 @@ func NewAgentDemoView(addr string) *AgentDemoView {
 	view.input.SetLabel("Command")
 	view.input.Focus()
 	view.status = widgets.NewLabel("Submitted: (none)")
-	view.input.OnSubmit(func(text string) {
+	view.input.SetOnSubmit(func(text string) {
 		view.status.SetText("Submitted: " + text)
 	})
 
 	stack := demo.NewVBox(view.input, view.status)
 	stack.Gap = 1
-	view.panel = widgets.NewPanel(stack).WithBorder(backend.DefaultStyle())
+	view.panel = widgets.NewPanel(stack, widgets.WithPanelBorder(backend.DefaultStyle()))
 	view.panel.SetTitle("Input")
 	return view
 }

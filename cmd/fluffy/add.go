@@ -118,7 +118,7 @@ type {{.TypeName}} struct {
 
 func New{{.TypeName}}() *{{.TypeName}} {
 	p := &{{.TypeName}}{}
-	p.title = ui.NewLabel("{{.TypeName}}").WithStyle(backend.DefaultStyle().Bold(true))
+	p.title = ui.NewLabel("{{.TypeName}}", ui.WithLabelStyle(backend.DefaultStyle().Bold(true)))
 	return p
 }
 

@@ -14,26 +14,26 @@ import (
 // AsyncImage loads an image asynchronously and renders it when ready.
 type AsyncImage struct {
 	Component
-	loader     func() (image.Image, error)
+	loader      func() (image.Image, error)
 	placeholder runtime.Widget
-	blitter    graphics.Blitter
-	scaleMode  graphics.ScaleMode
-	scaleToFit bool
-	center     bool
+	blitter     graphics.Blitter
+	scaleMode   graphics.ScaleMode
+	scaleToFit  bool
+	center      bool
 
 	canvas     *graphics.Canvas
 	cellWidth  int
 	cellHeight int
 
-	mu      sync.Mutex
-	img     image.Image
-	err     error
-	loading bool
+	mu       sync.Mutex
+	img      image.Image
+	err      error
+	loading  bool
 	loadOnce sync.Once
 }
 
 // AsyncImageOption configures an async image widget.
-type AsyncImageOption func(*AsyncImage)
+type AsyncImageOption = Option[AsyncImage]
 
 // NewAsyncImage loads an image from disk asynchronously.
 func NewAsyncImage(path string, opts ...AsyncImageOption) *AsyncImage {

@@ -14,6 +14,7 @@ import (
 	"github.com/odvcencio/fluffyui/audio"
 	"github.com/odvcencio/fluffyui/backend"
 	"github.com/odvcencio/fluffyui/clipboard"
+	"github.com/odvcencio/fluffyui/i18n"
 	"github.com/odvcencio/fluffyui/state"
 	"github.com/odvcencio/fluffyui/style"
 	"github.com/odvcencio/fluffyui/terminal"
@@ -49,6 +50,8 @@ type AppConfig struct {
 	Stylesheet        *style.Stylesheet
 	Animator          *animation.Animator
 	ReducedMotion     bool
+	FrameBudget       time.Duration
+	Localizer         i18n.Localizer
 	ErrorReporter     *ErrorReporter
 }
 
@@ -77,6 +80,9 @@ type App struct {
 	stylesheet        *style.Stylesheet
 	animator          *animation.Animator
 	reducedMotion     bool
+	frameBudget       time.Duration
+	lastFrameDuration time.Duration
+	localizer         i18n.Localizer
 	errorReporter     *ErrorReporter
 	taskCtx           context.Context
 	taskCancel        context.CancelFunc
@@ -130,6 +136,8 @@ func NewApp(cfg AppConfig) *App {
 		stylesheet:        sheet,
 		animator:          cfg.Animator,
 		reducedMotion:     cfg.ReducedMotion,
+		frameBudget:       cfg.FrameBudget,
+		localizer:         cfg.Localizer,
 		errorReporter:     cfg.ErrorReporter,
 	}
 	if app.flushPolicy == 0 {
@@ -169,12 +177,29 @@ func (a *App) Theme() *theme.Theme {
 	return a.theme
 }
 
+// Localizer returns the active localizer.
+func (a *App) Localizer() i18n.Localizer {
+	if a == nil {
+		return nil
+	}
+	return a.localizer
+}
+
 // Animator returns the app animator.
 func (a *App) Animator() *animation.Animator {
 	if a == nil {
 		return nil
 	}
 	return a.animator
+}
+
+// SetLocalizer updates the app localizer.
+func (a *App) SetLocalizer(localizer i18n.Localizer) {
+	if a == nil {
+		return
+	}
+	a.localizer = localizer
+	a.Invalidate()
 }
 
 // SetStylesheet replaces the active stylesheet and invalidates the render pass.
@@ -384,7 +409,9 @@ func (a *App) Run(ctx context.Context) error {
 			msg = TickMsg{Time: now}
 			if a.animator != nil {
 				dt := a.tickRate.Seconds()
-				if a.animator.Update(dt) {
+				if a.frameBudget > 0 && a.lastFrameDuration > a.frameBudget {
+					// Skip animation update when we're over budget.
+				} else if a.animator.Update(dt) {
 					a.dirty = true
 				}
 			}
@@ -541,9 +568,10 @@ func (a *App) render() {
 
 	observer := a.renderObserver
 	var stats RenderStats
+	frameStart := time.Now()
 	if observer != nil {
 		stats.Frame = atomic.AddInt64(&a.renderFrame, 1)
-		stats.Started = time.Now()
+		stats.Started = frameStart
 		stats.LayerCount = a.screen.LayerCount()
 	}
 
@@ -654,6 +682,7 @@ func (a *App) render() {
 		stats.TotalDuration = stats.Ended.Sub(stats.Started)
 		observer.ObserveRender(stats)
 	}
+	a.lastFrameDuration = time.Since(frameStart)
 }
 
 func (a *App) taskContext() context.Context {

@@ -1,0 +1,36 @@
+{
+  "name": "fluffyui",
+  "displayName": "FluffyUI",
+  "description": "FluffyUI helpers for Go TUI development",
+  "version": "0.0.1",
+  "publisher": "fluffyui",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "activationEvents": [
+    "onCommand:fluffyui.openDocs",
+    "onCommand:fluffyui.runTests"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "fluffyui.openDocs",
+        "title": "FluffyUI: Open Docs"
+      },
+      {
+        "command": "fluffyui.runTests",
+        "title": "FluffyUI: Run Tests"
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -w -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.0",
+    "vscode": "^1.1.40"
+  }
+}

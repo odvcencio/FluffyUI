@@ -145,12 +145,17 @@ func (l *List[T]) StyleType() string {
 	return "List"
 }
 
-// OnSelect registers a selection handler.
-func (l *List[T]) OnSelect(fn func(index int, item T)) {
+// SetOnSelect registers a selection handler.
+func (l *List[T]) SetOnSelect(fn func(index int, item T)) {
 	if l == nil {
 		return
 	}
 	l.onSelect = fn
+}
+
+// Deprecated: use SetOnSelect instead.
+func (l *List[T]) OnSelect(fn func(index int, item T)) {
+	l.SetOnSelect(fn)
 }
 
 // SetLabel updates the accessibility label.

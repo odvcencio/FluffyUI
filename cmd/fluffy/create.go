@@ -21,7 +21,7 @@ type projectTemplate struct {
 
 func runCreate(args []string) error {
 	fs := flag.NewFlagSet("create", flag.ContinueOnError)
-	templateName := fs.String("template", "minimal", "template: minimal, full, game")
+	templateName := fs.String("template", "minimal", "template: minimal, full, game, dashboard, form, data-viewer")
 	modulePath := fs.String("module", "", "go module path")
 	force := fs.Bool("force", false, "overwrite existing files")
 	fs.SetOutput(os.Stderr)
@@ -66,6 +66,12 @@ func selectTemplate(name string) (projectTemplate, error) {
 		return fullTemplate(), nil
 	case "game":
 		return gameTemplate(), nil
+	case "dashboard":
+		return dashboardTemplate(), nil
+	case "form":
+		return formTemplate(), nil
+	case "data-viewer":
+		return dataViewerTemplate(), nil
 	default:
 		return projectTemplate{}, fmt.Errorf("unknown template: %s", name)
 	}
@@ -136,6 +142,51 @@ func gameTemplate() projectTemplate {
 		files: map[string]string{
 			"go.mod":              goModTemplate,
 			"main.go":             gameMainTemplate,
+			"fluffy.toml":         fluffyTomlTemplate,
+			"themes/default.yaml": defaultThemeTemplate,
+		},
+	}
+}
+
+func dashboardTemplate() projectTemplate {
+	return projectTemplate{
+		dirs: []string{
+			"widgets",
+			"themes",
+		},
+		files: map[string]string{
+			"go.mod":              goModTemplate,
+			"main.go":             dashboardMainTemplate,
+			"fluffy.toml":         fluffyTomlTemplate,
+			"themes/default.yaml": defaultThemeTemplate,
+		},
+	}
+}
+
+func formTemplate() projectTemplate {
+	return projectTemplate{
+		dirs: []string{
+			"widgets",
+			"themes",
+		},
+		files: map[string]string{
+			"go.mod":              goModTemplate,
+			"main.go":             formMainTemplate,
+			"fluffy.toml":         fluffyTomlTemplate,
+			"themes/default.yaml": defaultThemeTemplate,
+		},
+	}
+}
+
+func dataViewerTemplate() projectTemplate {
+	return projectTemplate{
+		dirs: []string{
+			"widgets",
+			"themes",
+		},
+		files: map[string]string{
+			"go.mod":              goModTemplate,
+			"main.go":             dataViewerMainTemplate,
 			"fluffy.toml":         fluffyTomlTemplate,
 			"themes/default.yaml": defaultThemeTemplate,
 		},
@@ -220,7 +271,7 @@ func NewDashboard() *Dashboard {
 	count.SetEqualFunc(state.EqualComparable[int])
 
 	d := &Dashboard{count: count}
-	d.title = ui.NewLabel("{{.AppTitle}} Dashboard").WithStyle(backend.DefaultStyle().Bold(true))
+	d.title = ui.NewLabel("{{.AppTitle}} Dashboard", ui.WithLabelStyle(backend.DefaultStyle().Bold(true)))
 	d.countLabel = ui.NewLabel("Count: 0")
 	d.incBtn = ui.NewButton("Increment", ui.WithVariant(ui.VariantPrimary), ui.WithOnClick(func() {
 		d.update(1)
@@ -394,6 +445,214 @@ func (b *Bouncer) HandleMessage(msg runtime.Message) runtime.HandleResult {
 }
 
 var _ runtime.Widget = (*Bouncer)(nil)
+`
+
+const dashboardMainTemplate = `package main
+
+import (
+	"context"
+	"fmt"
+	"os"
+
+	"github.com/odvcencio/fluffyui/backend"
+	"github.com/odvcencio/fluffyui/fluffy"
+	"github.com/odvcencio/fluffyui/runtime"
+	"github.com/odvcencio/fluffyui/state"
+	ui "github.com/odvcencio/fluffyui/widgets"
+)
+
+func main() {
+	app, err := fluffy.NewApp()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "app init failed: %v\n", err)
+		os.Exit(1)
+	}
+	app.SetRoot(buildDashboard())
+
+	if err := app.Run(context.Background()); err != nil && err != context.Canceled {
+		fmt.Fprintf(os.Stderr, "app run failed: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func buildDashboard() runtime.Widget {
+	sparkData := state.NewSignal([]float64{12, 18, 14, 22, 16, 24, 19})
+	spark := ui.NewSparkline(sparkData)
+
+	progress := ui.NewProgress()
+	progress.Label = "Capacity"
+	progress.Value = 72
+
+	alert := ui.NewAlert("All systems nominal", ui.AlertSuccess)
+
+	table := ui.NewTable(
+		ui.TableColumn{Title: "Service"},
+		ui.TableColumn{Title: "Status"},
+		ui.TableColumn{Title: "Latency"},
+	)
+	table.SetRows([][]string{
+		{"Auth", "OK", "32ms"},
+		{"Billing", "OK", "45ms"},
+		{"Search", "OK", "57ms"},
+	})
+
+	left := ui.NewPanel(table, ui.WithPanelBorder(backend.DefaultStyle()))
+	left.SetTitle("Services")
+
+	rightColumn := ui.VBox(
+		ui.FlexFixed(alert),
+		ui.FlexFixed(progress),
+		ui.FlexFixed(spark),
+	)
+	rightColumn.Gap = 1
+
+	right := ui.NewPanel(rightColumn, ui.WithPanelBorder(backend.DefaultStyle()))
+	right.SetTitle("Signals")
+
+	split := ui.NewSplitter(left, right)
+	split.Ratio = 0.6
+	return split
+}
+`
+
+const formMainTemplate = `package main
+
+import (
+	"context"
+	"fmt"
+	"os"
+
+	"github.com/odvcencio/fluffyui/backend"
+	"github.com/odvcencio/fluffyui/fluffy"
+	"github.com/odvcencio/fluffyui/forms"
+	"github.com/odvcencio/fluffyui/runtime"
+	ui "github.com/odvcencio/fluffyui/widgets"
+)
+
+func main() {
+	app, err := fluffy.NewApp()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "app init failed: %v\n", err)
+		os.Exit(1)
+	}
+	app.SetRoot(buildForm())
+
+	if err := app.Run(context.Background()); err != nil && err != context.Canceled {
+		fmt.Fprintf(os.Stderr, "app run failed: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func buildForm() runtime.Widget {
+	builder := forms.NewBuilder().
+		Text("name", "Name", "", forms.Required("Name required")).
+		Email("email", "Email", "", forms.Email("Invalid email")).
+		Checkbox("tos", "Accept terms", false)
+
+	form, _ := builder.Build()
+
+	status := ui.NewLabel("Ready")
+
+	nameInput := ui.NewInput()
+	nameInput.SetPlaceholder("Name")
+	nameInput.SetOnChange(func(text string) {
+		form.Set("name", text)
+	})
+
+	emailInput := ui.NewInput()
+	emailInput.SetPlaceholder("Email")
+	emailInput.SetOnChange(func(text string) {
+		form.Set("email", text)
+	})
+
+	terms := ui.NewCheckbox("Accept terms")
+	terms.SetOnChange(func(value *bool) {
+		if value != nil {
+			form.Set("tos", *value)
+		}
+	})
+
+	submit := ui.NewButton("Submit", ui.WithVariant(ui.VariantPrimary), ui.WithOnClick(func() {
+		form.Submit()
+	}))
+
+	form.OnSubmit(func(values forms.Values) {
+		status.SetText(fmt.Sprintf("Submitted: %v", values))
+	})
+
+	layout := ui.VBox(
+		ui.FlexFixed(ui.NewLabel("Sign up", ui.WithLabelStyle(backend.DefaultStyle().Bold(true)))),
+		ui.FlexFixed(nameInput),
+		ui.FlexFixed(emailInput),
+		ui.FlexFixed(terms),
+		ui.FlexFixed(submit),
+		ui.FlexFixed(status),
+	)
+	layout.Gap = 1
+
+	panel := ui.NewPanel(layout, ui.WithPanelBorder(backend.DefaultStyle()))
+	panel.SetTitle("Form")
+	return panel
+}
+`
+
+const dataViewerMainTemplate = `package main
+
+import (
+	"context"
+	"fmt"
+	"os"
+
+	"github.com/odvcencio/fluffyui/backend"
+	"github.com/odvcencio/fluffyui/fluffy"
+	"github.com/odvcencio/fluffyui/runtime"
+	ui "github.com/odvcencio/fluffyui/widgets"
+)
+
+type tableSource struct {
+	rows int
+}
+
+func (t tableSource) RowCount() int {
+	return t.rows
+}
+
+func (t tableSource) Cell(row, col int) string {
+	switch col {
+	case 0:
+		return fmt.Sprintf("Row %d", row+1)
+	case 1:
+		return fmt.Sprintf("Value %d", (row+1)*10)
+	default:
+		return ""
+	}
+}
+
+func main() {
+	app, err := fluffy.NewApp()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "app init failed: %v\n", err)
+		os.Exit(1)
+	}
+	app.SetRoot(buildViewer())
+
+	if err := app.Run(context.Background()); err != nil && err != context.Canceled {
+		fmt.Fprintf(os.Stderr, "app run failed: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func buildViewer() runtime.Widget {
+	grid := ui.NewDataGrid(
+		ui.TableColumn{Title: "Name"},
+		ui.TableColumn{Title: "Value"},
+	)
+	grid.SetDataSource(tableSource{rows: 10000})
+
+	panel := ui.NewPanel(grid, ui.WithPanelBorder(backend.DefaultStyle()))
+	panel.SetTitle("Data Viewer")
+	return panel
+}
 `
 
 const defaultThemeTemplate = `name: "Default Theme"

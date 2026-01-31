@@ -14,8 +14,8 @@ table := widgets.NewTable(
 data := state.NewSignal([]widgets.BarData{{Label: "Auth", Value: 32}})
 chart := widgets.NewBarChart(data)
 
-left := widgets.NewPanel(table).WithBorder(backend.DefaultStyle())
-right := widgets.NewPanel(chart).WithBorder(backend.DefaultStyle())
+left := widgets.NewPanel(table, widgets.WithPanelBorder(backend.DefaultStyle()))
+right := widgets.NewPanel(chart, widgets.WithPanelBorder(backend.DefaultStyle()))
 
 split := widgets.NewSplitter(left, right)
 split.Ratio = 0.6

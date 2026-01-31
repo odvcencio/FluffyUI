@@ -49,10 +49,10 @@ func NewTodoView() *TodoView {
 		listStyle:   backend.DefaultStyle(),
 		selectStyle: backend.DefaultStyle().Reverse(true),
 	}
-	view.title = widgets.NewLabel("Todo App").WithStyle(backend.DefaultStyle().Bold(true))
+	view.title = widgets.NewLabel("Todo App", widgets.WithLabelStyle(backend.DefaultStyle().Bold(true)))
 	view.input = widgets.NewInput()
 	view.input.SetPlaceholder("Add a task and press Enter")
-	view.input.OnSubmit(func(text string) {
+	view.input.SetOnSubmit(func(text string) {
 		view.addTask(text)
 	})
 
@@ -73,7 +73,7 @@ func NewTodoView() *TodoView {
 		ctx.Buffer.SetString(ctx.Bounds.X, ctx.Bounds.Y, line, style)
 	})
 	view.list = widgets.NewList(adapter)
-	view.list.OnSelect(func(index int, item Task) {
+	view.list.SetOnSelect(func(index int, item Task) {
 		view.toggleTask(index)
 	})
 	view.status = widgets.NewLabel("0 items")
@@ -87,7 +87,7 @@ func (t *TodoView) Mount() {
 		t.Invalidate()
 	})
 	if t.input != nil {
-		t.input.OnChange(func(text string) {
+		t.input.SetOnChange(func(text string) {
 			t.Invalidate()
 		})
 	}

@@ -13,6 +13,7 @@ import (
 	"github.com/odvcencio/fluffyui/backend/sim"
 	backendtcell "github.com/odvcencio/fluffyui/backend/tcell"
 	"github.com/odvcencio/fluffyui/clipboard"
+	"github.com/odvcencio/fluffyui/i18n"
 	"github.com/odvcencio/fluffyui/keybind"
 	"github.com/odvcencio/fluffyui/recording"
 	"github.com/odvcencio/fluffyui/runtime"
@@ -164,6 +165,16 @@ func WithTickRate(rate time.Duration) AppOption {
 	}
 }
 
+// WithFrameBudget sets a render frame budget for animation updates.
+func WithFrameBudget(budget time.Duration) AppOption {
+	return func(b *appBuilder) {
+		if b == nil {
+			return
+		}
+		b.cfg.FrameBudget = budget
+	}
+}
+
 // WithAnnouncer overrides the accessibility announcer.
 func WithAnnouncer(announcer accessibility.Announcer) AppOption {
 	return func(b *appBuilder) {
@@ -191,6 +202,16 @@ func WithStylesheet(sheet *style.Stylesheet) AppOption {
 			return
 		}
 		b.cfg.Stylesheet = sheet
+	}
+}
+
+// WithLocalizer overrides the app localizer.
+func WithLocalizer(localizer i18n.Localizer) AppOption {
+	return func(b *appBuilder) {
+		if b == nil {
+			return
+		}
+		b.cfg.Localizer = localizer
 	}
 }
 

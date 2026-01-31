@@ -26,7 +26,7 @@ const (
 )
 
 // SelectModeOption configures select behavior.
-type SelectModeOption func(*Select)
+type SelectModeOption = Option[Select]
 
 // Select is a dropdown-like selector (inline).
 type Select struct {

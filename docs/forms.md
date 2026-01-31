@@ -17,7 +17,7 @@ form := forms.NewForm(name, email)
 Wire input widgets to form fields:
 
 ```go
-input.OnChange(func(text string) {
+input.SetOnChange(func(text string) {
     form.Set("name", text)
 })
 ```
@@ -38,5 +38,20 @@ errors := form.Validate()
 ```go
 form.AddValidator(forms.FieldsMatch("password", "confirm", "Passwords must match"))
 ```
+
+## Builder DSL
+
+Use the fluent builder when defining forms declaratively:
+
+```go
+builder := forms.NewBuilder().
+    Text("name", "Name", "", forms.Required("Name required")).
+    Email("email", "Email", "", forms.Email("Invalid email")).
+    Checkbox("tos", "Terms", false)
+
+form, specs := builder.Build()
+```
+
+The returned `specs` slice can be used to drive custom form renderers.
 
 See `examples/settings-form` for a full example.

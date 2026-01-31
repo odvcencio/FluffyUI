@@ -30,10 +30,10 @@ const (
 )
 
 // SliderOption configures slider behavior.
-type SliderOption func(*Slider)
+type SliderOption = Option[Slider]
 
 // RangeSliderOption configures range slider behavior.
-type RangeSliderOption func(*RangeSlider)
+type RangeSliderOption = Option[RangeSlider]
 
 // Slider is a focusable value slider.
 type Slider struct {

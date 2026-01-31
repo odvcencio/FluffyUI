@@ -38,13 +38,13 @@ func ExampleInput() {
 	input := widgets.NewInput()
 	input.SetPlaceholder("Search...")
 	input.SetText("fluffy")
-	input.OnSubmit(func(text string) {})
+	input.SetOnSubmit(func(text string) {})
 	_ = input
 }
 
 func ExampleTextArea() {
 	area := widgets.NewTextArea()
 	area.SetText("First line\nSecond line")
-	area.OnChange(func(text string) {})
+	area.SetOnChange(func(text string) {})
 	_ = area
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/odvcencio/fluffyui/animation"
 	"github.com/odvcencio/fluffyui/audio"
 	"github.com/odvcencio/fluffyui/clipboard"
+	"github.com/odvcencio/fluffyui/i18n"
 	"github.com/odvcencio/fluffyui/state"
 	"github.com/odvcencio/fluffyui/style"
 	"github.com/odvcencio/fluffyui/theme"
@@ -72,6 +73,14 @@ func (s Services) Theme() *theme.Theme {
 		return nil
 	}
 	return s.app.theme
+}
+
+// Localizer returns the active localizer.
+func (s Services) Localizer() i18n.Localizer {
+	if s.app == nil {
+		return nil
+	}
+	return s.app.localizer
 }
 
 // Animator returns the app animator.

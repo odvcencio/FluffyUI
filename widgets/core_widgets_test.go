@@ -61,7 +61,7 @@ func TestInputTypingAndSubmit(t *testing.T) {
 	}
 
 	var submitted string
-	input.OnSubmit(func(text string) {
+	input.SetOnSubmit(func(text string) {
 		submitted = text
 	})
 	input.HandleMessage(runtime.KeyMsg{Key: terminal.KeyEnter})

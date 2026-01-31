@@ -35,19 +35,19 @@ type LayoutView struct {
 
 func NewLayoutView() *LayoutView {
 	view := &LayoutView{}
-	view.header = widgets.NewLabel("Layout Widgets").WithStyle(backend.DefaultStyle().Bold(true))
+	view.header = widgets.NewLabel("Layout Widgets", widgets.WithLabelStyle(backend.DefaultStyle().Bold(true)))
 
 	longText := strings.Repeat("ScrollView keeps large content responsive. ", 8)
 	text := widgets.NewText(longText)
 	scroll := widgets.NewScrollView(text)
-	leftPanel := widgets.NewPanel(scroll).WithBorder(backend.DefaultStyle())
+	leftPanel := widgets.NewPanel(scroll, widgets.WithPanelBorder(backend.DefaultStyle()))
 	leftPanel.SetTitle("ScrollView")
 
 	stack := widgets.NewStack(
-		widgets.NewBox(nil).WithStyle(backend.DefaultStyle().Background(backend.ColorBlue)),
+		widgets.NewBox(nil, widgets.WithBoxStyle(backend.DefaultStyle().Background(backend.ColorBlue))),
 		widgets.NewLabel("Stack overlay (top-left)"),
 	)
-	rightPanel := widgets.NewPanel(stack).WithBorder(backend.DefaultStyle())
+	rightPanel := widgets.NewPanel(stack, widgets.WithPanelBorder(backend.DefaultStyle()))
 	rightPanel.SetTitle("Stack")
 
 	view.splitter = widgets.NewSplitter(leftPanel, rightPanel)
@@ -55,10 +55,10 @@ func NewLayoutView() *LayoutView {
 
 	view.grid = widgets.NewGrid(2, 2)
 	view.grid.Gap = 1
-	view.grid.Add(widgets.NewPanel(widgets.NewLabel("Grid cell A")).WithBorder(backend.DefaultStyle()), 0, 0, 1, 1)
-	view.grid.Add(widgets.NewPanel(widgets.NewLabel("Grid cell B")).WithBorder(backend.DefaultStyle()), 0, 1, 1, 1)
-	view.grid.Add(widgets.NewPanel(widgets.NewLabel("Grid cell C")).WithBorder(backend.DefaultStyle()), 1, 0, 1, 1)
-	view.grid.Add(widgets.NewPanel(widgets.NewLabel("Grid cell D")).WithBorder(backend.DefaultStyle()), 1, 1, 1, 1)
+	view.grid.Add(widgets.NewPanel(widgets.NewLabel("Grid cell A"), widgets.WithPanelBorder(backend.DefaultStyle())), 0, 0, 1, 1)
+	view.grid.Add(widgets.NewPanel(widgets.NewLabel("Grid cell B"), widgets.WithPanelBorder(backend.DefaultStyle())), 0, 1, 1, 1)
+	view.grid.Add(widgets.NewPanel(widgets.NewLabel("Grid cell C"), widgets.WithPanelBorder(backend.DefaultStyle())), 1, 0, 1, 1)
+	view.grid.Add(widgets.NewPanel(widgets.NewLabel("Grid cell D"), widgets.WithPanelBorder(backend.DefaultStyle())), 1, 1, 1, 1)
 
 	return view
 }

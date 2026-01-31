@@ -149,12 +149,17 @@ func (t *TextArea) Text() string {
 	return string(t.text)
 }
 
-// OnChange registers a callback for text changes.
-func (t *TextArea) OnChange(fn func(text string)) {
+// SetOnChange registers a callback for text changes.
+func (t *TextArea) SetOnChange(fn func(text string)) {
 	if t == nil {
 		return
 	}
 	t.onChange = fn
+}
+
+// Deprecated: use SetOnChange instead.
+func (t *TextArea) OnChange(fn func(text string)) {
+	t.SetOnChange(fn)
 }
 
 // SetValidators updates validation rules for the text area.

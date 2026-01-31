@@ -19,8 +19,31 @@ type Text struct {
 	styleSet  bool
 }
 
+// TextOption configures a Text widget.
+type TextOption = Option[Text]
+
+// WithTextStyle sets the text style.
+func WithTextStyle(style backend.Style) TextOption {
+	return func(t *Text) {
+		if t == nil {
+			return
+		}
+		t.SetStyle(style)
+	}
+}
+
+// WithTextA11yLabel sets an accessibility label override.
+func WithTextA11yLabel(label string) TextOption {
+	return func(t *Text) {
+		if t == nil {
+			return
+		}
+		t.SetA11yLabel(label)
+	}
+}
+
 // NewText creates a new text widget.
-func NewText(text string) *Text {
+func NewText(text string, opts ...TextOption) *Text {
 	t := &Text{
 		text:  text,
 		style: backend.DefaultStyle(),
@@ -28,6 +51,13 @@ func NewText(text string) *Text {
 	}
 	t.Base.Role = accessibility.RoleText
 	t.Base.Label = text
+	for _, opt := range opts {
+		if opt == nil {
+			continue
+		}
+		opt(t)
+	}
+	t.syncA11y()
 	return t
 }
 
@@ -55,7 +85,7 @@ func (t *Text) SetStyle(style backend.Style) {
 	t.styleSet = true
 }
 
-// WithStyle sets the style and returns the widget for chaining.
+// Deprecated: prefer WithTextStyle during construction or SetStyle for mutation.
 func (t *Text) WithStyle(style backend.Style) *Text {
 	t.style = style
 	t.styleSet = true
@@ -102,13 +132,13 @@ func (t *Text) Render(ctx runtime.RenderContext) {
 
 	style := t.style
 	resolved := ctx.ResolveStyle(t)
-		if !resolved.IsZero() {
-			final := resolved
-			if t.styleSet {
-				final = final.Merge(uistyle.FromBackend(t.style))
-			}
-			style = final.ToBackend()
+	if !resolved.IsZero() {
+		final := resolved
+		if t.styleSet {
+			final = final.Merge(uistyle.FromBackend(t.style))
 		}
+		style = final.ToBackend()
+	}
 
 	for i, line := range t.lines {
 		if i >= bounds.Height {
@@ -159,6 +189,39 @@ type Label struct {
 	styleSet  bool
 }
 
+// LabelOption configures a Label widget.
+type LabelOption = Option[Label]
+
+// WithLabelStyle sets the label style.
+func WithLabelStyle(style backend.Style) LabelOption {
+	return func(l *Label) {
+		if l == nil {
+			return
+		}
+		l.SetStyle(style)
+	}
+}
+
+// WithLabelAlignment sets the label alignment.
+func WithLabelAlignment(align Alignment) LabelOption {
+	return func(l *Label) {
+		if l == nil {
+			return
+		}
+		l.SetAlignment(align)
+	}
+}
+
+// WithLabelA11yLabel sets an accessibility label override.
+func WithLabelA11yLabel(label string) LabelOption {
+	return func(l *Label) {
+		if l == nil {
+			return
+		}
+		l.SetA11yLabel(label)
+	}
+}
+
 // Alignment specifies text alignment.
 type Alignment int
 
@@ -169,7 +232,7 @@ const (
 )
 
 // NewLabel creates a new label widget.
-func NewLabel(text string) *Label {
+func NewLabel(text string, opts ...LabelOption) *Label {
 	l := &Label{
 		text:      text,
 		style:     backend.DefaultStyle(),
@@ -177,6 +240,13 @@ func NewLabel(text string) *Label {
 	}
 	l.Base.Role = accessibility.RoleText
 	l.Base.Label = text
+	for _, opt := range opts {
+		if opt == nil {
+			continue
+		}
+		opt(l)
+	}
+	l.syncA11y()
 	return l
 }
 
@@ -203,7 +273,7 @@ func (l *Label) SetAlignment(align Alignment) {
 	l.alignment = align
 }
 
-// WithStyle sets the style and returns for chaining.
+// Deprecated: prefer WithLabelStyle during construction or SetStyle for mutation.
 func (l *Label) WithStyle(style backend.Style) *Label {
 	l.style = style
 	l.styleSet = true
@@ -215,7 +285,7 @@ func (l *Label) StyleType() string {
 	return "Label"
 }
 
-// WithAlignment sets alignment and returns for chaining.
+// Deprecated: prefer WithLabelAlignment during construction or SetAlignment for mutation.
 func (l *Label) WithAlignment(align Alignment) *Label {
 	l.alignment = align
 	return l
@@ -256,13 +326,13 @@ func (l *Label) Render(ctx runtime.RenderContext) {
 
 	style := l.style
 	resolved := ctx.ResolveStyle(l)
-		if !resolved.IsZero() {
-			final := resolved
-			if l.styleSet {
-				final = final.Merge(uistyle.FromBackend(l.style))
-			}
-			style = final.ToBackend()
+	if !resolved.IsZero() {
+		final := resolved
+		if l.styleSet {
+			final = final.Merge(uistyle.FromBackend(l.style))
 		}
+		style = final.ToBackend()
+	}
 	ctx.Buffer.SetString(x, bounds.Y, text, style)
 }
 

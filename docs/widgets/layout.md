@@ -104,14 +104,15 @@ scroll := widgets.NewScrollView(widgets.NewText(longText))
 
 API notes:
 - `NewPanel(child)` returns a panel.
-- `WithBorder(style)` enables a border.
+- `WithPanelBorder(style)` enables a border.
 - `SetTitle` labels the panel.
 - `NewBox(child)` creates a background fill container.
+- `WithBoxStyle(style)` configures the box background.
 - GoDoc example: `ExamplePanel`, `ExampleBox`.
 
 Example:
 
 ```go
-panel := widgets.NewPanel(content).WithBorder(backend.DefaultStyle())
+panel := widgets.NewPanel(content, widgets.WithPanelBorder(backend.DefaultStyle()))
 panel.SetTitle("Details")
 ```

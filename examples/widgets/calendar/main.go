@@ -36,7 +36,7 @@ type CalendarView struct {
 
 func NewCalendarView() *CalendarView {
 	view := &CalendarView{}
-	view.header = widgets.NewLabel("Calendar + DatePicker").WithStyle(backend.DefaultStyle().Bold(true))
+	view.header = widgets.NewLabel("Calendar + DatePicker", widgets.WithLabelStyle(backend.DefaultStyle().Bold(true)))
 	view.calendar = widgets.NewCalendar(
 		widgets.WithWeekStart(time.Monday),
 		widgets.WithShowWeekNumbers(true),

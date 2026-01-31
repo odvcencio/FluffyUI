@@ -4,7 +4,11 @@ import "github.com/odvcencio/fluffyui/runtime"
 
 // Flex re-exports runtime flex layout types for widget-level usage.
 type Flex = runtime.Flex
+
+// FlexChild defines a child item for flex layouts.
 type FlexChild = runtime.FlexChild
+
+// FlexDirection defines the layout axis for flex containers.
 type FlexDirection = runtime.FlexDirection
 
 // FlexDirection constants.

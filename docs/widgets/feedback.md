@@ -7,6 +7,7 @@ Feedback widgets communicate status and progress. A complete demo is in
 
 API notes:
 - `NewDialog(title, body, buttons...)` creates a modal dialog.
+- Use `Apply(WithDialog...)` or `Set*` methods for configuration.
 - Use `runtime.PushOverlay` to display it.
 - GoDoc example: `ExampleDialog`.
 
@@ -16,6 +17,7 @@ Example:
 dialog := widgets.NewDialog("Confirm", "Delete this item?",
     widgets.DialogButton{Label: "OK", OnClick: confirm},
 )
+dialog.Apply(widgets.WithDialogAutoDismiss(5 * time.Second))
 ```
 
 ## Spinner

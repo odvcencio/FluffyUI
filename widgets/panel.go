@@ -12,18 +12,53 @@ import (
 // Panel is a container widget with optional border and background.
 type Panel struct {
 	Base
-	child       runtime.Widget
-	style       backend.Style
-	borderStyle backend.Style
-	hasBorder   bool
-	title       string
-	label       string
+	child          runtime.Widget
+	style          backend.Style
+	borderStyle    backend.Style
+	hasBorder      bool
+	title          string
+	label          string
 	styleSet       bool
 	borderStyleSet bool
 }
 
+// PanelOption configures a Panel widget.
+type PanelOption = Option[Panel]
+
+// WithPanelStyle sets the panel background style.
+func WithPanelStyle(style backend.Style) PanelOption {
+	return func(p *Panel) {
+		if p == nil {
+			return
+		}
+		p.SetStyle(style)
+	}
+}
+
+// WithPanelBorder enables a border with the given style.
+func WithPanelBorder(style backend.Style) PanelOption {
+	return func(p *Panel) {
+		if p == nil {
+			return
+		}
+		p.hasBorder = true
+		p.borderStyle = style
+		p.borderStyleSet = true
+	}
+}
+
+// WithPanelTitle sets the panel title.
+func WithPanelTitle(title string) PanelOption {
+	return func(p *Panel) {
+		if p == nil {
+			return
+		}
+		p.SetTitle(title)
+	}
+}
+
 // NewPanel creates a new panel widget.
-func NewPanel(child runtime.Widget) *Panel {
+func NewPanel(child runtime.Widget, opts ...PanelOption) *Panel {
 	panel := &Panel{
 		child:       child,
 		style:       backend.DefaultStyle(),
@@ -32,17 +67,26 @@ func NewPanel(child runtime.Widget) *Panel {
 		label:       "Panel",
 	}
 	panel.Base.Role = accessibility.RoleGroup
+	for _, opt := range opts {
+		if opt == nil {
+			continue
+		}
+		opt(panel)
+	}
 	panel.syncA11y()
 	return panel
 }
 
 // SetStyle sets the panel background style.
 func (p *Panel) SetStyle(style backend.Style) {
+	if p == nil {
+		return
+	}
 	p.style = style
 	p.styleSet = true
 }
 
-// WithStyle sets the style and returns for chaining.
+// Deprecated: prefer WithPanelStyle during construction or SetStyle for mutation.
 func (p *Panel) WithStyle(style backend.Style) *Panel {
 	p.style = style
 	p.styleSet = true
@@ -51,10 +95,23 @@ func (p *Panel) WithStyle(style backend.Style) *Panel {
 
 // SetBorder enables or disables the border.
 func (p *Panel) SetBorder(enabled bool) {
+	if p == nil {
+		return
+	}
 	p.hasBorder = enabled
 }
 
-// WithBorder enables border and returns for chaining.
+// SetBorderStyle sets the border style and enables the border.
+func (p *Panel) SetBorderStyle(style backend.Style) {
+	if p == nil {
+		return
+	}
+	p.hasBorder = true
+	p.borderStyle = style
+	p.borderStyleSet = true
+}
+
+// Deprecated: prefer WithPanelBorder during construction or SetBorderStyle for mutation.
 func (p *Panel) WithBorder(style backend.Style) *Panel {
 	p.hasBorder = true
 	p.borderStyle = style
@@ -69,11 +126,14 @@ func (p *Panel) StyleType() string {
 
 // SetTitle sets the panel title (shown in border).
 func (p *Panel) SetTitle(title string) {
+	if p == nil {
+		return
+	}
 	p.title = title
 	p.syncA11y()
 }
 
-// WithTitle sets title and returns for chaining.
+// Deprecated: prefer WithPanelTitle during construction or SetTitle for mutation.
 func (p *Panel) WithTitle(title string) *Panel {
 	p.title = title
 	p.syncA11y()
@@ -221,31 +281,53 @@ func (p *Panel) syncA11y() {
 // Box is a simple container that fills its background.
 type Box struct {
 	Base
-	child runtime.Widget
-	style backend.Style
-	label string
+	child    runtime.Widget
+	style    backend.Style
+	label    string
 	styleSet bool
 }
 
+// BoxOption configures a Box widget.
+type BoxOption = Option[Box]
+
+// WithBoxStyle sets the box background style.
+func WithBoxStyle(style backend.Style) BoxOption {
+	return func(b *Box) {
+		if b == nil {
+			return
+		}
+		b.SetStyle(style)
+	}
+}
+
 // NewBox creates a new box widget.
-func NewBox(child runtime.Widget) *Box {
+func NewBox(child runtime.Widget, opts ...BoxOption) *Box {
 	box := &Box{
 		child: child,
 		style: backend.DefaultStyle(),
 		label: "Box",
 	}
 	box.Base.Role = accessibility.RoleGroup
+	for _, opt := range opts {
+		if opt == nil {
+			continue
+		}
+		opt(box)
+	}
 	box.syncA11y()
 	return box
 }
 
 // SetStyle sets the background style.
 func (b *Box) SetStyle(style backend.Style) {
+	if b == nil {
+		return
+	}
 	b.style = style
 	b.styleSet = true
 }
 
-// WithStyle sets style and returns for chaining.
+// Deprecated: prefer WithBoxStyle during construction or SetStyle for mutation.
 func (b *Box) WithStyle(style backend.Style) *Box {
 	b.style = style
 	b.styleSet = true

@@ -38,8 +38,8 @@ func NewDateRangePicker() *DateRangePicker {
 	picker.endInput = NewInput()
 	picker.startInput.SetPlaceholder(picker.format)
 	picker.endInput.SetPlaceholder(picker.format)
-	picker.startInput.OnChange(func(text string) { picker.handleInputChange(true, text) })
-	picker.endInput.OnChange(func(text string) { picker.handleInputChange(false, text) })
+	picker.startInput.SetOnChange(func(text string) { picker.handleInputChange(true, text) })
+	picker.endInput.SetOnChange(func(text string) { picker.handleInputChange(false, text) })
 	picker.calendar.OnRangeSelect(func(start, end time.Time) {
 		picker.syncInputs()
 		if picker.onRangeSelect != nil {

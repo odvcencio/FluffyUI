@@ -34,7 +34,7 @@ func main() {
 	}
 
 	text := widgets.NewText("")
-	panel := widgets.NewPanel(text).WithBorder(backend.DefaultStyle())
+	panel := widgets.NewPanel(text, widgets.WithPanelBorder(backend.DefaultStyle()))
 	panel.SetTitle("Recording Demo")
 
 	totalFrames := 90

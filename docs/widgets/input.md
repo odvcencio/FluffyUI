@@ -83,7 +83,7 @@ ac.SetOptions([]string{"Alpha", "Beta", "Gamma"})
 `Input` is a single-line text editor with cursor support.
 
 API notes:
-- `SetPlaceholder`, `OnSubmit`, and `OnChange` provide hooks.
+- `SetPlaceholder`, `SetOnSubmit`, and `SetOnChange` provide hooks.
 - GoDoc example: `ExampleInput`.
 
 Example:
@@ -91,7 +91,7 @@ Example:
 ```go
 input := widgets.NewInput()
 input.SetPlaceholder("Search")
-input.OnSubmit(func(text string) { fmt.Println(text) })
+input.SetOnSubmit(func(text string) { fmt.Println(text) })
 ```
 
 ## MultiSelect
@@ -117,7 +117,7 @@ ms := widgets.NewMultiSelect(
 
 API notes:
 - `SetText` updates content.
-- `OnChange` notifies edits.
+- `SetOnChange` notifies edits.
 - GoDoc example: `ExampleTextArea`.
 
 Example:
@@ -125,6 +125,9 @@ Example:
 ```go
 area := widgets.NewTextArea()
 area.SetText("Multi-line\ninput")
+area.SetOnChange(func(text string) {
+    // handle changes
+})
 ```
 
 ## DateRangePicker

@@ -125,7 +125,7 @@ func NewGameView(game *Game) *GameView {
 		lastLoc:      -1,
 	}
 
-	v.header = widgets.NewLabel("CANDY WARS - Jefferson Middle School").WithStyle(backend.DefaultStyle().Bold(true).Foreground(backend.ColorYellow))
+	v.header = widgets.NewLabel("CANDY WARS - Jefferson Middle School", widgets.WithLabelStyle(backend.DefaultStyle().Bold(true).Foreground(backend.ColorYellow)))
 
 	v.tradeTab = NewTradeTabContent(game, v)
 	v.inventoryTab = NewInventoryTabContent(game, v)
@@ -140,13 +140,13 @@ func NewGameView(game *Game) *GameView {
 
 	v.messageLabel = widgets.NewLabel("")
 	v.messageLabel.SetA11yLabel("Message")
-	v.statsLabel = widgets.NewLabel("").WithStyle(v.dimStyle)
+	v.statsLabel = widgets.NewLabel("", widgets.WithLabelStyle(v.dimStyle))
 	v.statsLabel.SetA11yLabel("Stats")
 	v.inventoryLbl = widgets.NewLabel("")
 	v.inventoryLbl.SetA11yLabel("Inventory")
-	v.scheduleLbl = widgets.NewLabel("").WithStyle(v.dimStyle)
+	v.scheduleLbl = widgets.NewLabel("", widgets.WithLabelStyle(v.dimStyle))
 	v.scheduleLbl.SetA11yLabel("Schedule")
-	v.statusLbl = widgets.NewLabel("").WithStyle(v.dimStyle)
+	v.statusLbl = widgets.NewLabel("", widgets.WithLabelStyle(v.dimStyle))
 	v.statusLbl.SetA11yLabel("Status")
 
 	v.heatGauge = widgets.NewProgress()
@@ -163,14 +163,14 @@ func NewGameView(game *Game) *GameView {
 	v.tradeInput = widgets.NewInput()
 	v.tradeInput.SetLabel("Qty")
 	v.tradeInput.SetPlaceholder("Quantity")
-	v.tradeInput.OnChange(func(string) {
+	v.tradeInput.SetOnChange(func(string) {
 		v.Invalidate()
 	})
 
 	v.bankInput = widgets.NewInput()
 	v.bankInput.SetLabel("Amount")
 	v.bankInput.SetPlaceholder("Amount")
-	v.bankInput.OnChange(func(string) {
+	v.bankInput.SetOnChange(func(string) {
 		v.Invalidate()
 	})
 	v.bankAction = bankDeposit
@@ -178,7 +178,7 @@ func NewGameView(game *Game) *GameView {
 	v.loanInput = widgets.NewInput()
 	v.loanInput.SetLabel("Repay")
 	v.loanInput.SetPlaceholder("Amount")
-	v.loanInput.OnChange(func(string) {
+	v.loanInput.SetOnChange(func(string) {
 		v.Invalidate()
 	})
 	v.loanRepay = false
@@ -186,7 +186,7 @@ func NewGameView(game *Game) *GameView {
 	v.craftInput = widgets.NewInput()
 	v.craftInput.SetLabel("Qty")
 	v.craftInput.SetPlaceholder("1")
-	v.craftInput.OnChange(func(string) {
+	v.craftInput.SetOnChange(func(string) {
 		v.Invalidate()
 	})
 	v.craftIndex = 0
@@ -194,7 +194,7 @@ func NewGameView(game *Game) *GameView {
 	v.stashInput = widgets.NewInput()
 	v.stashInput.SetLabel("Qty")
 	v.stashInput.SetPlaceholder("1")
-	v.stashInput.OnChange(func(string) {
+	v.stashInput.SetOnChange(func(string) {
 		v.Invalidate()
 	})
 	v.stashMode = stashDeposit
@@ -202,7 +202,7 @@ func NewGameView(game *Game) *GameView {
 	v.blackMarketInput = widgets.NewInput()
 	v.blackMarketInput.SetLabel("Qty")
 	v.blackMarketInput.SetPlaceholder("1")
-	v.blackMarketInput.OnChange(func(string) {
+	v.blackMarketInput.SetOnChange(func(string) {
 		v.Invalidate()
 	})
 	v.blackMarketIndex = 0

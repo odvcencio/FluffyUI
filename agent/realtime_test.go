@@ -4,6 +4,7 @@ package agent
 
 import (
 	"context"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -14,27 +15,16 @@ import (
 
 func TestRealTimeNotifier(t *testing.T) {
 	be := sim.New(80, 24)
-	be.Init()
-	defer be.Fini()
 
 	label := widgets.NewLabel("Hello")
 	app := runtime.NewApp(runtime.AppConfig{Backend: be})
 	app.SetRoot(label)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	done := make(chan error, 1)
-	go func() {
-		done <- app.Run(ctx)
-	}()
-	defer func() {
-		app.ExecuteCommand(runtime.Quit{})
-		<-done
-	}()
+	runAppForTest(t, app)
 
 	// Wait for app to start
 	time.Sleep(50 * time.Millisecond)
+	app.Post(runtime.InvalidateMsg{})
 
 	agt := New(Config{App: app})
 	notifier := NewRealTimeNotifier(agt)
@@ -61,30 +51,19 @@ func TestRealTimeNotifier(t *testing.T) {
 
 func TestRealTimeServer(t *testing.T) {
 	be := sim.New(80, 24)
-	be.Init()
-	defer be.Fini()
 
 	label := widgets.NewLabel("Test")
 	app := runtime.NewApp(runtime.AppConfig{Backend: be})
 	app.SetRoot(label)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	done := make(chan error, 1)
-	go func() {
-		done <- app.Run(ctx)
-	}()
-	defer func() {
-		app.ExecuteCommand(runtime.Quit{})
-		<-done
-	}()
+	runAppForTest(t, app)
 
 	// Wait for app to start
 	time.Sleep(50 * time.Millisecond)
+	app.Post(runtime.InvalidateMsg{})
 
 	opts := DefaultEnhancedServerOptions()
-	opts.Addr = "unix:/tmp/test-realtime-server.sock"
+	opts.Addr = "unix:" + filepath.Join(t.TempDir(), "realtime.sock")
 	opts.App = app
 
 	server, err := NewRealTimeServer(opts)
@@ -117,29 +96,19 @@ func TestRealTimeServer(t *testing.T) {
 
 func TestWaitForCondition(t *testing.T) {
 	be := sim.New(80, 24)
-	be.Init()
-	defer be.Fini()
 
 	label := widgets.NewLabel("Initial")
 	app := runtime.NewApp(runtime.AppConfig{Backend: be})
 	app.SetRoot(label)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	done := make(chan error, 1)
-	go func() {
-		done <- app.Run(ctx)
-	}()
-	defer func() {
-		app.ExecuteCommand(runtime.Quit{})
-		<-done
-	}()
+	runAppForTest(t, app)
 
 	// Wait for app to start
 	time.Sleep(50 * time.Millisecond)
+	app.Post(runtime.InvalidateMsg{})
 
 	opts := DefaultEnhancedServerOptions()
+	opts.Addr = "unix:" + filepath.Join(t.TempDir(), "realtime.sock")
 	opts.App = app
 
 	server, err := NewRealTimeServer(opts)
@@ -157,7 +126,7 @@ func TestWaitForCondition(t *testing.T) {
 	defer cancel2()
 
 	_, err = server.WaitForCondition(ctx2, func(s Snapshot) bool {
-		return s.Text != ""
+		return len(s.Widgets) > 0
 	}, time.Second)
 	if err != nil {
 		t.Fatalf("wait for condition failed: %v", err)
@@ -186,25 +155,14 @@ func TestEventFilters(t *testing.T) {
 
 func TestRealTimeNotifierBroadcast(t *testing.T) {
 	be := sim.New(80, 24)
-	be.Init()
-	defer be.Fini()
 
 	app := runtime.NewApp(runtime.AppConfig{Backend: be})
 	app.SetRoot(widgets.NewLabel("Test"))
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	done := make(chan error, 1)
-	go func() {
-		done <- app.Run(ctx)
-	}()
-	defer func() {
-		app.ExecuteCommand(runtime.Quit{})
-		<-done
-	}()
+	runAppForTest(t, app)
 
 	time.Sleep(50 * time.Millisecond)
+	app.Post(runtime.InvalidateMsg{})
 
 	agt := New(Config{App: app})
 	notifier := NewRealTimeNotifier(agt)

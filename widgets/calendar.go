@@ -36,7 +36,7 @@ type CalendarDayState struct {
 type DayRenderFunc func(ctx runtime.RenderContext, date time.Time, state CalendarDayState)
 
 // CalendarOption configures a calendar.
-type CalendarOption func(*Calendar)
+type CalendarOption = Option[Calendar]
 
 // Calendar displays a month grid with selectable days.
 type Calendar struct {

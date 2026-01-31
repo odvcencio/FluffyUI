@@ -38,7 +38,7 @@ func NewAutoComplete() *AutoComplete {
 		selectedSty:    backend.DefaultStyle().Reverse(true),
 	}
 	ac.input.SetPlaceholder("Type to search")
-	ac.input.OnChange(func(text string) {
+	ac.input.SetOnChange(func(text string) {
 		ac.updateSuggestions(text)
 	})
 	ac.Base.Role = accessibility.RoleTextbox

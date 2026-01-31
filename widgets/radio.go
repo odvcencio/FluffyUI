@@ -40,12 +40,17 @@ func (g *RadioGroup) SetSelected(index int) {
 	}
 }
 
-// OnChange registers a selection callback.
-func (g *RadioGroup) OnChange(fn func(index int)) {
+// SetOnChange registers a selection callback.
+func (g *RadioGroup) SetOnChange(fn func(index int)) {
 	if g == nil {
 		return
 	}
 	g.onChange = fn
+}
+
+// Deprecated: use SetOnChange instead.
+func (g *RadioGroup) OnChange(fn func(index int)) {
+	g.SetOnChange(fn)
 }
 
 // Radio is a single radio option.

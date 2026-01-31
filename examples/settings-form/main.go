@@ -51,7 +51,7 @@ func NewFormView() *FormView {
 	form := forms.NewForm(nameField, emailField, newsField)
 	view := &FormView{form: form}
 
-	view.title = widgets.NewLabel("Settings Form").WithStyle(backend.DefaultStyle().Bold(true))
+	view.title = widgets.NewLabel("Settings Form", widgets.WithLabelStyle(backend.DefaultStyle().Bold(true)))
 	view.nameLabel = widgets.NewLabel("Name")
 	view.emailLabel = widgets.NewLabel("Email")
 	view.nameInput = widgets.NewInput()
@@ -70,11 +70,11 @@ func NewFormView() *FormView {
 	view.buttonRow = demo.NewHBox(view.submitBtn, view.resetBtn)
 	view.buttonRow.Gap = 2
 
-	view.nameInput.OnChange(func(text string) {
+	view.nameInput.SetOnChange(func(text string) {
 		form.Set("name", text)
 		view.validate()
 	})
-	view.emailInput.OnChange(func(text string) {
+	view.emailInput.SetOnChange(func(text string) {
 		form.Set("email", text)
 		view.validate()
 	})

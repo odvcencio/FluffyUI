@@ -514,7 +514,7 @@ func NewMapTabContent(game *Game, view *GameView) *MapTabContent {
 		ctx.Buffer.SetString(ctx.Bounds.X, ctx.Bounds.Y, truncPad(line, ctx.Bounds.Width), style)
 	})
 	m.locationList = widgets.NewList(adapter)
-	m.locationList.OnSelect(func(index int, loc Location) {
+	m.locationList.SetOnSelect(func(index int, loc Location) {
 		m.game.Travel(index)
 	})
 

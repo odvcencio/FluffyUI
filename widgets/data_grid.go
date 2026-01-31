@@ -40,6 +40,7 @@ type DataGrid struct {
 
 	Columns        []TableColumn
 	Rows           [][]string
+	dataSource     TabularDataSource
 	selectedRow    int
 	selectedCol    int
 	offset         int
@@ -113,10 +114,30 @@ func (g *DataGrid) SetRows(rows [][]string) {
 	if g == nil {
 		return
 	}
+	g.dataSource = nil
 	g.Rows = rows
 	g.ensureSelectionInRange()
 	g.syncA11y()
 	g.Invalidate()
+}
+
+// SetDataSource sets a virtualized data source for large datasets.
+func (g *DataGrid) SetDataSource(source TabularDataSource) {
+	if g == nil {
+		return
+	}
+	g.dataSource = source
+	g.ensureSelectionInRange()
+	g.syncA11y()
+	g.Invalidate()
+}
+
+// DataSource returns the active data source.
+func (g *DataGrid) DataSource() TabularDataSource {
+	if g == nil {
+		return nil
+	}
+	return g.dataSource
 }
 
 // SetLabel updates the accessibility label.
@@ -219,7 +240,7 @@ func (g *DataGrid) StartEditing() {
 	if g == nil || g.editor == nil {
 		return
 	}
-	if len(g.Rows) == 0 || len(g.Columns) == 0 {
+	if g.RowCount() == 0 || len(g.Columns) == 0 {
 		return
 	}
 	g.editing = true
@@ -272,6 +293,12 @@ func (g *DataGrid) RowCount() int {
 	if g == nil {
 		return 0
 	}
+	if g.dataSource != nil {
+		if count := g.dataSource.RowCount(); count > 0 {
+			return count
+		}
+		return 0
+	}
 	return len(g.Rows)
 }
 
@@ -285,8 +312,11 @@ func (g *DataGrid) ColumnCount() int {
 
 // GetCell returns the cell value at row/column.
 func (g *DataGrid) GetCell(row, col int) string {
-	if g == nil || row < 0 || row >= len(g.Rows) {
+	if g == nil || row < 0 || row >= g.RowCount() {
 		return ""
+	}
+	if g.dataSource != nil {
+		return g.dataSource.Cell(row, col)
 	}
 	if col < 0 || col >= len(g.Rows[row]) {
 		return ""
@@ -296,7 +326,14 @@ func (g *DataGrid) GetCell(row, col int) string {
 
 // SetCell updates a cell value at row/column.
 func (g *DataGrid) SetCell(row, col int, value string) {
-	if g == nil || row < 0 || row >= len(g.Rows) {
+	if g == nil || row < 0 || row >= g.RowCount() {
+		return
+	}
+	if editable, ok := g.dataSource.(TabularEditable); ok {
+		editable.SetCell(row, col, value)
+		return
+	}
+	if g.dataSource != nil {
 		return
 	}
 	for len(g.Rows[row]) <= col {
@@ -308,7 +345,7 @@ func (g *DataGrid) SetCell(row, col int, value string) {
 // Measure returns the desired size.
 func (g *DataGrid) Measure(constraints runtime.Constraints) runtime.Size {
 	return g.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {
-		height := min(len(g.Rows)+1, contentConstraints.MaxHeight)
+		height := min(g.RowCount()+1, contentConstraints.MaxHeight)
 		if height <= 0 {
 			height = contentConstraints.MinHeight
 		}
@@ -366,9 +403,10 @@ func (g *DataGrid) Render(ctx runtime.RenderContext) {
 	}
 	g.ensureSelectionInRange()
 	g.ensureSelectionVisibleWithHeight(rowArea)
+	rowCount := g.RowCount()
 	for row := 0; row < rowArea; row++ {
 		rowIndex := g.offset + row
-		if rowIndex < 0 || rowIndex >= len(g.Rows) {
+		if rowIndex < 0 || rowIndex >= rowCount {
 			break
 		}
 		x = content.X
@@ -376,10 +414,7 @@ func (g *DataGrid) Render(ctx runtime.RenderContext) {
 			if x >= content.X+content.Width {
 				break
 			}
-			cell := ""
-			if colIndex < len(g.Rows[rowIndex]) {
-				cell = g.Rows[rowIndex][colIndex]
-			}
+			cell := g.GetCell(rowIndex, colIndex)
 			style := baseStyle
 			if rowIndex == g.selectedRow && colIndex == g.selectedCol {
 				style = mergeBackendStyles(baseStyle, g.selectedStyle)
@@ -448,9 +483,9 @@ func (g *DataGrid) HandleMessage(msg runtime.Message) runtime.HandleResult {
 		case terminal.KeyHome:
 			g.SetSelected(0, g.selectedCol)
 			return runtime.Handled()
-		case terminal.KeyEnd:
-			g.SetSelected(len(g.Rows)-1, g.selectedCol)
-			return runtime.Handled()
+	case terminal.KeyEnd:
+		g.SetSelected(g.RowCount()-1, g.selectedCol)
+		return runtime.Handled()
 		case terminal.KeyPageUp:
 			g.SetSelected(g.selectedRow-(g.bounds.Height-1), g.selectedCol)
 			return runtime.Handled()
@@ -488,7 +523,8 @@ func (g *DataGrid) ensureSelectionInRange() {
 	if g == nil {
 		return
 	}
-	if len(g.Rows) == 0 {
+	rowCount := g.RowCount()
+	if rowCount == 0 {
 		g.selectedRow = 0
 		g.selectedCol = 0
 		return
@@ -496,8 +532,8 @@ func (g *DataGrid) ensureSelectionInRange() {
 	if g.selectedRow < 0 {
 		g.selectedRow = 0
 	}
-	if g.selectedRow >= len(g.Rows) {
-		g.selectedRow = len(g.Rows) - 1
+	if g.selectedRow >= rowCount {
+		g.selectedRow = rowCount - 1
 	}
 	if g.selectedCol < 0 {
 		g.selectedCol = 0
@@ -527,7 +563,7 @@ func (g *DataGrid) ensureSelectionVisibleWithHeight(rowArea int) {
 	if g.offset < 0 {
 		g.offset = 0
 	}
-	maxOffset := len(g.Rows) - rowArea
+	maxOffset := g.RowCount() - rowArea
 	if maxOffset < 0 {
 		maxOffset = 0
 	}
@@ -549,7 +585,7 @@ func (g *DataGrid) cellAt(x, y int) (int, int, bool) {
 		return 0, 0, false
 	}
 	rowIndex := g.offset + (y - (content.Y + 1))
-	if rowIndex < 0 || rowIndex >= len(g.Rows) {
+	if rowIndex < 0 || rowIndex >= g.RowCount() {
 		return 0, 0, false
 	}
 	colIndex := -1
@@ -614,8 +650,9 @@ func (g *DataGrid) syncA11y() {
 		label = "Data Grid"
 	}
 	g.Base.Label = label
-	g.Base.Description = fmt.Sprintf("%d rows, %d columns", len(g.Rows), len(g.Columns))
-	if len(g.Rows) > 0 && g.selectedRow >= 0 && g.selectedRow < len(g.Rows) {
+	rowCount := g.RowCount()
+	g.Base.Description = fmt.Sprintf("%d rows, %d columns", rowCount, len(g.Columns))
+	if rowCount > 0 && g.selectedRow >= 0 && g.selectedRow < rowCount {
 		value := g.GetCell(g.selectedRow, g.selectedCol)
 		g.Base.Value = &accessibility.ValueInfo{Text: value}
 	} else {

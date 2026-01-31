@@ -48,10 +48,10 @@ type AccordionSection struct {
 }
 
 // AccordionOption configures an accordion.
-type AccordionOption func(*Accordion)
+type AccordionOption = Option[Accordion]
 
 // AccordionSectionOption configures a section.
-type AccordionSectionOption func(*AccordionSection)
+type AccordionSectionOption = Option[AccordionSection]
 
 // NewAccordion creates an accordion.
 func NewAccordion(sections ...*AccordionSection) *Accordion {

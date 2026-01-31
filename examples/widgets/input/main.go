@@ -45,7 +45,7 @@ type InputView struct {
 
 func NewInputView() *InputView {
 	view := &InputView{}
-	view.header = widgets.NewLabel("Input Widgets").WithStyle(backend.DefaultStyle().Bold(true))
+	view.header = widgets.NewLabel("Input Widgets", widgets.WithLabelStyle(backend.DefaultStyle().Bold(true)))
 	view.input = widgets.NewInput()
 	view.input.SetPlaceholder("Type and press Enter")
 	view.textarea = widgets.NewTextArea()
@@ -83,7 +83,7 @@ func NewInputView() *InputView {
 	view.buttons = demo.NewHBox(primary, secondary)
 	view.buttons.Gap = 2
 
-	view.input.OnSubmit(func(text string) {
+	view.input.SetOnSubmit(func(text string) {
 		view.status.SetText("Submitted: " + truncateText(text, 20))
 		view.Invalidate()
 	})
@@ -117,7 +117,7 @@ func NewInputView() *InputView {
 		view.Invalidate()
 	})
 
-	group.OnChange(func(index int) {
+	group.SetOnChange(func(index int) {
 		label := "-"
 		if index == 0 {
 			label = "Fast"

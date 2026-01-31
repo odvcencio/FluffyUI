@@ -305,7 +305,7 @@ func TestInput_OnSubmit(t *testing.T) {
 	input.SetText("test")
 
 	var submitted string
-	input.OnSubmit(func(text string) {
+	input.SetOnSubmit(func(text string) {
 		submitted = text
 	})
 
@@ -321,7 +321,7 @@ func TestInput_OnChange(t *testing.T) {
 	input.Focus()
 
 	var changed string
-	input.OnChange(func(text string) {
+	input.SetOnChange(func(text string) {
 		changed = text
 	})
 
@@ -531,7 +531,7 @@ func TestMultilineInput_OnSubmit(t *testing.T) {
 	mi.SetText("test")
 
 	var submitted string
-	mi.OnSubmit(func(text string) {
+	mi.SetOnSubmit(func(text string) {
 		submitted = text
 	})
 

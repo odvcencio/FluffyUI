@@ -32,7 +32,7 @@ func NewDatePicker() *DatePicker {
 	picker.calendar = NewCalendar()
 	picker.input = NewInput()
 	picker.input.SetPlaceholder(picker.format)
-	picker.input.OnChange(picker.handleInputChange)
+	picker.input.SetOnChange(picker.handleInputChange)
 	picker.calendar.OnSelect(func(date time.Time) {
 		picker.syncInput()
 	})

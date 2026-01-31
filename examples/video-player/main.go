@@ -53,8 +53,8 @@ func NewVideoPlayerView(path string) (*VideoPlayerView, error) {
 	player.Play()
 
 	view := &VideoPlayerView{player: player}
-	view.title = widgets.NewLabel("Video Player").WithStyle(backend.DefaultStyle().Bold(true))
-	view.panel = widgets.NewPanel(player).WithBorder(backend.DefaultStyle())
+	view.title = widgets.NewLabel("Video Player", widgets.WithLabelStyle(backend.DefaultStyle().Bold(true)))
+	view.panel = widgets.NewPanel(player, widgets.WithPanelBorder(backend.DefaultStyle()))
 	view.panel.SetTitle(filepath.Base(path))
 	view.help = widgets.NewLabel("Space: play/pause  Ctrl+C: quit")
 	return view, nil

@@ -68,7 +68,7 @@ func NewFileBrowserView() (*FileBrowserView, error) {
 		currentDir: cwd,
 		entries:    state.NewSignal([]FileEntry{}),
 	}
-	view.pathLabel = widgets.NewLabel("").WithStyle(backend.DefaultStyle().Bold(true))
+	view.pathLabel = widgets.NewLabel("", widgets.WithLabelStyle(backend.DefaultStyle().Bold(true)))
 	view.statusLabel = widgets.NewLabel("")
 	view.details = widgets.NewText("")
 
@@ -91,14 +91,14 @@ func NewFileBrowserView() (*FileBrowserView, error) {
 		ctx.Buffer.SetString(ctx.Bounds.X, ctx.Bounds.Y, line, style)
 	})
 	view.list = widgets.NewList(adapter)
-	view.list.OnSelect(func(index int, item FileEntry) {
+	view.list.SetOnSelect(func(index int, item FileEntry) {
 		view.selected = &item
 		view.updateDetails()
 	})
 
-	view.leftPanel = widgets.NewPanel(view.list).WithBorder(backend.DefaultStyle())
+	view.leftPanel = widgets.NewPanel(view.list, widgets.WithPanelBorder(backend.DefaultStyle()))
 	view.leftPanel.SetTitle("Files")
-	view.rightPanel = widgets.NewPanel(view.details).WithBorder(backend.DefaultStyle())
+	view.rightPanel = widgets.NewPanel(view.details, widgets.WithPanelBorder(backend.DefaultStyle()))
 	view.rightPanel.SetTitle("Details")
 	view.splitter = widgets.NewSplitter(view.leftPanel, view.rightPanel)
 	view.splitter.Ratio = 0.55

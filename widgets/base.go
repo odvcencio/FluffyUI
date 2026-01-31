@@ -275,7 +275,7 @@ func truncateString(s string, maxWidth int) string {
 	if maxWidth <= 0 {
 		return ""
 	}
-	if runewidth.StringWidth(s) <= maxWidth {
+	if textWidth(s) <= maxWidth {
 		return s
 	}
 	if maxWidth <= 3 {
@@ -322,10 +322,11 @@ func padRight(s string, width int) string {
 	if width <= 0 {
 		return ""
 	}
-	if runewidth.StringWidth(s) >= width {
+	textW := textWidth(s)
+	if textW >= width {
 		return runewidth.Truncate(s, width, "")
 	}
-	padding := width - runewidth.StringWidth(s)
+	padding := width - textW
 	return s + strings.Repeat(" ", padding)
 }
 
@@ -338,9 +339,10 @@ func writePadded(buf *runtime.Buffer, x, y, width int, text string, style backen
 		return
 	}
 	text = runewidth.Truncate(text, width, "")
+	textW := textWidth(text)
 	buf.SetString(x, y, text, style)
-	if pad := width - runewidth.StringWidth(text); pad > 0 {
-		buf.Fill(runtime.Rect{X: x + runewidth.StringWidth(text), Y: y, Width: pad, Height: 1}, ' ', style)
+	if pad := width - textW; pad > 0 {
+		buf.Fill(runtime.Rect{X: x + textW, Y: y, Width: pad, Height: 1}, ' ', style)
 	}
 }
 

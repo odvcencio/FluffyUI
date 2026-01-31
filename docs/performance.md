@@ -41,6 +41,54 @@ summary := sampler.Summary()
 `RenderStats` includes render/flush durations, dirty cell counts, and the dirty
 bounding box for each frame.
 
+## Allocation profiling
+
+Use `-benchmem` and pprof to track allocations in hot paths:
+
+```bash
+go test ./widgets -run ^$ -bench Render -benchmem
+go test ./runtime -run ^$ -bench Buffer -benchmem
+```
+
+For deeper dives, collect profiles:
+
+```bash
+go test ./widgets -run ^$ -bench Render -benchmem -cpuprofile cpu.out -memprofile mem.out
+go tool pprof cpu.out
+```
+
+## Animation frame budget
+
+You can throttle animation updates when frames exceed a budget:
+
+```go
+app := runtime.NewApp(runtime.AppConfig{
+    TickRate:    time.Second / 30,
+    FrameBudget: 20 * time.Millisecond,
+})
+```
+
+When the last frame exceeds the budget, the animator skips the next update to
+avoid compounding latency.
+
+## Performance dashboard
+
+FluffyUI includes a `PerformanceDashboard` widget that renders summaries from
+`runtime.RenderSampler` and auto-refreshes at a configurable interval.
+
+```go
+sampler := runtime.NewRenderSampler(120)
+dashboard := widgets.NewPerformanceDashboard(
+    sampler,
+    widgets.WithPerformanceRefresh(500*time.Millisecond),
+)
+app := runtime.NewApp(runtime.AppConfig{
+    RenderObserver: sampler,
+})
+```
+
+See `examples/perf-dashboard` for a full demo.
+
 ## Simulation backend
 
 Use the `backend/sim` package in tests to verify rendering logic without a real

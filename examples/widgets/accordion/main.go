@@ -35,7 +35,7 @@ type AccordionView struct {
 
 func NewAccordionView() *AccordionView {
 	view := &AccordionView{}
-	view.header = widgets.NewLabel("Accordion Widget").WithStyle(backend.DefaultStyle().Bold(true))
+	view.header = widgets.NewLabel("Accordion Widget", widgets.WithLabelStyle(backend.DefaultStyle().Bold(true)))
 
 	overview := strings.Repeat("Accordion sections keep layouts tidy. ", 2)
 	section1 := widgets.NewAccordionSection("Overview", widgets.NewText(overview), widgets.WithSectionExpanded(true))

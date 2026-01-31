@@ -42,7 +42,7 @@ type CounterView struct {
 
 func NewCounterView(count *state.Signal[int]) *CounterView {
 	view := &CounterView{count: count}
-	view.title = widgets.NewLabel("FluffyUI Counter").WithStyle(backend.DefaultStyle().Bold(true))
+	view.title = widgets.NewLabel("FluffyUI Counter", widgets.WithLabelStyle(backend.DefaultStyle().Bold(true)))
 	view.countLabel = widgets.NewLabel("Count: 0")
 	view.incBtn = widgets.NewButton("Increment", widgets.WithVariant(widgets.VariantPrimary), widgets.WithOnClick(func() {
 		view.updateCount(1)

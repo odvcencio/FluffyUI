@@ -58,7 +58,7 @@ type DashboardView struct {
 
 func NewDashboardView() *DashboardView {
 	view := &DashboardView{}
-	view.header = widgets.NewLabel("System Dashboard").WithStyle(backend.DefaultStyle().Bold(true))
+	view.header = widgets.NewLabel("System Dashboard", widgets.WithLabelStyle(backend.DefaultStyle().Bold(true)))
 
 	view.requestsLabel = widgets.NewLabel("Requests: 0")
 	view.errorsLabel = widgets.NewLabel("Errors: 0")
@@ -104,9 +104,9 @@ func NewDashboardView() *DashboardView {
 	rightColumn := demo.NewVBox(view.alert, view.progress, view.spark, view.latency)
 	rightColumn.Gap = 1
 
-	view.leftPanel = widgets.NewPanel(view.table).WithBorder(backend.DefaultStyle())
+	view.leftPanel = widgets.NewPanel(view.table, widgets.WithPanelBorder(backend.DefaultStyle()))
 	view.leftPanel.SetTitle("Services")
-	view.rightPanel = widgets.NewPanel(rightColumn).WithBorder(backend.DefaultStyle())
+	view.rightPanel = widgets.NewPanel(rightColumn, widgets.WithPanelBorder(backend.DefaultStyle()))
 	view.rightPanel.SetTitle("Signals")
 
 	view.splitter = widgets.NewSplitter(view.leftPanel, view.rightPanel)
@@ -119,7 +119,7 @@ func NewDashboardView() *DashboardView {
 func wrapMetricPanel(title string, value *widgets.Label) *widgets.Panel {
 	stack := demo.NewVBox(widgets.NewLabel(title), value)
 	stack.Gap = 1
-	panel := widgets.NewPanel(stack).WithBorder(backend.DefaultStyle())
+	panel := widgets.NewPanel(stack, widgets.WithPanelBorder(backend.DefaultStyle()))
 	panel.SetTitle(title)
 	return panel
 }

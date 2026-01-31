@@ -137,3 +137,24 @@ label.SetStyle(backend.DefaultStyle().Foreground(backend.ColorGreen).Bold(true))
 
 Inline styles apply when no stylesheet rule matches, and can also override
 stylesheet output when explicitly set.
+
+## Theme tools (CLI)
+
+The `fluffy theme` command provides helpers for managing theme files:
+
+```bash
+# Create a starter theme file
+fluffy theme init --path themes/default.yaml
+
+# Validate contrast and color references
+fluffy theme check --path themes/default.yaml
+
+# Export CSS variables from a theme
+fluffy theme export --path themes/default.yaml --output theme.css
+
+# List local theme files
+fluffy theme list --dir themes
+
+# Install a theme file into your project
+fluffy theme install --source ./themes/alt.yaml --dir themes
+```

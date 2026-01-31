@@ -46,22 +46,22 @@ func NewDocsView(site *content.SiteContent) *DocsView {
 		navItems:    state.NewSignal([]navItem{}),
 		searchItems: state.NewSignal([]navItem{}),
 	}
-	view.header = widgets.NewLabel("FluffyUI Documentation").WithStyle(backend.DefaultStyle().Bold(true))
+	view.header = widgets.NewLabel("FluffyUI Documentation", widgets.WithLabelStyle(backend.DefaultStyle().Bold(true)))
 	view.status = widgets.NewLabel("Ready")
 	view.searchInput = widgets.NewInput()
 	view.searchInput.SetPlaceholder("Search docs...")
-	view.searchInput.OnChange(view.onSearchChanged)
+	view.searchInput.SetOnChange(view.onSearchChanged)
 	view.searchInput.SetLabel("Search")
 
 	view.navList = widgets.NewList(widgets.NewSignalAdapter(view.navItems, renderNavItem))
 	view.navList.SetLabel("Documentation Navigation")
-	view.navList.OnSelect(func(index int, item navItem) {
+	view.navList.SetOnSelect(func(index int, item navItem) {
 		view.selectDoc(item.DocID)
 	})
 
 	view.searchList = widgets.NewList(widgets.NewSignalAdapter(view.searchItems, renderSearchItem))
 	view.searchList.SetLabel("Search Results")
-	view.searchList.OnSelect(func(index int, item navItem) {
+	view.searchList.SetOnSelect(func(index int, item navItem) {
 		view.selectDocAnchor(item.DocID, item.HeadingID)
 	})
 

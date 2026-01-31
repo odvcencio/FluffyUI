@@ -27,7 +27,7 @@ type Tooltip struct {
 }
 
 // TooltipOption configures a tooltip.
-type TooltipOption func(*Tooltip)
+type TooltipOption = Option[Tooltip]
 
 // NewTooltip creates a tooltip wrapper.
 func NewTooltip(target runtime.Widget, content runtime.Widget, opts ...TooltipOption) *Tooltip {

@@ -72,3 +72,24 @@ app := runtime.NewApp(runtime.AppConfig{
 
 fluffytest.AssertAnnounced(t, announcer, "Line 3 of 10")
 ```
+
+## Accessibility audits
+
+Use the testing helpers to spot missing roles/labels during CI:
+
+```go
+issues := fluffytest.AuditAccessibility(root)
+for _, issue := range issues {
+    t.Logf("%s: %s", issue.Path, issue.Message)
+}
+
+fluffytest.AssertAccessible(t, root)
+```
+
+## WCAG alignment checklist
+
+- **Contrast**: use `fluffy theme check` to validate AA contrast ratios.
+- **Focus visibility**: configure `FocusStyle` and ensure focusable widgets render a clear indicator.
+- **Keyboard access**: verify `FocusNext`/`FocusPrev` navigation and shortcuts.
+- **Labels**: ensure focusable widgets provide meaningful accessible labels.
+- **Status updates**: announce state changes via the app announcer.

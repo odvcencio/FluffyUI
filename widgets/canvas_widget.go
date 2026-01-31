@@ -16,21 +16,47 @@ type CanvasWidget struct {
 	cellHeight int
 }
 
-// NewCanvasWidget creates a CanvasWidget with the draw callback.
-func NewCanvasWidget(draw func(canvas *graphics.Canvas)) *CanvasWidget {
-	return &CanvasWidget{
-		blitter: &graphics.SextantBlitter{},
-		draw:    draw,
+// CanvasOption configures a CanvasWidget.
+type CanvasOption = Option[CanvasWidget]
+
+// WithCanvasBlitter sets the blitter used to render pixels to cells.
+func WithCanvasBlitter(blitter graphics.Blitter) CanvasOption {
+	return func(w *CanvasWidget) {
+		if w == nil || blitter == nil {
+			return
+		}
+		w.blitter = blitter
+		w.canvas = nil
 	}
 }
 
-// WithBlitter sets the blitter used to render pixels to cells.
-func (w *CanvasWidget) WithBlitter(blitter graphics.Blitter) *CanvasWidget {
+// NewCanvasWidget creates a CanvasWidget with the draw callback.
+func NewCanvasWidget(draw func(canvas *graphics.Canvas), opts ...CanvasOption) *CanvasWidget {
+	widget := &CanvasWidget{
+		blitter: &graphics.SextantBlitter{},
+		draw:    draw,
+	}
+	for _, opt := range opts {
+		if opt == nil {
+			continue
+		}
+		opt(widget)
+	}
+	return widget
+}
+
+// SetBlitter sets the blitter used to render pixels to cells.
+func (w *CanvasWidget) SetBlitter(blitter graphics.Blitter) {
 	if w == nil || blitter == nil {
-		return w
+		return
 	}
 	w.blitter = blitter
 	w.canvas = nil
+}
+
+// Deprecated: prefer WithCanvasBlitter during construction or SetBlitter for mutation.
+func (w *CanvasWidget) WithBlitter(blitter graphics.Blitter) *CanvasWidget {
+	w.SetBlitter(blitter)
 	return w
 }
 

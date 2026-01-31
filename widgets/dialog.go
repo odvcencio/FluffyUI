@@ -36,8 +36,72 @@ type Dialog struct {
 	startTime   time.Time
 	paused      bool
 
-	style backend.Style
+	style    backend.Style
 	styleSet bool
+}
+
+// DialogOption configures a Dialog widget.
+type DialogOption = Option[Dialog]
+
+// WithDialogContent sets a custom content widget.
+func WithDialogContent(content runtime.Widget) DialogOption {
+	return func(d *Dialog) {
+		if d == nil {
+			return
+		}
+		d.Content = content
+	}
+}
+
+// WithDialogDismissable sets whether Escape closes the dialog.
+func WithDialogDismissable(dismissable bool) DialogOption {
+	return func(d *Dialog) {
+		if d == nil {
+			return
+		}
+		d.dismissable = dismissable
+	}
+}
+
+// WithDialogOnDismiss registers a dismiss callback.
+func WithDialogOnDismiss(fn func()) DialogOption {
+	return func(d *Dialog) {
+		if d == nil {
+			return
+		}
+		d.onDismiss = fn
+	}
+}
+
+// WithDialogAutoDismiss enables auto-dismiss after duration.
+func WithDialogAutoDismiss(duration time.Duration) DialogOption {
+	return func(d *Dialog) {
+		if d == nil {
+			return
+		}
+		d.autoDismiss = duration
+		d.startTime = time.Now()
+	}
+}
+
+// WithDialogStyle sets the dialog style.
+func WithDialogStyle(style backend.Style) DialogOption {
+	return func(d *Dialog) {
+		if d == nil {
+			return
+		}
+		d.SetStyle(style)
+	}
+}
+
+// WithDialogButtons sets the dialog buttons.
+func WithDialogButtons(buttons ...DialogButton) DialogOption {
+	return func(d *Dialog) {
+		if d == nil {
+			return
+		}
+		d.Buttons = buttons
+	}
 }
 
 // NewDialog creates a dialog with title, body text, and optional buttons.
@@ -56,6 +120,20 @@ func NewDialog(title, body string, buttons ...DialogButton) *Dialog {
 	return dialog
 }
 
+// Apply applies dialog options and returns the dialog for chaining.
+func (d *Dialog) Apply(opts ...DialogOption) *Dialog {
+	if d == nil {
+		return d
+	}
+	for _, opt := range opts {
+		if opt == nil {
+			continue
+		}
+		opt(d)
+	}
+	return d
+}
+
 // StyleType returns the selector type name.
 func (d *Dialog) StyleType() string {
 	return "Dialog"
@@ -70,29 +148,69 @@ func (d *Dialog) SetStyle(style backend.Style) {
 	d.styleSet = true
 }
 
-// WithContent sets a custom widget as dialog body (replaces text Body).
-func (d *Dialog) WithContent(content runtime.Widget) *Dialog {
+// SetContent sets a custom widget as dialog body (replaces text Body).
+func (d *Dialog) SetContent(content runtime.Widget) {
+	if d == nil {
+		return
+	}
 	d.Content = content
+}
+
+// Deprecated: prefer WithDialogContent during construction or SetContent for mutation.
+func (d *Dialog) WithContent(content runtime.Widget) *Dialog {
+	d.SetContent(content)
 	return d
 }
 
-// WithDismissable sets whether Escape closes the dialog (default true).
-func (d *Dialog) WithDismissable(dismissable bool) *Dialog {
+// SetDismissable sets whether Escape closes the dialog (default true).
+func (d *Dialog) SetDismissable(dismissable bool) {
+	if d == nil {
+		return
+	}
 	d.dismissable = dismissable
+}
+
+// Deprecated: prefer WithDialogDismissable during construction or SetDismissable for mutation.
+func (d *Dialog) WithDismissable(dismissable bool) *Dialog {
+	d.SetDismissable(dismissable)
 	return d
 }
 
-// OnDismiss sets callback when dialog is dismissed via Escape.
-func (d *Dialog) OnDismiss(fn func()) *Dialog {
+// SetOnDismiss sets callback when dialog is dismissed via Escape.
+func (d *Dialog) SetOnDismiss(fn func()) {
+	if d == nil {
+		return
+	}
 	d.onDismiss = fn
+}
+
+// Deprecated: prefer WithDialogOnDismiss during construction or SetOnDismiss for mutation.
+func (d *Dialog) OnDismiss(fn func()) *Dialog {
+	d.SetOnDismiss(fn)
 	return d
 }
 
-// WithAutoDismiss enables auto-dismiss after duration (0 = disabled).
-// Call ShouldDismiss() periodically to check if time has elapsed.
-func (d *Dialog) WithAutoDismiss(duration time.Duration) *Dialog {
+// SetAutoDismiss enables auto-dismiss after duration (0 = disabled).
+func (d *Dialog) SetAutoDismiss(duration time.Duration) {
+	if d == nil {
+		return
+	}
 	d.autoDismiss = duration
 	d.startTime = time.Now()
+}
+
+// SetButtons updates dialog buttons.
+func (d *Dialog) SetButtons(buttons ...DialogButton) {
+	if d == nil {
+		return
+	}
+	d.Buttons = buttons
+}
+
+// Deprecated: prefer WithDialogAutoDismiss during construction or SetAutoDismiss for mutation.
+// Call ShouldDismiss() periodically to check if time has elapsed.
+func (d *Dialog) WithAutoDismiss(duration time.Duration) *Dialog {
+	d.SetAutoDismiss(duration)
 	return d
 }
 
@@ -140,21 +258,21 @@ func (d *Dialog) ShouldDismiss(now time.Time) bool {
 	return now.Sub(d.startTime) >= d.autoDismiss
 }
 
-	// Measure returns desired size.
-	func (d *Dialog) Measure(constraints runtime.Constraints) runtime.Size {
-		return d.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {
-			width := textWidth(d.Title)
+// Measure returns desired size.
+func (d *Dialog) Measure(constraints runtime.Constraints) runtime.Size {
+	return d.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {
+		width := textWidth(d.Title)
 
-			// Measure body text width
-			if d.Content == nil {
-				for _, line := range strings.Split(d.Body, "\n") {
-					lineWidth := textWidth(line)
-					if lineWidth > width {
-						width = lineWidth
-					}
+		// Measure body text width
+		if d.Content == nil {
+			for _, line := range strings.Split(d.Body, "\n") {
+				lineWidth := textWidth(line)
+				if lineWidth > width {
+					width = lineWidth
 				}
-			} else {
-				// For custom content, use a reasonable default or measure it
+			}
+		} else {
+			// For custom content, use a reasonable default or measure it
 			contentSize := d.Content.Measure(contentConstraints)
 			if contentSize.Width > width {
 				width = contentSize.Width
@@ -278,25 +396,25 @@ func (d *Dialog) Render(ctx runtime.RenderContext) {
 	}
 	buttonY := inner.Y + inner.Height - 1
 	x := inner.X
-		for i, button := range d.Buttons {
-			var label string
-			if button.Key != 0 {
-				label = "[" + string(unicode.ToUpper(button.Key)) + "] " + button.Label
-			} else {
-				label = "[" + button.Label + "]"
-			}
-			labelWidth := textWidth(label)
-			if x+labelWidth > inner.X+inner.Width {
-				break
-			}
-			style := baseStyle
-			if i == d.selected {
-				style = style.Reverse(true)
-			}
-			ctx.Buffer.SetString(x, buttonY, label, style)
-			x += labelWidth + 2
+	for i, button := range d.Buttons {
+		var label string
+		if button.Key != 0 {
+			label = "[" + string(unicode.ToUpper(button.Key)) + "] " + button.Label
+		} else {
+			label = "[" + button.Label + "]"
 		}
+		labelWidth := textWidth(label)
+		if x+labelWidth > inner.X+inner.Width {
+			break
+		}
+		style := baseStyle
+		if i == d.selected {
+			style = style.Reverse(true)
+		}
+		ctx.Buffer.SetString(x, buttonY, label, style)
+		x += labelWidth + 2
 	}
+}
 
 // HandleMessage handles button selection and keyboard shortcuts.
 func (d *Dialog) HandleMessage(msg runtime.Message) runtime.HandleResult {

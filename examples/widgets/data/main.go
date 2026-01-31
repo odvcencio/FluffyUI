@@ -38,7 +38,7 @@ type DataView struct {
 
 func NewDataView() *DataView {
 	view := &DataView{}
-	view.header = widgets.NewLabel("Data Widgets").WithStyle(backend.DefaultStyle().Bold(true))
+	view.header = widgets.NewLabel("Data Widgets", widgets.WithLabelStyle(backend.DefaultStyle().Bold(true)))
 
 	items := []string{"Alpha", "Beta", "Gamma", "Delta", "Epsilon", "Zeta", "Eta"}
 	adapter := widgets.NewSliceAdapter(items, func(item string, index int, selected bool, ctx runtime.RenderContext) {
@@ -50,7 +50,7 @@ func NewDataView() *DataView {
 		ctx.Buffer.SetString(ctx.Bounds.X, ctx.Bounds.Y, line, style)
 	})
 	view.list = widgets.NewList(adapter)
-	leftPanel := widgets.NewPanel(view.list).WithBorder(backend.DefaultStyle())
+	leftPanel := widgets.NewPanel(view.list, widgets.WithPanelBorder(backend.DefaultStyle()))
 	leftPanel.SetTitle("List")
 
 	view.table = widgets.NewTable(
@@ -77,13 +77,13 @@ func NewDataView() *DataView {
 	}
 	view.tree = widgets.NewTree(root)
 
-	tablePanel := widgets.NewPanel(view.table).WithBorder(backend.DefaultStyle())
+	tablePanel := widgets.NewPanel(view.table, widgets.WithPanelBorder(backend.DefaultStyle()))
 	tablePanel.SetTitle("Table")
-	gridPanel := widgets.NewPanel(view.grid).WithBorder(backend.DefaultStyle())
+	gridPanel := widgets.NewPanel(view.grid, widgets.WithPanelBorder(backend.DefaultStyle()))
 	gridPanel.SetTitle("DataGrid")
-	treePanel := widgets.NewPanel(view.tree).WithBorder(backend.DefaultStyle())
+	treePanel := widgets.NewPanel(view.tree, widgets.WithPanelBorder(backend.DefaultStyle()))
 	treePanel.SetTitle("Tree")
-	richPanel := widgets.NewPanel(view.richText).WithBorder(backend.DefaultStyle())
+	richPanel := widgets.NewPanel(view.richText, widgets.WithPanelBorder(backend.DefaultStyle()))
 	richPanel.SetTitle("RichText")
 	rightColumn := demo.NewVBox(tablePanel, gridPanel, treePanel, richPanel)
 	rightColumn.Gap = 1

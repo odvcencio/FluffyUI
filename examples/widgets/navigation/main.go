@@ -33,7 +33,7 @@ type NavigationView struct {
 
 func NewNavigationView() *NavigationView {
 	view := &NavigationView{}
-	view.header = widgets.NewLabel("Navigation Widgets").WithStyle(backend.DefaultStyle().Bold(true))
+	view.header = widgets.NewLabel("Navigation Widgets", widgets.WithLabelStyle(backend.DefaultStyle().Bold(true)))
 
 	menuTab := demo.NewVBox(newMenuSection(), newBreadcrumbSection())
 	menuTab.Gap = 1
@@ -43,7 +43,7 @@ func NewNavigationView() *NavigationView {
 		widgets.Step{Title: "Build", State: widgets.StepActive},
 		widgets.Step{Title: "Ship", State: widgets.StepPending},
 	)
-	stepsPanel := widgets.NewPanel(steps).WithBorder(backend.DefaultStyle())
+	stepsPanel := widgets.NewPanel(steps, widgets.WithPanelBorder(backend.DefaultStyle()))
 	stepsPanel.SetTitle("Stepper")
 
 	palette := widgets.NewPaletteWidget("Quick Actions")
@@ -76,7 +76,7 @@ func newMenuSection() runtime.Widget {
 		},
 	}
 	menu := widgets.NewMenu(items...)
-	panel := widgets.NewPanel(menu).WithBorder(backend.DefaultStyle())
+	panel := widgets.NewPanel(menu, widgets.WithPanelBorder(backend.DefaultStyle()))
 	panel.SetTitle("Menu")
 
 	section := demo.NewVBox(panel, status)
@@ -90,7 +90,7 @@ func newBreadcrumbSection() runtime.Widget {
 		widgets.BreadcrumbItem{Label: "Projects"},
 		widgets.BreadcrumbItem{Label: "FluffyUI"},
 	)
-	panel := widgets.NewPanel(crumbs).WithBorder(backend.DefaultStyle())
+	panel := widgets.NewPanel(crumbs, widgets.WithPanelBorder(backend.DefaultStyle()))
 	panel.SetTitle("Breadcrumb")
 	return panel
 }

@@ -46,7 +46,7 @@ type FeedbackView struct {
 
 func NewFeedbackView() *FeedbackView {
 	view := &FeedbackView{}
-	view.header = widgets.NewLabel("Feedback Widgets").WithStyle(backend.DefaultStyle().Bold(true))
+	view.header = widgets.NewLabel("Feedback Widgets", widgets.WithLabelStyle(backend.DefaultStyle().Bold(true)))
 	view.helper = widgets.NewLabel("Press D for dialog, T for toast")
 	view.alert = widgets.NewAlert("All systems nominal", widgets.AlertSuccess)
 	view.progress = widgets.NewProgress()

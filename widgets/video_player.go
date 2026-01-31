@@ -35,8 +35,32 @@ type VideoPlayer struct {
 	onEnd        func()
 }
 
+// VideoPlayerOption configures a VideoPlayer.
+type VideoPlayerOption = Option[VideoPlayer]
+
+// WithVideoPlayerBlitter configures the blitter used for rendering frames.
+func WithVideoPlayerBlitter(blitter graphics.Blitter) VideoPlayerOption {
+	return func(v *VideoPlayer) {
+		if v == nil || blitter == nil {
+			return
+		}
+		v.blitter = blitter
+		v.canvas = nil
+	}
+}
+
+// WithVideoPlayerOnEnd registers a callback for when playback completes.
+func WithVideoPlayerOnEnd(fn func()) VideoPlayerOption {
+	return func(v *VideoPlayer) {
+		if v == nil {
+			return
+		}
+		v.onEnd = fn
+	}
+}
+
 // NewVideoPlayer creates a player and starts decoding frames.
-func NewVideoPlayer(path string) (*VideoPlayer, error) {
+func NewVideoPlayer(path string, opts ...VideoPlayerOption) (*VideoPlayer, error) {
 	decoder, err := video.NewDecoder(path)
 	if err != nil {
 		return nil, err
@@ -46,19 +70,30 @@ func NewVideoPlayer(path string) (*VideoPlayer, error) {
 		blitter: graphics.BestBlitter(nil),
 	}
 	player.initTiming(decoder.Info())
+	for _, opt := range opts {
+		if opt == nil {
+			continue
+		}
+		opt(player)
+	}
 	if err := player.startFrameLoader(); err != nil {
 		return nil, err
 	}
 	return player, nil
 }
 
-// WithBlitter configures the blitter used for rendering frames.
-func (v *VideoPlayer) WithBlitter(blitter graphics.Blitter) *VideoPlayer {
+// SetBlitter configures the blitter used for rendering frames.
+func (v *VideoPlayer) SetBlitter(blitter graphics.Blitter) {
 	if v == nil || blitter == nil {
-		return v
+		return
 	}
 	v.blitter = blitter
 	v.canvas = nil
+}
+
+// Deprecated: prefer WithVideoPlayerBlitter during construction or SetBlitter for mutation.
+func (v *VideoPlayer) WithBlitter(blitter graphics.Blitter) *VideoPlayer {
+	v.SetBlitter(blitter)
 	return v
 }
 

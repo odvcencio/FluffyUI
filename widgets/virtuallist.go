@@ -201,12 +201,17 @@ func (v *VirtualList[T]) UseAdapterHeights() {
 	v.applyHeightProvider()
 }
 
-// OnSelect registers a selection handler.
-func (v *VirtualList[T]) OnSelect(fn func(index int, item T)) {
+// SetOnSelect registers a selection handler.
+func (v *VirtualList[T]) SetOnSelect(fn func(index int, item T)) {
 	if v == nil {
 		return
 	}
 	v.onSelect = fn
+}
+
+// Deprecated: use SetOnSelect instead.
+func (v *VirtualList[T]) OnSelect(fn func(index int, item T)) {
+	v.SetOnSelect(fn)
 }
 
 // SelectedIndex returns the current selection.

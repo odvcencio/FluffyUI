@@ -10,7 +10,7 @@ Use these widgets to render structured data. A complete demo is in
 API notes:
 - `NewList(adapter)` constructs the list.
 - `NewSliceAdapter` and `NewSignalAdapter` wrap data sources.
-- `OnSelect` notifies selection changes.
+- `SetOnSelect` notifies selection changes.
 - `SetSelected` and `SelectedItem` allow external control.
 - GoDoc example: `ExampleList`.
 
@@ -35,6 +35,7 @@ list := widgets.NewList(adapter)
 API notes:
 - `NewTable(columns...)` defines columns.
 - `SetRows(rows)` updates data.
+- `SetDataSource(source)` enables virtualized large datasets.
 - GoDoc example: `ExampleTable`.
 
 Example:
@@ -55,6 +56,7 @@ API notes:
 - `NewDataGrid(columns...)` creates the grid.
 - `SetSelected(row, col)` controls selection.
 - `StartEditing` and `CommitEditing` drive inline edits.
+- `SetDataSource(source)` enables virtualized large datasets.
 
 Example:
 

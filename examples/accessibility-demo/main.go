@@ -116,7 +116,7 @@ func newAccessibilityControls(announcer *accessibility.SimpleAnnouncer, parent *
 		announcer: announcer,
 		parent:    parent,
 	}
-	c.title = widgets.NewLabel("Accessibility Demo").WithStyle(backend.DefaultStyle().Bold(true))
+	c.title = widgets.NewLabel("Accessibility Demo", widgets.WithLabelStyle(backend.DefaultStyle().Bold(true)))
 	c.hint = widgets.NewLabel("Tab to move focus. Enter to activate.")
 	c.textarea = widgets.NewTextArea()
 	c.textarea.SetLabel("Notes")
