@@ -84,6 +84,7 @@ type Session struct {
 	pendingRequests   atomic.Int64
 	completedRequests atomic.Int64
 	failedRequests    atomic.Int64
+	rateLimited       atomic.Int64
 
 	// Rate limiting
 	limiter *rate.Limiter
@@ -266,6 +267,7 @@ func (s *Session) StartRequest() error {
 
 	// Check rate limit
 	if s.limiter != nil && !s.limiter.Allow() {
+		s.rateLimited.Add(1)
 		return &RateLimitError{
 			RetryAfter: rateRetryDelay(s.limiter),
 		}
@@ -328,6 +330,7 @@ func (s *Session) Stats() SessionStats {
 		PendingRequests:   int(s.pendingRequests.Load()),
 		CompletedRequests: int(s.completedRequests.Load()),
 		FailedRequests:    int(s.failedRequests.Load()),
+		RateLimited:       int(s.rateLimited.Load()),
 		Authed:            s.authed.Load(),
 		Mode:              s.mode,
 		Priority:          s.priority,
@@ -342,6 +345,7 @@ type SessionStats struct {
 	PendingRequests   int             `json:"pending_requests"`
 	CompletedRequests int             `json:"completed_requests"`
 	FailedRequests    int             `json:"failed_requests"`
+	RateLimited       int             `json:"rate_limited"`
 	Authed            bool            `json:"authed"`
 	Mode              SessionMode     `json:"mode"`
 	Priority          SessionPriority `json:"priority"`
@@ -364,6 +368,7 @@ type SessionPool struct {
 
 	// Global rate limiting
 	globalLimiter *rate.Limiter
+	rateLimited   atomic.Int64
 
 	// Housekeeping
 	ticker *time.Ticker
@@ -505,6 +510,7 @@ func (p *SessionPool) CheckGlobalRate() error {
 		return nil
 	}
 	if !p.globalLimiter.Allow() {
+		p.rateLimited.Add(1)
 		return &RateLimitError{
 			RetryAfter: rateRetryDelay(p.globalLimiter),
 		}
@@ -535,7 +541,9 @@ func (p *SessionPool) Stats() PoolStats {
 			stats.NormalSessions++
 		}
 		stats.TotalPendingRequests += int(s.pendingRequests.Load())
+		stats.RateLimitedSessions += int(s.rateLimited.Load())
 	}
+	stats.RateLimitedGlobal = p.rateLimited.Load()
 
 	return stats
 }
@@ -584,12 +592,14 @@ func (p *SessionPool) cleanupExpired() {
 
 // PoolStats contains pool statistics
 type PoolStats struct {
-	TotalSessions        int `json:"total_sessions"`
-	MaxSessions          int `json:"max_sessions"`
-	NormalSessions       int `json:"normal_sessions"`
-	BackgroundSessions   int `json:"background_sessions"`
-	InteractiveSessions  int `json:"interactive_sessions"`
-	TotalPendingRequests int `json:"total_pending_requests"`
+	TotalSessions        int   `json:"total_sessions"`
+	MaxSessions          int   `json:"max_sessions"`
+	NormalSessions       int   `json:"normal_sessions"`
+	BackgroundSessions   int   `json:"background_sessions"`
+	InteractiveSessions  int   `json:"interactive_sessions"`
+	TotalPendingRequests int   `json:"total_pending_requests"`
+	RateLimitedSessions  int   `json:"rate_limited_sessions"`
+	RateLimitedGlobal    int64 `json:"rate_limited_global"`
 }
 
 // Helper function to calculate retry delay

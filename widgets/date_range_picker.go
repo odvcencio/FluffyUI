@@ -217,7 +217,6 @@ func (d *DateRangePicker) Layout(bounds runtime.Rect) {
 	sepWidth := textWidth(sep)
 	leftWidth := (content.Width - sepWidth) / 2
 	if leftWidth < 6 {
-		leftWidth = max(1, content.Width)
 		if d.startInput != nil {
 			d.startInput.Layout(runtime.Rect{X: content.X, Y: inputY, Width: content.Width, Height: rowHeight})
 		}

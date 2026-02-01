@@ -609,6 +609,8 @@ fluffyui/
 └── examples/       Working example applications
 ```
 
+Note: `gpu/` and `video/` are optional/experimental modules and are not yet coverage-gated. APIs may evolve between minor releases.
+
 ## Dependencies
 
 FluffyUI has minimal dependencies:

@@ -61,8 +61,7 @@ func NewGraphicsDemo() *GraphicsDemo {
 		particles: animation.NewParticleSystem(256),
 		image:     sample,
 	}
-	widget := widgets.NewCanvasWidget(demo.draw)
-	widget.WithBlitter(graphics.BestBlitter(nil))
+	widget := widgets.NewCanvasWidget(demo.draw, widgets.WithCanvasBlitter(graphics.BestBlitter(nil)))
 	demo.CanvasWidget = widget
 	return demo
 }

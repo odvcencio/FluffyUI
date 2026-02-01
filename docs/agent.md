@@ -27,6 +27,13 @@ export FLUFFYUI_AGENT_TOKEN=my-secret-token
 
 # Optional: Allow text capture in snapshots
 export FLUFFYUI_AGENT_ALLOW_TEXT=1
+
+# Optional: TLS for TCP/WS
+export FLUFFYUI_AGENT_TLS_CERT=/path/to/cert.pem
+export FLUFFYUI_AGENT_TLS_KEY=/path/to/key.pem
+
+# Optional: WebSocket origin allowlist (comma-separated)
+export FLUFFYUI_AGENT_ALLOWED_ORIGINS=https://app.example.com,https://admin.example.com
 ```
 
 ### Basic Usage
@@ -151,6 +158,20 @@ task, err := server.SubmitBackgroundTask(
 progress := task.Progress()  // 0-100
 status := task.Status()      // pending, running, completed, failed, cancelled
 ```
+
+## Security Defaults
+
+FluffyUI ships with conservative WebSocket origin handling:
+
+- If no allowed origins are configured, **browser origins are rejected**.
+- Non-browser clients without an `Origin` header are still allowed.
+- Use `WithAllowedOrigins(...)` or `FLUFFYUI_AGENT_ALLOWED_ORIGINS` to permit browser access.
+
+For production deployments:
+
+- Prefer **unix sockets** for local automation (`FLUFFYUI_AGENT=unix:/tmp/agent.sock`).
+- If you expose TCP/WS, use **TLS** (set `FLUFFYUI_AGENT_TLS_CERT`/`FLUFFYUI_AGENT_TLS_KEY`) or run behind a TLS reverse proxy.
+- Always set `FLUFFYUI_AGENT_TOKEN` for authenticated access.
 
 ## Protocols
 

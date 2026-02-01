@@ -2306,13 +2306,11 @@ func (d *fireworksDemo) HandleMessage(msg runtime.Message) runtime.HandleResult 
 func demoVideo() runtime.Widget {
 	// Try to find sample video in testdata
 	videoPath := "testdata/sample.mp4"
-	player, err := widgets.NewVideoPlayer(videoPath)
+	player, err := widgets.NewVideoPlayer(videoPath, widgets.WithVideoPlayerBlitter(&graphics.SextantBlitter{}))
 	if err != nil {
 		// Fallback to simulated video if no sample video found
 		return &videoFallbackDemo{}
 	}
-	// Force SextantBlitter for better video rendering in recordings
-	player.WithBlitter(&graphics.SextantBlitter{})
 	player.Play()
 	return &videoDemo{player: player}
 }

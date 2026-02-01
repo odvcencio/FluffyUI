@@ -1,6 +1,7 @@
 package video
 
 import (
+	"context"
 	"image"
 	"image/color"
 	"testing"
@@ -140,17 +141,17 @@ func TestParseDurationInvalid(t *testing.T) {
 
 func TestExtractFramesErrors(t *testing.T) {
 	var d *Decoder
-	if _, err := d.ExtractFramesContext(nil, 24); err == nil {
+	if _, err := d.ExtractFramesContext(context.Background(), 24); err == nil {
 		t.Fatalf("expected error for nil decoder")
 	}
 
 	d = &Decoder{path: "", info: VideoInfo{FrameRate: 24}, frameSize: 12}
-	if _, err := d.ExtractFramesContext(nil, 24); err == nil {
+	if _, err := d.ExtractFramesContext(context.Background(), 24); err == nil {
 		t.Fatalf("expected error for empty path")
 	}
 
 	d = &Decoder{path: "video.mp4", info: VideoInfo{FrameRate: 24}, frameSize: 0}
-	if _, err := d.ExtractFramesContext(nil, 24); err == nil {
+	if _, err := d.ExtractFramesContext(context.Background(), 24); err == nil {
 		t.Fatalf("expected error for invalid frame size")
 	}
 }

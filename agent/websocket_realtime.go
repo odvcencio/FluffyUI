@@ -512,10 +512,10 @@ func (s *RealTimeWebSocketServer) checkOrigin(r *http.Request) bool {
 	if s == nil {
 		return false
 	}
-	if len(s.allowedOrigins) == 0 {
-		return true
-	}
 	origin := r.Header.Get("Origin")
+	if len(s.allowedOrigins) == 0 {
+		return origin == ""
+	}
 	if origin == "" {
 		return true
 	}

@@ -1,0 +1,52 @@
+package agent
+
+import (
+	"testing"
+
+	"github.com/odvcencio/fluffyui/accessibility"
+	"github.com/odvcencio/fluffyui/runtime"
+)
+
+type simpleAccessible struct {
+	label string
+	value *accessibility.ValueInfo
+}
+
+func (s simpleAccessible) Measure(runtime.Constraints) runtime.Size { return runtime.Size{} }
+func (s simpleAccessible) Layout(runtime.Rect)                      {}
+func (s simpleAccessible) Render(runtime.RenderContext)             {}
+func (s simpleAccessible) HandleMessage(runtime.Message) runtime.HandleResult {
+	return runtime.Unhandled()
+}
+
+func (s simpleAccessible) AccessibleRole() accessibility.Role { return accessibility.RoleText }
+func (s simpleAccessible) AccessibleLabel() string            { return s.label }
+func (s simpleAccessible) AccessibleDescription() string      { return "" }
+func (s simpleAccessible) AccessibleState() accessibility.StateSet {
+	return accessibility.StateSet{}
+}
+func (s simpleAccessible) AccessibleValue() *accessibility.ValueInfo { return s.value }
+
+func TestAccessibleChoice(t *testing.T) {
+	if accessibleChoice(nil) != "" {
+		t.Fatalf("expected empty for nil")
+	}
+	acc := simpleAccessible{label: "Label"}
+	if accessibleChoice(acc) != "Label" {
+		t.Fatalf("expected label choice")
+	}
+	acc = simpleAccessible{label: "Label", value: &accessibility.ValueInfo{Text: "Value"}}
+	if accessibleChoice(acc) != "Value" {
+		t.Fatalf("expected value choice")
+	}
+}
+
+func TestAccessibleFromWidget(t *testing.T) {
+	if accessibleFromWidget(nil) != nil {
+		t.Fatalf("expected nil for nil widget")
+	}
+	acc := simpleAccessible{label: "ok"}
+	if accessibleFromWidget(acc) == nil {
+		t.Fatalf("expected accessible from widget")
+	}
+}

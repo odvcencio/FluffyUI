@@ -6,32 +6,35 @@ import "strings"
 type FieldType string
 
 const (
-	FieldText       FieldType = "text"
-	FieldNumber     FieldType = "number"
-	FieldEmail      FieldType = "email"
-	FieldPassword   FieldType = "password"
-	FieldCheckbox   FieldType = "checkbox"
-	FieldSelect     FieldType = "select"
+	FieldText        FieldType = "text"
+	FieldNumber      FieldType = "number"
+	FieldEmail       FieldType = "email"
+	FieldPassword    FieldType = "password"
+	FieldCheckbox    FieldType = "checkbox"
+	FieldSelect      FieldType = "select"
 	FieldMultiSelect FieldType = "multiselect"
-	FieldDate       FieldType = "date"
-	FieldTime       FieldType = "time"
+	FieldDate        FieldType = "date"
+	FieldTime        FieldType = "time"
 )
 
 // FieldSpec describes a form field for builders and renderers.
 type FieldSpec struct {
-	Name        string
-	Label       string
-	Type        FieldType
-	Placeholder string
-	Options     []string
-	Initial     any
-	Validators  []Validator
+	Name            string
+	Label           string
+	Type            FieldType
+	Placeholder     string
+	Options         []string
+	Initial         any
+	Validators      []Validator
+	AsyncValidators []AsyncValidator
+	DependsOn       []string
 }
 
 // Builder constructs forms using a fluent DSL.
 type Builder struct {
-	fields     []FieldSpec
-	validators []FormValidator
+	fields          []FieldSpec
+	validators      []FormValidator
+	asyncValidators []AsyncFormValidator
 }
 
 // NewBuilder creates a new form builder.
@@ -162,6 +165,15 @@ func (b *Builder) Validator(validator FormValidator) *Builder {
 	return b
 }
 
+// AsyncValidator adds a form-level async validator.
+func (b *Builder) AsyncValidator(validator AsyncFormValidator) *Builder {
+	if b == nil || validator == nil {
+		return b
+	}
+	b.asyncValidators = append(b.asyncValidators, validator)
+	return b
+}
+
 // Build constructs a Form and returns the field specs used.
 func (b *Builder) Build() (*Form, []FieldSpec) {
 	if b == nil {
@@ -175,11 +187,24 @@ func (b *Builder) Build() (*Form, []FieldSpec) {
 			continue
 		}
 		fields = append(fields, spec)
-		formFields = append(formFields, NewField(name, spec.Initial, spec.Validators...))
+		field := NewField(name, spec.Initial, spec.Validators...)
+		if len(spec.AsyncValidators) > 0 {
+			field.SetAsyncValidators(spec.AsyncValidators...)
+		}
+		formFields = append(formFields, field)
 	}
 	form := NewForm(formFields...)
 	for _, validator := range b.validators {
 		form.AddValidator(validator)
+	}
+	for _, validator := range b.asyncValidators {
+		form.AddAsyncValidator(validator)
+	}
+	for _, spec := range fields {
+		if len(spec.DependsOn) == 0 {
+			continue
+		}
+		form.SetDependencies(spec.Name, spec.DependsOn...)
 	}
 	return form, fields
 }

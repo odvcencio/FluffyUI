@@ -97,10 +97,10 @@ func (p *Particle3D) Alpha() float32 {
 
 // Firework represents a single firework that launches and explodes
 type Firework struct {
-	X, Y, Z    float64   // Position
-	VX, VY, VZ float64   // Velocity
-	R, G, B    uint8     // Color
-	Exploded   bool      // Has it exploded?
+	X, Y, Z    float64 // Position
+	VX, VY, VZ float64 // Velocity
+	R, G, B    uint8   // Color
+	Exploded   bool    // Has it exploded?
 	Particles  []Particle3D
 	Trail      [][2]float64 // Launch trail
 	TargetY    float64      // Explosion height
@@ -111,15 +111,15 @@ type Firework struct {
 func NewFirework(canvasW, canvasH int, cameraZ float64) *Firework {
 	// Random neon/firework colors
 	colors := [][3]uint8{
-		{255, 50, 50},    // Red
-		{255, 140, 0},    // Orange
-		{255, 215, 0},    // Gold
-		{50, 255, 50},    // Green
-		{100, 150, 255},  // Blue
-		{200, 100, 255},  // Purple
-		{255, 192, 203},  // Pink
-		{0, 255, 255},    // Cyan
-		{255, 255, 255},  // White
+		{255, 50, 50},   // Red
+		{255, 140, 0},   // Orange
+		{255, 215, 0},   // Gold
+		{50, 255, 50},   // Green
+		{100, 150, 255}, // Blue
+		{200, 100, 255}, // Purple
+		{255, 192, 203}, // Pink
+		{0, 255, 255},   // Cyan
+		{255, 255, 255}, // White
 	}
 	c := colors[rand.Intn(len(colors))]
 
@@ -141,7 +141,7 @@ func NewFirework(canvasW, canvasH int, cameraZ float64) *Firework {
 		VX: rand.Float64()*40 - 20, // Slight horizontal drift
 		VY: -requiredV,
 		VZ: 0,
-		R: c[0], G: c[1], B: c[2],
+		R:  c[0], G: c[1], B: c[2],
 		TargetY: targetY,
 	}
 }
@@ -219,12 +219,12 @@ func (f *Firework) IsFinished() bool {
 // FireworksDemo is the main demo widget
 type FireworksDemo struct {
 	*widgets.CanvasWidget
-	fireworks    []*Firework
-	cameraZ      float64
-	lastSpawn    time.Time
-	spawnDelay   time.Duration
-	canvasW      int
-	canvasH      int
+	fireworks  []*Firework
+	cameraZ    float64
+	lastSpawn  time.Time
+	spawnDelay time.Duration
+	canvasW    int
+	canvasH    int
 }
 
 func NewFireworksDemo() *FireworksDemo {
@@ -232,8 +232,7 @@ func NewFireworksDemo() *FireworksDemo {
 		spawnDelay: time.Millisecond * 800,
 	}
 	// Use Braille blitter for maximum resolution (2x4 pixels per cell)
-	demo.CanvasWidget = widgets.NewCanvasWidget(demo.draw)
-	demo.CanvasWidget.WithBlitter(&graphics.BrailleBlitter{})
+	demo.CanvasWidget = widgets.NewCanvasWidget(demo.draw, widgets.WithCanvasBlitter(&graphics.BrailleBlitter{}))
 	return demo
 }
 

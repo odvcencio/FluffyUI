@@ -44,7 +44,7 @@ func NewModalDialog(title string, width, height int) *ModalDialog {
 
 // WithContent sets the dialog's content widget.
 func (d *ModalDialog) WithContent(content runtime.Widget) *ModalDialog {
-	d.Dialog.WithContent(content)
+	d.Dialog.SetContent(content)
 	return d
 }
 
@@ -64,19 +64,19 @@ func (d *ModalDialog) WithActions(actions ...DialogAction) *ModalDialog {
 
 // WithDismissable sets whether Escape closes the dialog.
 func (d *ModalDialog) WithDismissable(dismissable bool) *ModalDialog {
-	d.Dialog.WithDismissable(dismissable)
+	d.Dialog.SetDismissable(dismissable)
 	return d
 }
 
 // OnDismiss sets the callback when dialog is dismissed.
 func (d *ModalDialog) OnDismiss(fn func()) *ModalDialog {
-	d.Dialog.OnDismiss(fn)
+	d.Dialog.SetOnDismiss(fn)
 	return d
 }
 
 // WithAutoDismiss enables auto-dismiss after duration.
 func (d *ModalDialog) WithAutoDismiss(duration time.Duration) *ModalDialog {
-	d.Dialog.WithAutoDismiss(duration)
+	d.Dialog.SetAutoDismiss(duration)
 	return d
 }
 

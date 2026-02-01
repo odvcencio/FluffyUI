@@ -37,8 +37,8 @@ type WebSocketServer struct {
 type WebSocketOptions struct {
 	ServerOptions
 	// AllowedOrigins restricts which origins can connect.
-	// Empty slice allows all origins (insecure, dev only).
-	// Use []string{"*"} explicitly to allow all in production.
+	// Empty slice allows only non-browser clients (no Origin header).
+	// Use []string{"*"} explicitly to allow all origins.
 	AllowedOrigins []string
 }
 
@@ -130,13 +130,12 @@ func (s *WebSocketServer) checkOrigin(r *http.Request) bool {
 	if s == nil {
 		return false
 	}
-	// No restrictions configured = allow all (dev mode)
-	if len(s.allowedOrigins) == 0 {
-		return true
-	}
 	origin := r.Header.Get("Origin")
+	// Empty allowlist only permits non-browser clients (no Origin header).
+	if len(s.allowedOrigins) == 0 {
+		return origin == ""
+	}
 	if origin == "" {
-		// No origin header (same-origin request or non-browser client)
 		return true
 	}
 	for _, allowed := range s.allowedOrigins {

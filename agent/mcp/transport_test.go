@@ -3,6 +3,7 @@ package mcp
 import (
 	"bufio"
 	"bytes"
+	"reflect"
 	"sync"
 	"testing"
 
@@ -46,7 +47,7 @@ func TestSocketSessionBasics(t *testing.T) {
 	if len(session.GetSessionResources()) != 1 {
 		t.Fatalf("expected resources")
 	}
-	templates := map[string]mcpserver.ServerResourceTemplate{"rt": {Template: mcp.ResourceTemplate{URI: "t"}}}
+	templates := map[string]mcpserver.ServerResourceTemplate{"rt": {Template: mcp.ResourceTemplate{Name: "t"}}}
 	session.SetSessionResourceTemplates(templates)
 	if len(session.GetSessionResourceTemplates()) != 1 {
 		t.Fatalf("expected templates")
@@ -59,7 +60,7 @@ func TestSocketSessionBasics(t *testing.T) {
 	}
 	caps := mcp.ClientCapabilities{}
 	session.SetClientCapabilities(caps)
-	if session.GetClientCapabilities() != caps {
+	if !reflect.DeepEqual(session.GetClientCapabilities(), caps) {
 		t.Fatalf("expected client capabilities")
 	}
 }

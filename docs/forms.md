@@ -33,6 +33,32 @@ form.Submit()
 errors := form.Validate()
 ```
 
+## Async validation
+
+Attach async validators to fields or the form and run `ValidateAsync`:
+
+```go
+field := forms.NewField("username", "")
+field.SetAsyncValidators(forms.Async(func(ctx context.Context, value any) *forms.ValidationError {
+    // Example: check uniqueness with a remote call
+    if value == "admin" {
+        return &forms.ValidationError{Message: "Username unavailable"}
+    }
+    return nil
+}))
+
+form := forms.NewForm(field)
+errs := <-form.ValidateAsync(context.Background())
+```
+
+## Dependencies
+
+Declare field dependencies to revalidate when inputs change:
+
+```go
+form.SetDependencies("confirm", "password")
+```
+
 ## Cross-field validation
 
 ```go

@@ -39,13 +39,13 @@ func NewGPUCanvasDemo() *GPUCanvasDemo {
 	if backend := strings.TrimSpace(os.Getenv("FLUFFYUI_GPU_BACKEND")); backend != "" {
 		switch strings.ToLower(backend) {
 		case "opengl", "gl":
-			demo.GPUCanvasWidget.WithBackend(gpu.BackendOpenGL)
+			demo.GPUCanvasWidget.SetBackend(gpu.BackendOpenGL)
 		case "metal":
-			demo.GPUCanvasWidget.WithBackend(gpu.BackendMetal)
+			demo.GPUCanvasWidget.SetBackend(gpu.BackendMetal)
 		case "webgl":
-			demo.GPUCanvasWidget.WithBackend(gpu.BackendWebGL)
+			demo.GPUCanvasWidget.SetBackend(gpu.BackendWebGL)
 		case "software", "cpu":
-			demo.GPUCanvasWidget.WithBackend(gpu.BackendSoftware)
+			demo.GPUCanvasWidget.SetBackend(gpu.BackendSoftware)
 		}
 	}
 	return demo

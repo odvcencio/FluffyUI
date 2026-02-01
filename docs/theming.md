@@ -69,14 +69,7 @@ FSS supports a focused media query subset:
 Use a file watcher to reload on edits:
 
 ```go
-stop := style.WatchFile("app.fss", time.Second, func(sheet *style.Stylesheet, err error) {
-    if err != nil || sheet == nil {
-        return
-    }
-    app.Services().Scheduler().Schedule(func() {
-        app.SetStylesheet(sheet)
-    })
-})
+stop := runtime.WatchStylesheetFile(app, "app.fss", time.Second)
 defer stop()
 ```
 

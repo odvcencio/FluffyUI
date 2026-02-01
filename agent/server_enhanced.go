@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
+	"crypto/tls"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -40,14 +41,19 @@ type EnhancedServerOptions struct {
 	QueueOptions QueueOptions
 
 	// Background tasks
-	MaxBackgroundTasks    int
-	MaxTasksPerSession    int
+	MaxBackgroundTasks int
+	MaxTasksPerSession int
 
 	// Connection handling
 	MaxConnections        int           // Max concurrent connections (0 = unlimited)
 	ConnectionIdleTimeout time.Duration // Timeout for idle connections
 	RequestTimeout        time.Duration // Max time to process a request
-	
+
+	// TLS
+	TLSConfig   *tls.Config
+	TLSCertFile string
+	TLSKeyFile  string
+
 	// Health and monitoring
 	EnableHealthCheck bool
 	HealthInterval    time.Duration
@@ -72,16 +78,16 @@ func DefaultEnhancedServerOptions() EnhancedServerOptions {
 // EnhancedServer exposes an out-of-process JSONL API with session management,
 // request queuing, and background task support.
 type EnhancedServer struct {
-	opts EnhancedServerOptions
+	opts  EnhancedServerOptions
 	agent *Agent
 
 	// Connection management
-	listener   net.Listener
-	unixPath   string
-	connCount  atomic.Int64
-	maxConns   int
-	connMu     sync.Mutex
-	conns      map[net.Conn]context.CancelFunc
+	listener  net.Listener
+	unixPath  string
+	connCount atomic.Int64
+	maxConns  int
+	connMu    sync.Mutex
+	conns     map[net.Conn]context.CancelFunc
 
 	// Core components
 	sessionPool *SessionPool
@@ -96,20 +102,20 @@ type EnhancedServer struct {
 	wg        sync.WaitGroup
 
 	// Health
-	healthMu   sync.RWMutex
+	healthMu     sync.RWMutex
 	healthStatus HealthStatus
-	lastHealth time.Time
+	lastHealth   time.Time
 }
 
 // HealthStatus represents the current health of the server
 type HealthStatus struct {
-	Healthy       bool      `json:"healthy"`
-	Message       string    `json:"message,omitempty"`
-	ActiveConns   int64     `json:"active_connections"`
-	ActiveSessions int      `json:"active_sessions"`
-	QueueSize     int       `json:"queue_size"`
-	ActiveTasks   int       `json:"active_tasks"`
-	Timestamp     time.Time `json:"timestamp"`
+	Healthy        bool      `json:"healthy"`
+	Message        string    `json:"message,omitempty"`
+	ActiveConns    int64     `json:"active_connections"`
+	ActiveSessions int       `json:"active_sessions"`
+	QueueSize      int       `json:"queue_size"`
+	ActiveTasks    int       `json:"active_tasks"`
+	Timestamp      time.Time `json:"timestamp"`
 }
 
 // NewEnhancedServer validates options and constructs an enhanced server.
@@ -173,7 +179,13 @@ func (s *EnhancedServer) Start() error {
 		return errors.New("server already running")
 	}
 
-	ln, unixPath, err := listenAgentAddr(s.opts.Addr)
+	tlsConfig, err := resolveTLSConfig(s.opts.TLSConfig, s.opts.TLSCertFile, s.opts.TLSKeyFile)
+	if err != nil {
+		s.running.Store(false)
+		return err
+	}
+
+	ln, unixPath, err := listenAgentAddrWithTLS(s.opts.Addr, tlsConfig)
 	if err != nil {
 		s.running.Store(false)
 		return err
@@ -260,22 +272,22 @@ func (s *EnhancedServer) Stats() ServerStats {
 	queueStats := s.queue.Stats()
 
 	return ServerStats{
-		Running:        s.running.Load(),
-		ActiveConns:    s.connCount.Load(),
-		SessionStats:   poolStats,
-		QueueStats:     queueStats,
-		ActiveTasks:    s.taskManager.Count(),
-		Health:         s.Health(),
+		Running:      s.running.Load(),
+		ActiveConns:  s.connCount.Load(),
+		SessionStats: poolStats,
+		QueueStats:   queueStats,
+		ActiveTasks:  s.taskManager.Count(),
+		Health:       s.Health(),
 	}
 }
 
 // ServerStats contains comprehensive server statistics
 type ServerStats struct {
-	Running     bool         `json:"running"`
-	ActiveConns int64        `json:"active_connections"`
-	SessionStats PoolStats   `json:"sessions"`
-	QueueStats   QueueStats  `json:"queue"`
-	ActiveTasks  int         `json:"active_tasks"`
+	Running      bool         `json:"running"`
+	ActiveConns  int64        `json:"active_connections"`
+	SessionStats PoolStats    `json:"sessions"`
+	QueueStats   QueueStats   `json:"queue"`
+	ActiveTasks  int          `json:"active_tasks"`
 	Health       HealthStatus `json:"health"`
 }
 
@@ -742,13 +754,13 @@ func (s *EnhancedServer) updateHealth() {
 
 	s.healthMu.Lock()
 	s.healthStatus = HealthStatus{
-		Healthy:         healthy,
-		Message:         message,
-		ActiveConns:     stats.ActiveConns,
-		ActiveSessions:  stats.SessionStats.TotalSessions,
-		QueueSize:       stats.QueueStats.CriticalSize + stats.QueueStats.HighSize + stats.QueueStats.NormalSize + stats.QueueStats.LowSize + stats.QueueStats.BackgroundSize,
-		ActiveTasks:     stats.ActiveTasks,
-		Timestamp:       time.Now(),
+		Healthy:        healthy,
+		Message:        message,
+		ActiveConns:    stats.ActiveConns,
+		ActiveSessions: stats.SessionStats.TotalSessions,
+		QueueSize:      stats.QueueStats.CriticalSize + stats.QueueStats.HighSize + stats.QueueStats.NormalSize + stats.QueueStats.LowSize + stats.QueueStats.BackgroundSize,
+		ActiveTasks:    stats.ActiveTasks,
+		Timestamp:      time.Now(),
 	}
 	s.lastHealth = time.Now()
 	s.healthMu.Unlock()

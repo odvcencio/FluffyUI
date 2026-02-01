@@ -1,6 +1,6 @@
 // Water Demo - GPU-accelerated waterfall with particles and mist
 //
-// Demonstrates GPU canvas with particle physics for a waterfall effect
+// # Demonstrates GPU canvas with particle physics for a waterfall effect
 //
 // Usage:
 //
@@ -38,24 +38,24 @@ func main() {
 
 // WaterParticle represents a single water droplet
 type WaterParticle struct {
-	X, Y       float32
-	VX, VY     float32
-	Life       float32
-	MaxLife    float32
-	Size       float32
-	Alpha      float32
-	IsMist     bool
-	IsSplash   bool
+	X, Y     float32
+	VX, VY   float32
+	Life     float32
+	MaxLife  float32
+	Size     float32
+	Alpha    float32
+	IsMist   bool
+	IsSplash bool
 }
 
 // WaterDemo renders a GPU-accelerated waterfall
 type WaterDemo struct {
 	*widgets.GPUCanvasWidget
-	particles  []WaterParticle
-	phase      float32
-	lastEmit   time.Time
-	poolLevel  float32
-	rocks      []Rock
+	particles []WaterParticle
+	phase     float32
+	lastEmit  time.Time
+	poolLevel float32
+	rocks     []Rock
 }
 
 // Rock represents a decorative rock in the scene
@@ -74,14 +74,14 @@ func NewWaterDemo() *WaterDemo {
 	backend := strings.TrimSpace(os.Getenv("FLUFFYUI_GPU_BACKEND"))
 	switch strings.ToLower(backend) {
 	case "opengl", "gl":
-		d.GPUCanvasWidget.WithBackend(gpu.BackendOpenGL)
+		d.GPUCanvasWidget.SetBackend(gpu.BackendOpenGL)
 	case "metal":
-		d.GPUCanvasWidget.WithBackend(gpu.BackendMetal)
+		d.GPUCanvasWidget.SetBackend(gpu.BackendMetal)
 	case "software", "cpu":
-		d.GPUCanvasWidget.WithBackend(gpu.BackendSoftware)
+		d.GPUCanvasWidget.SetBackend(gpu.BackendSoftware)
 	default:
 		// Auto-detect: OpenGL on Linux/Windows, Metal on macOS, software fallback
-		d.GPUCanvasWidget.WithBackend(gpu.BackendAuto)
+		d.GPUCanvasWidget.SetBackend(gpu.BackendAuto)
 	}
 	return d
 }
@@ -284,8 +284,8 @@ func (d *WaterDemo) drawBackground(canvas *gpu.GPUCanvas, w, h int) {
 	for y := 0; y < h; y++ {
 		t := float32(y) / float32(h)
 		col := lerpColor(
-			color.RGBA{R: 8, G: 15, B: 35, A: 255},   // Dark blue top
-			color.RGBA{R: 20, G: 40, B: 60, A: 255},  // Lighter blue bottom
+			color.RGBA{R: 8, G: 15, B: 35, A: 255},  // Dark blue top
+			color.RGBA{R: 20, G: 40, B: 60, A: 255}, // Lighter blue bottom
 			t,
 		)
 		canvas.SetStrokeColor(col)

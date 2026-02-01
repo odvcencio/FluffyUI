@@ -2,8 +2,11 @@
 package forms
 
 import (
+	"context"
 	"reflect"
 	"strings"
+	"sync"
+	"sync/atomic"
 
 	"github.com/odvcencio/fluffyui/state"
 )
@@ -34,12 +37,18 @@ type Field interface {
 
 // FieldBase provides common field state management.
 type FieldBase struct {
-	name       string
-	initial    any
-	validators []Validator
-	dirty      *state.Signal[bool]
-	touched    *state.Signal[bool]
-	errors     *state.Signal[[]string]
+	name            string
+	initial         any
+	validators      []Validator
+	asyncValidators []AsyncValidator
+	dirty           *state.Signal[bool]
+	touched         *state.Signal[bool]
+	errors          *state.Signal[[]string]
+	validating      *state.Signal[bool]
+	validationID    atomic.Uint64
+	errMu           sync.Mutex
+	syncErrors      []string
+	asyncErrors     []string
 }
 
 // NewFieldBase constructs a field base.
@@ -51,6 +60,7 @@ func NewFieldBase(name string, initial any, validators ...Validator) FieldBase {
 		dirty:      state.NewSignal(false),
 		touched:    state.NewSignal(false),
 		errors:     state.NewSignal([]string{}),
+		validating: state.NewSignal(false),
 	}
 }
 
@@ -86,6 +96,22 @@ func (f *FieldBase) Errors() []string {
 	return f.errors.Get()
 }
 
+// Validating reports whether async validation is running.
+func (f *FieldBase) Validating() bool {
+	if f == nil || f.validating == nil {
+		return false
+	}
+	return f.validating.Get()
+}
+
+// ValidatingSignal returns the async validation signal.
+func (f *FieldBase) ValidatingSignal() *state.Signal[bool] {
+	if f == nil {
+		return nil
+	}
+	return f.validating
+}
+
 // Valid reports whether the field has no validation errors.
 func (f *FieldBase) Valid() bool {
 	return len(f.Errors()) == 0
@@ -113,6 +139,13 @@ func (f *FieldBase) ResetState() {
 	if f.errors != nil {
 		f.errors.Set([]string{})
 	}
+	if f.validating != nil {
+		f.validating.Set(false)
+	}
+	f.errMu.Lock()
+	f.syncErrors = nil
+	f.asyncErrors = nil
+	f.errMu.Unlock()
 }
 
 // SetValidators updates the validators.
@@ -121,6 +154,26 @@ func (f *FieldBase) SetValidators(validators ...Validator) {
 		return
 	}
 	f.validators = validators
+}
+
+// SetAsyncValidators updates async validators.
+func (f *FieldBase) SetAsyncValidators(validators ...AsyncValidator) {
+	if f == nil {
+		return
+	}
+	if validators == nil {
+		f.asyncValidators = nil
+		return
+	}
+	f.asyncValidators = append([]AsyncValidator{}, validators...)
+}
+
+// AsyncValidators returns a copy of async validators.
+func (f *FieldBase) AsyncValidators() []AsyncValidator {
+	if f == nil || len(f.asyncValidators) == 0 {
+		return nil
+	}
+	return append([]AsyncValidator{}, f.asyncValidators...)
 }
 
 // MarkTouched marks the field as touched.
@@ -147,7 +200,48 @@ func (f *FieldBase) SetErrors(messages []string) {
 	if messages == nil {
 		messages = []string{}
 	}
+	f.errMu.Lock()
+	f.syncErrors = append([]string{}, messages...)
+	f.asyncErrors = nil
+	f.errMu.Unlock()
 	f.errors.Set(messages)
+}
+
+func (f *FieldBase) setSyncErrors(errs []ValidationError) {
+	if f == nil || f.errors == nil {
+		return
+	}
+	messages := validationMessages(errs)
+	f.errMu.Lock()
+	f.syncErrors = messages
+	combined := append([]string{}, f.syncErrors...)
+	combined = append(combined, f.asyncErrors...)
+	f.errMu.Unlock()
+	f.errors.Set(combined)
+}
+
+func (f *FieldBase) setAsyncErrors(errs []ValidationError) {
+	if f == nil || f.errors == nil {
+		return
+	}
+	messages := validationMessages(errs)
+	f.errMu.Lock()
+	f.asyncErrors = messages
+	combined := append([]string{}, f.syncErrors...)
+	combined = append(combined, f.asyncErrors...)
+	f.errMu.Unlock()
+	f.errors.Set(combined)
+}
+
+func validationMessages(errs []ValidationError) []string {
+	if len(errs) == 0 {
+		return []string{}
+	}
+	messages := make([]string, 0, len(errs))
+	for _, err := range errs {
+		messages = append(messages, err.Message)
+	}
+	return messages
 }
 
 // ValidateValue validates a value using the field validators.
@@ -168,6 +262,38 @@ func (f *FieldBase) ValidateValue(value any) []ValidationError {
 		}
 	}
 	return out
+}
+
+func (f *FieldBase) bumpValidationID() uint64 {
+	if f == nil {
+		return 0
+	}
+	return f.validationID.Add(1)
+}
+
+func (f *FieldBase) currentValidationID() uint64 {
+	if f == nil {
+		return 0
+	}
+	return f.validationID.Load()
+}
+
+func (f *FieldBase) clearAsyncErrors() {
+	if f == nil || f.errors == nil {
+		return
+	}
+	f.errMu.Lock()
+	f.asyncErrors = nil
+	combined := append([]string{}, f.syncErrors...)
+	f.errMu.Unlock()
+	f.errors.Set(combined)
+}
+
+func (f *FieldBase) setValidating(on bool) {
+	if f == nil || f.validating == nil {
+		return
+	}
+	f.validating.Set(on)
 }
 
 // SimpleField is a basic field implementation storing its own value.
@@ -199,6 +325,8 @@ func (f *SimpleField) SetValue(value any) {
 		return
 	}
 	f.value = value
+	f.bumpValidationID()
+	f.clearAsyncErrors()
 	f.UpdateDirty(value)
 	f.MarkTouched()
 	f.updateErrors()
@@ -220,6 +348,8 @@ func (f *SimpleField) Reset() {
 		return
 	}
 	f.value = f.initial
+	f.bumpValidationID()
+	f.clearAsyncErrors()
 	f.ResetState()
 }
 
@@ -232,37 +362,82 @@ func (f *SimpleField) setErrorsFromValidation(errs []ValidationError) {
 	if f == nil {
 		return
 	}
-	if len(errs) == 0 {
-		f.SetErrors([]string{})
-		return
+	f.setSyncErrors(errs)
+}
+
+// ValidateAsync runs async validators and updates errors when complete.
+func (f *SimpleField) ValidateAsync(ctx context.Context) <-chan []ValidationError {
+	out := make(chan []ValidationError, 1)
+	if f == nil {
+		out <- nil
+		return out
 	}
-	messages := make([]string, 0, len(errs))
-	for _, err := range errs {
-		messages = append(messages, err.Message)
+	validators := f.AsyncValidators()
+	if len(validators) == 0 {
+		out <- nil
+		return out
 	}
-	f.SetErrors(messages)
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	value := f.value
+	validationID := f.currentValidationID()
+	f.setValidating(true)
+
+	go func() {
+		defer f.setValidating(false)
+		var errs []ValidationError
+		for _, validator := range validators {
+			if validator == nil {
+				continue
+			}
+			if ctx.Err() != nil {
+				break
+			}
+			if err := validator.ValidateAsync(ctx, value); err != nil {
+				if err.Field == "" {
+					err.Field = f.name
+				}
+				errs = append(errs, *err)
+			}
+		}
+		if ctx.Err() == nil && f.currentValidationID() == validationID {
+			f.setAsyncErrors(errs)
+		}
+		out <- errs
+	}()
+
+	return out
 }
 
 // Form manages a collection of fields.
 type Form struct {
-	fields     map[string]Field
-	order      []string
-	validators []FormValidator
-	onSubmit   func(values Values)
-	onCancel   func()
+	fields          map[string]Field
+	order           []string
+	validators      []FormValidator
+	asyncValidators []AsyncFormValidator
+	onSubmit        func(values Values)
+	onCancel        func()
 
 	dirty      *state.Signal[bool]
 	valid      *state.Signal[bool]
 	submitting *state.Signal[bool]
+	validating *state.Signal[bool]
+
+	dependencies map[string][]string
+	dependents   map[string][]string
 }
 
 // NewForm constructs an empty form.
 func NewForm(fields ...Field) *Form {
 	form := &Form{
-		fields:     make(map[string]Field),
-		dirty:      state.NewSignal(false),
-		valid:      state.NewSignal(true),
-		submitting: state.NewSignal(false),
+		fields:       make(map[string]Field),
+		dirty:        state.NewSignal(false),
+		valid:        state.NewSignal(true),
+		submitting:   state.NewSignal(false),
+		validating:   state.NewSignal(false),
+		dependencies: make(map[string][]string),
+		dependents:   make(map[string][]string),
 	}
 	for _, field := range fields {
 		form.AddField(field)
@@ -292,6 +467,14 @@ func (f *Form) AddValidator(validator FormValidator) {
 		return
 	}
 	f.validators = append(f.validators, validator)
+}
+
+// AddAsyncValidator registers an async cross-field validator.
+func (f *Form) AddAsyncValidator(validator AsyncFormValidator) {
+	if f == nil || validator == nil {
+		return
+	}
+	f.asyncValidators = append(f.asyncValidators, validator)
 }
 
 // OnSubmit sets the submit callback.
@@ -341,6 +524,7 @@ func (f *Form) Set(name string, value any) {
 	}
 	field.SetValue(value)
 	f.updateDirty()
+	f.revalidateDependents(name)
 }
 
 // Values returns a snapshot of form values.
@@ -366,6 +550,25 @@ func (f *Form) Submit() {
 		f.onSubmit(f.Values())
 	}
 	f.submitting.Set(false)
+}
+
+// SubmitAsync runs validation asynchronously and invokes onSubmit if valid.
+func (f *Form) SubmitAsync(ctx context.Context) <-chan []ValidationError {
+	out := make(chan []ValidationError, 1)
+	if f == nil {
+		out <- nil
+		return out
+	}
+	f.submitting.Set(true)
+	go func() {
+		errs := <-f.ValidateAsync(ctx)
+		if len(errs) == 0 && f.onSubmit != nil {
+			f.onSubmit(f.Values())
+		}
+		f.submitting.Set(false)
+		out <- errs
+	}()
+	return out
 }
 
 // Cancel invokes the cancel callback.
@@ -416,6 +619,86 @@ func (f *Form) Validate() []ValidationError {
 	return errors
 }
 
+// ValidateAsync validates fields and async validators, returning a channel of errors.
+func (f *Form) ValidateAsync(ctx context.Context) <-chan []ValidationError {
+	out := make(chan []ValidationError, 1)
+	if f == nil {
+		out <- nil
+		return out
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	f.validating.Set(true)
+	syncErrors := f.Validate()
+	values := f.Values()
+
+	type asyncField interface {
+		ValidateAsync(context.Context) <-chan []ValidationError
+	}
+
+	go func() {
+		var mu sync.Mutex
+		errors := append([]ValidationError{}, syncErrors...)
+		var wg sync.WaitGroup
+
+		for _, name := range f.order {
+			field := f.fields[name]
+			if field == nil {
+				continue
+			}
+			if af, ok := field.(asyncField); ok {
+				wg.Add(1)
+				go func(ch <-chan []ValidationError) {
+					defer wg.Done()
+					if ch == nil {
+						return
+					}
+					select {
+					case <-ctx.Done():
+						return
+					case errs := <-ch:
+						if len(errs) == 0 {
+							return
+						}
+						mu.Lock()
+						errors = append(errors, errs...)
+						mu.Unlock()
+					}
+				}(af.ValidateAsync(ctx))
+			}
+		}
+
+		for _, validator := range f.asyncValidators {
+			if validator == nil {
+				continue
+			}
+			wg.Add(1)
+			go func(v AsyncFormValidator) {
+				defer wg.Done()
+				if ctx.Err() != nil {
+					return
+				}
+				errs := v.ValidateAsync(ctx, values)
+				if len(errs) == 0 {
+					return
+				}
+				mu.Lock()
+				errors = append(errors, errs...)
+				mu.Unlock()
+			}(validator)
+		}
+
+		wg.Wait()
+		f.valid.Set(len(errors) == 0)
+		f.validating.Set(false)
+		out <- errors
+	}()
+
+	return out
+}
+
 // DirtySignal returns the form dirty signal.
 func (f *Form) DirtySignal() *state.Signal[bool] {
 	if f == nil {
@@ -440,6 +723,14 @@ func (f *Form) SubmittingSignal() *state.Signal[bool] {
 	return f.submitting
 }
 
+// ValidatingSignal returns the async validating signal.
+func (f *Form) ValidatingSignal() *state.Signal[bool] {
+	if f == nil {
+		return nil
+	}
+	return f.validating
+}
+
 func (f *Form) updateDirty() {
 	if f == nil || f.dirty == nil {
 		return
@@ -452,4 +743,73 @@ func (f *Form) updateDirty() {
 		}
 	}
 	f.dirty.Set(dirty)
+}
+
+// SetDependencies declares that a field depends on other fields.
+func (f *Form) SetDependencies(field string, deps ...string) {
+	if f == nil {
+		return
+	}
+	field = strings.TrimSpace(field)
+	if field == "" {
+		return
+	}
+	if f.dependencies == nil {
+		f.dependencies = make(map[string][]string)
+	}
+
+	seen := make(map[string]struct{}, len(deps))
+	var out []string
+	for _, dep := range deps {
+		name := strings.TrimSpace(dep)
+		if name == "" {
+			continue
+		}
+		if _, ok := seen[name]; ok {
+			continue
+		}
+		seen[name] = struct{}{}
+		out = append(out, name)
+	}
+
+	f.dependencies[field] = out
+	f.rebuildDependents()
+}
+
+func (f *Form) rebuildDependents() {
+	if f == nil {
+		return
+	}
+	f.dependents = make(map[string][]string)
+	for field, deps := range f.dependencies {
+		for _, dep := range deps {
+			f.dependents[dep] = append(f.dependents[dep], field)
+		}
+	}
+}
+
+func (f *Form) revalidateDependents(changed string) {
+	if f == nil {
+		return
+	}
+	changed = strings.TrimSpace(changed)
+	if changed == "" || len(f.dependents) == 0 {
+		return
+	}
+	dependents := f.dependents[changed]
+	if len(dependents) == 0 {
+		return
+	}
+	for _, name := range dependents {
+		field := f.fields[name]
+		if field == nil {
+			continue
+		}
+		field.Validate()
+		if af, ok := field.(interface {
+			ValidateAsync(context.Context) <-chan []ValidationError
+		}); ok {
+			af.ValidateAsync(context.Background())
+		}
+	}
 }

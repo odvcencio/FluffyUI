@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -29,6 +30,9 @@ type ServerOptions struct {
 	TestMode        bool
 	Token           string
 	SnapshotTimeout time.Duration
+	TLSConfig       *tls.Config
+	TLSCertFile     string
+	TLSKeyFile      string
 }
 
 // Capabilities describes server features exposed to clients.
@@ -83,7 +87,12 @@ func (s *Server) Serve(ctx context.Context) error {
 		ctx = context.Background()
 	}
 
-	ln, unixPath, err := listenAgentAddr(s.opts.Addr)
+	tlsConfig, err := resolveTLSConfig(s.opts.TLSConfig, s.opts.TLSCertFile, s.opts.TLSKeyFile)
+	if err != nil {
+		return err
+	}
+
+	ln, unixPath, err := listenAgentAddrWithTLS(s.opts.Addr, tlsConfig)
 	if err != nil {
 		return err
 	}
@@ -301,6 +310,10 @@ func (s *Server) handleRequest(ctx context.Context, sess *session, req request) 
 }
 
 func listenAgentAddr(addr string) (net.Listener, string, error) {
+	return listenAgentAddrWithTLS(addr, nil)
+}
+
+func listenAgentAddrWithTLS(addr string, tlsConfig *tls.Config) (net.Listener, string, error) {
 	switch {
 	case strings.HasPrefix(addr, "unix:"):
 		path := strings.TrimPrefix(addr, "unix:")
@@ -316,10 +329,43 @@ func listenAgentAddr(addr string) (net.Listener, string, error) {
 			return nil, "", errors.New("tcp address is required")
 		}
 		ln, err := net.Listen("tcp", host)
-		return ln, "", err
+		if err != nil {
+			return nil, "", err
+		}
+		if tlsConfig != nil {
+			ln = tls.NewListener(ln, tlsConfig)
+		}
+		return ln, "", nil
 	default:
 		return nil, "", fmt.Errorf("unsupported address %q (use unix: or tcp:)", addr)
 	}
+}
+
+func resolveTLSConfig(base *tls.Config, certFile, keyFile string) (*tls.Config, error) {
+	if base == nil && strings.TrimSpace(certFile) == "" && strings.TrimSpace(keyFile) == "" {
+		return nil, nil
+	}
+	if (strings.TrimSpace(certFile) == "") != (strings.TrimSpace(keyFile) == "") {
+		return nil, errors.New("both TLS certificate and key files are required")
+	}
+
+	var cfg *tls.Config
+	if base != nil {
+		cfg = base.Clone()
+	} else {
+		cfg = &tls.Config{}
+	}
+	if cfg.MinVersion == 0 {
+		cfg.MinVersion = tls.VersionTLS12
+	}
+	if strings.TrimSpace(certFile) != "" {
+		cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+		if err != nil {
+			return nil, fmt.Errorf("load TLS cert: %w", err)
+		}
+		cfg.Certificates = []tls.Certificate{cert}
+	}
+	return cfg, nil
 }
 
 func parseKeyPress(key string) (keybind.KeyPress, error) {

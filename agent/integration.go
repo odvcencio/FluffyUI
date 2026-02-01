@@ -23,6 +23,7 @@ package agent
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"net/http"
@@ -46,7 +47,10 @@ import (
 //   - FLUFFYUI_AGENT_ALLOW_TEXT: Set to "1" or "true" to allow text capture
 //   - FLUFFYUI_AGENT_MAX_SESSIONS: Maximum concurrent sessions (default: 100)
 //   - FLUFFYUI_AGENT_RATE_LIMIT: Requests per second limit (default: 1000)
-//   - FLUFFYUI_AGENT_ENABLE_HEALTH: Set to "0" or "false" to disable health checks
+//   - FLUFFYUI_AGENT_DISABLE_HEALTH: Set to "1" or "true" to disable health checks
+//   - FLUFFYUI_AGENT_TLS_CERT: TLS certificate file for TCP/WS
+//   - FLUFFYUI_AGENT_TLS_KEY: TLS key file for TCP/WS
+//   - FLUFFYUI_AGENT_ALLOWED_ORIGINS: Comma-separated allowed WS origins
 //
 // Returns nil if FLUFFYUI_AGENT is not set or is set to "0" or "false".
 func EnableFromEnv(app *runtime.App) (*RealTimeServer, error) {
@@ -65,6 +69,9 @@ func EnableFromEnv(app *runtime.App) (*RealTimeServer, error) {
 	opts.Token = strings.TrimSpace(os.Getenv("FLUFFYUI_AGENT_TOKEN"))
 	opts.AllowText = envBool("FLUFFYUI_AGENT_ALLOW_TEXT")
 	opts.EnableHealthCheck = !envBool("FLUFFYUI_AGENT_DISABLE_HEALTH")
+	opts.TLSCertFile = strings.TrimSpace(os.Getenv("FLUFFYUI_AGENT_TLS_CERT"))
+	opts.TLSKeyFile = strings.TrimSpace(os.Getenv("FLUFFYUI_AGENT_TLS_KEY"))
+	allowedOrigins := envCSV("FLUFFYUI_AGENT_ALLOWED_ORIGINS")
 
 	// Parse pool limits from env
 	if maxSessions := envInt("FLUFFYUI_AGENT_MAX_SESSIONS"); maxSessions > 0 {
@@ -88,6 +95,7 @@ func EnableFromEnv(app *runtime.App) (*RealTimeServer, error) {
 		go func() {
 			wsOpts := RealTimeWSOptions{
 				EnhancedServerOptions: opts,
+				AllowedOrigins:        allowedOrigins,
 			}
 			wsServer, err := NewRealTimeWebSocketServer(wsOpts)
 			if err != nil {
@@ -101,6 +109,16 @@ func EnableFromEnv(app *runtime.App) (*RealTimeServer, error) {
 
 			http.Handle("/agent", wsServer)
 			fmt.Printf("agent: WebSocket server listening on %s/agent\n", wsAddr)
+			if opts.TLSCertFile != "" || opts.TLSKeyFile != "" {
+				if opts.TLSCertFile == "" || opts.TLSKeyFile == "" {
+					fmt.Fprintln(os.Stderr, "agent: WebSocket TLS requires both FLUFFYUI_AGENT_TLS_CERT and FLUFFYUI_AGENT_TLS_KEY")
+					return
+				}
+				if err := http.ListenAndServeTLS(wsAddr, opts.TLSCertFile, opts.TLSKeyFile, nil); err != nil {
+					fmt.Fprintf(os.Stderr, "agent: WebSocket TLS server error: %v\n", err)
+				}
+				return
+			}
 			if err := http.ListenAndServe(wsAddr, nil); err != nil {
 				fmt.Fprintf(os.Stderr, "agent: WebSocket server error: %v\n", err)
 			}
@@ -151,18 +169,21 @@ func RunWithRealTimeAgent(app *runtime.App, ctx context.Context) error {
 
 // ServerConfig provides a fluent API for configuring the agent server
 type ServerConfig struct {
-	addr            string
-	wsAddr          string
-	token           string
-	allowText       bool
-	testMode        bool
-	maxSessions     int
-	maxConns        int
-	requestTimeout  time.Duration
-	enableHealth    bool
-	backgroundMode  bool
-	eventFilters    EventFilters
-	allowedOrigins  []string
+	addr           string
+	wsAddr         string
+	token          string
+	allowText      bool
+	testMode       bool
+	maxSessions    int
+	maxConns       int
+	requestTimeout time.Duration
+	enableHealth   bool
+	backgroundMode bool
+	eventFilters   EventFilters
+	allowedOrigins []string
+	tlsConfig      *tls.Config
+	tlsCertFile    string
+	tlsKeyFile     string
 }
 
 // NewConfig creates a new agent configuration
@@ -254,6 +275,19 @@ func (c *ServerConfig) WithAllowedOrigins(origins ...string) *ServerConfig {
 	return c
 }
 
+// WithTLSConfig sets the TLS configuration for TCP listeners.
+func (c *ServerConfig) WithTLSConfig(cfg *tls.Config) *ServerConfig {
+	c.tlsConfig = cfg
+	return c
+}
+
+// WithTLSFiles sets the TLS certificate and key files for TCP listeners.
+func (c *ServerConfig) WithTLSFiles(certFile, keyFile string) *ServerConfig {
+	c.tlsCertFile = certFile
+	c.tlsKeyFile = keyFile
+	return c
+}
+
 // Build creates a RealTimeServer from the configuration
 func (c *ServerConfig) Build(app *runtime.App) (*RealTimeServer, error) {
 	if app == nil {
@@ -273,6 +307,9 @@ func (c *ServerConfig) Build(app *runtime.App) (*RealTimeServer, error) {
 	opts.RequestTimeout = c.requestTimeout
 	opts.EnableHealthCheck = c.enableHealth
 	opts.SessionPoolLimits.MaxSessions = c.maxSessions
+	opts.TLSConfig = c.tlsConfig
+	opts.TLSCertFile = c.tlsCertFile
+	opts.TLSKeyFile = c.tlsKeyFile
 
 	if c.backgroundMode {
 		opts.SessionLimits = BackgroundSessionLimits()
@@ -303,6 +340,9 @@ func (c *ServerConfig) BuildWebSocket(app *runtime.App) (*RealTimeWebSocketServe
 			SessionPoolLimits: PoolLimits{
 				MaxSessions: c.maxSessions,
 			},
+			TLSConfig:   c.tlsConfig,
+			TLSCertFile: c.tlsCertFile,
+			TLSKeyFile:  c.tlsKeyFile,
 		},
 		AllowedOrigins: c.allowedOrigins,
 	}
@@ -350,4 +390,21 @@ func envInt(key string) int {
 	var n int
 	fmt.Sscanf(value, "%d", &n)
 	return n
+}
+
+func envCSV(key string) []string {
+	value := strings.TrimSpace(os.Getenv(key))
+	if value == "" {
+		return nil
+	}
+	parts := strings.Split(value, ",")
+	out := make([]string, 0, len(parts))
+	for _, part := range parts {
+		item := strings.TrimSpace(part)
+		if item == "" {
+			continue
+		}
+		out = append(out, item)
+	}
+	return out
 }
