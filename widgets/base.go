@@ -13,7 +13,7 @@ import (
 )
 
 // Base provides common functionality for widgets.
-// Embed this in widget structs to get default implementations.
+// Base should be embedded in widget structs to get default implementations.
 type Base struct {
 	accessibility.Base
 	outerBounds   runtime.Rect

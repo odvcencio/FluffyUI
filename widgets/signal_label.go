@@ -10,7 +10,7 @@ import (
 )
 
 // SignalLabel is a tiny label bound to a signal.
-// It demonstrates managing subscriptions in Mount/Unmount with a state.Scheduler.
+// SignalLabel demonstrates managing subscriptions in Mount/Unmount with a state.Scheduler.
 type SignalLabel struct {
 	Base
 	source    state.Readable[string]

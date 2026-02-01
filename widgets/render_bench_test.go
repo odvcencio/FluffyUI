@@ -45,6 +45,18 @@ func BenchmarkScrollViewRender(b *testing.B) {
 	benchmarkRender(b, view, 30, 5)
 }
 
+func BenchmarkGridRender1000Labels(b *testing.B) {
+	const rows = 25
+	const cols = 40
+	grid := NewGrid(rows, cols)
+	for r := 0; r < rows; r++ {
+		for c := 0; c < cols; c++ {
+			grid.Add(NewLabel("x"), r, c, 1, 1)
+		}
+	}
+	benchmarkRenderWithFPS(b, grid, 80, 25)
+}
+
 func benchmarkRender(b *testing.B, w runtime.Widget, width, height int) {
 	buf := runtime.NewBuffer(width, height)
 	constraints := runtime.Constraints{MaxWidth: width, MaxHeight: height}
@@ -55,5 +67,25 @@ func benchmarkRender(b *testing.B, w runtime.Widget, width, height int) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		w.Render(ctx)
+	}
+}
+
+func benchmarkRenderWithFPS(b *testing.B, w runtime.Widget, width, height int) {
+	buf := runtime.NewBuffer(width, height)
+	constraints := runtime.Constraints{MaxWidth: width, MaxHeight: height}
+	w.Measure(constraints)
+	w.Layout(runtime.Rect{X: 0, Y: 0, Width: width, Height: height})
+	ctx := runtime.RenderContext{Buffer: buf, Bounds: runtime.Rect{X: 0, Y: 0, Width: width, Height: height}}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		w.Render(ctx)
+	}
+	b.StopTimer()
+
+	elapsed := b.Elapsed().Seconds()
+	if elapsed > 0 {
+		b.ReportMetric(float64(b.N)/elapsed, "frames/s")
 	}
 }

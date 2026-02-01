@@ -76,3 +76,93 @@ func TestParseFrameRate(t *testing.T) {
 		t.Fatalf("rate = %f, want 0", rate)
 	}
 }
+
+func TestNewDecoderEmptyPath(t *testing.T) {
+	if _, err := NewDecoder(" "); err == nil {
+		t.Fatalf("expected error for empty path")
+	}
+}
+
+func TestDecoderInfoPathNil(t *testing.T) {
+	var d *Decoder
+	if d.Info() != (VideoInfo{}) {
+		t.Fatalf("expected zero info for nil decoder")
+	}
+	if d.Path() != "" {
+		t.Fatalf("expected empty path for nil decoder")
+	}
+}
+
+func TestDecodeRGB24Errors(t *testing.T) {
+	var d *Decoder
+	if _, err := d.decodeRGB24([]byte{1, 2, 3}); err == nil {
+		t.Fatalf("expected error for nil decoder")
+	}
+
+	d = &Decoder{info: VideoInfo{Width: 0, Height: 1}}
+	if _, err := d.decodeRGB24([]byte{1, 2, 3}); err == nil {
+		t.Fatalf("expected error for invalid dimensions")
+	}
+
+	d = &Decoder{info: VideoInfo{Width: 2, Height: 2}}
+	if _, err := d.decodeRGB24([]byte{1, 2, 3}); err == nil {
+		t.Fatalf("expected error for short data")
+	}
+}
+
+func TestParseProbeInfoNoVideoStream(t *testing.T) {
+	raw := `{"streams":[{"codec_type":"audio","duration":"1.0"}],"format":{"duration":"1.0"}}`
+	if _, err := parseProbeInfo(raw); err == nil {
+		t.Fatalf("expected error for missing video stream")
+	}
+}
+
+func TestParseFrameRateInvalid(t *testing.T) {
+	if rate := parseFrameRate("0/0"); rate != 0 {
+		t.Fatalf("rate = %f, want 0", rate)
+	}
+	if rate := parseFrameRate("30/0"); rate != 0 {
+		t.Fatalf("rate = %f, want 0", rate)
+	}
+	if rate := parseFrameRate("abc"); rate != 0 {
+		t.Fatalf("rate = %f, want 0", rate)
+	}
+}
+
+func TestParseDurationInvalid(t *testing.T) {
+	if parseDuration("") != 0 {
+		t.Fatalf("expected zero duration for empty string")
+	}
+	if parseDuration("oops") != 0 {
+		t.Fatalf("expected zero duration for invalid value")
+	}
+}
+
+func TestExtractFramesErrors(t *testing.T) {
+	var d *Decoder
+	if _, err := d.ExtractFramesContext(nil, 24); err == nil {
+		t.Fatalf("expected error for nil decoder")
+	}
+
+	d = &Decoder{path: "", info: VideoInfo{FrameRate: 24}, frameSize: 12}
+	if _, err := d.ExtractFramesContext(nil, 24); err == nil {
+		t.Fatalf("expected error for empty path")
+	}
+
+	d = &Decoder{path: "video.mp4", info: VideoInfo{FrameRate: 24}, frameSize: 0}
+	if _, err := d.ExtractFramesContext(nil, 24); err == nil {
+		t.Fatalf("expected error for invalid frame size")
+	}
+}
+
+func TestExtractFrameErrors(t *testing.T) {
+	var d *Decoder
+	if _, err := d.ExtractFrame(0); err == nil {
+		t.Fatalf("expected error for nil decoder")
+	}
+
+	d = &Decoder{path: ""}
+	if _, err := d.ExtractFrame(0); err == nil {
+		t.Fatalf("expected error for empty path")
+	}
+}

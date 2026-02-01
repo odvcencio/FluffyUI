@@ -18,8 +18,8 @@ type DialogButton struct {
 	OnClick func()
 }
 
-// Dialog is a modal message container with optional custom content,
-// keyboard shortcuts, auto-dismiss timer, and dismiss callbacks.
+// Dialog is a modal message container with optional custom content.
+// Dialog supports keyboard shortcuts, auto-dismiss timers, and dismiss callbacks.
 type Dialog struct {
 	FocusableBase
 	Title   string
