@@ -684,6 +684,9 @@ func (s *Server) handleGetCell(ctx context.Context, req mcp.CallToolRequest) (*m
 }
 
 func (s *Server) handleFindByLabel(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	if !s.textAllowed() {
+		return nil, textDeniedError("find_by_label")
+	}
 	args := labelQueryArgs{}
 	if err := req.BindArguments(&args); err != nil {
 		return nil, newMCPError(mcp.INVALID_PARAMS, err.Error(), nil)
@@ -732,6 +735,9 @@ func (s *Server) handleFindByID(ctx context.Context, req mcp.CallToolRequest) (*
 }
 
 func (s *Server) handleFindByValue(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	if !s.textAllowed() {
+		return nil, textDeniedError("find_by_value")
+	}
 	args := valueArgs{}
 	if err := req.BindArguments(&args); err != nil {
 		return nil, newMCPError(mcp.INVALID_PARAMS, err.Error(), nil)
@@ -961,6 +967,9 @@ func (s *Server) handleGetPrevFocusable(ctx context.Context, req mcp.CallToolReq
 }
 
 func (s *Server) handleGetLabel(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	if !s.textAllowed() {
+		return nil, textDeniedError("get_label")
+	}
 	return s.toolResult("get_label", s.widgetStringProperty(ctx, req, func(w WidgetInfo) string {
 		return w.Label
 	})), nil
@@ -973,12 +982,18 @@ func (s *Server) handleGetRole(ctx context.Context, req mcp.CallToolRequest) (*m
 }
 
 func (s *Server) handleGetValue(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	if !s.textAllowed() {
+		return nil, textDeniedError("get_value")
+	}
 	return s.toolResult("get_value", s.widgetStringProperty(ctx, req, func(w WidgetInfo) string {
 		return w.Value
 	})), nil
 }
 
 func (s *Server) handleGetDescription(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	if !s.textAllowed() {
+		return nil, textDeniedError("get_description")
+	}
 	return s.toolResult("get_description", s.widgetStringProperty(ctx, req, func(w WidgetInfo) string {
 		return w.Description
 	})), nil

@@ -3,6 +3,7 @@ package mcp
 import (
 	"context"
 	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -245,7 +246,7 @@ func (s *Server) onRequestInitialization(ctx context.Context, id any, message an
 		if token == "" {
 			return newMCPError(authErrorCode, "authentication required", nil)
 		}
-		if token != s.opts.Token {
+		if subtle.ConstantTimeCompare([]byte(token), []byte(s.opts.Token)) != 1 {
 			return newMCPError(authErrorCode, "authentication failed", nil)
 		}
 		state.authed = true

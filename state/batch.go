@@ -18,42 +18,34 @@ func Batch(fn func()) {
 	}
 	atomic.AddInt32(&batchDepth, 1)
 	defer func() {
-		if atomic.AddInt32(&batchDepth, -1) != 0 {
-			return
+		// Use mutex to coordinate with enqueueBatch - decrement and drain
+		// must be atomic to prevent race where enqueue sees depth=0 but
+		// queue hasn't been drained yet.
+		batchMu.Lock()
+		newDepth := atomic.AddInt32(&batchDepth, -1)
+		var flush []subscriber
+		if newDepth == 0 {
+			flush = batchQueue
+			batchQueue = nil
 		}
-		flush := drainBatch()
+		batchMu.Unlock()
 		runSubscribers(flush)
 	}()
 	fn()
-}
-
-func batching() bool {
-	return atomic.LoadInt32(&batchDepth) > 0
 }
 
 func enqueueBatch(subs []subscriber) bool {
 	if len(subs) == 0 {
 		return true
 	}
-	if !batching() {
-		return false
-	}
 	batchMu.Lock()
-	if batchDepth == 0 {
+	if atomic.LoadInt32(&batchDepth) == 0 {
 		batchMu.Unlock()
 		return false
 	}
 	batchQueue = append(batchQueue, subs...)
 	batchMu.Unlock()
 	return true
-}
-
-func drainBatch() []subscriber {
-	batchMu.Lock()
-	flush := batchQueue
-	batchQueue = nil
-	batchMu.Unlock()
-	return flush
 }
 
 func runSubscribers(subs []subscriber) {

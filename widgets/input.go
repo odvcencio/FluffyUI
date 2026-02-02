@@ -2,15 +2,25 @@ package widgets
 
 import (
 	"strings"
+	"time"
 
 	"github.com/odvcencio/fluffyui/accessibility"
 	"github.com/odvcencio/fluffyui/backend"
 	"github.com/odvcencio/fluffyui/clipboard"
 	"github.com/odvcencio/fluffyui/forms"
 	"github.com/odvcencio/fluffyui/runtime"
+	"github.com/odvcencio/fluffyui/state"
 	uistyle "github.com/odvcencio/fluffyui/style"
 	"github.com/odvcencio/fluffyui/terminal"
 )
+
+// inputState represents the state of an input for undo/redo.
+type inputState struct {
+	Text           string
+	CursorPos      int
+	SelectionStart int
+	SelectionEnd   int
+}
 
 // Input is a text input widget with cursor support.
 type Input struct {
@@ -30,17 +40,27 @@ type Input struct {
 	valErrors   []forms.ValidationError
 	valMessages []string
 
+	// History (undo/redo)
+	history        *state.History[inputState]
+	historyEnabled bool
+
 	// Callbacks
 	onSubmit func(text string)
 	onChange func(text string)
 }
 
+// defaultInputGroupWindow is the default time window for grouping rapid edits.
+const defaultInputGroupWindow = 500 * time.Millisecond
+
 // NewInput creates a new input widget.
 func NewInput() *Input {
 	input := &Input{
-		style:      backend.DefaultStyle(),
-		focusStyle: backend.DefaultStyle().Bold(true),
+		style:          backend.DefaultStyle(),
+		focusStyle:     backend.DefaultStyle().Bold(true),
+		historyEnabled: true,
 	}
+	// Initialize history with default settings
+	input.history = state.NewHistory(inputState{}, state.WithGroupWindow(defaultInputGroupWindow))
 	input.Base.Role = accessibility.RoleTextbox
 	input.syncA11y()
 	return input
@@ -146,6 +166,106 @@ func (i *Input) Valid() bool {
 		return true
 	}
 	return len(i.Validate()) == 0
+}
+
+// Undo reverts to the previous state.
+// Returns true if undo was successful.
+func (i *Input) Undo() bool {
+	if i == nil || !i.historyEnabled || i.history == nil {
+		return false
+	}
+	s, ok := i.history.Undo()
+	if !ok {
+		return false
+	}
+	i.restoreState(s)
+	return true
+}
+
+// Redo reapplies a previously undone state.
+// Returns true if redo was successful.
+func (i *Input) Redo() bool {
+	if i == nil || !i.historyEnabled || i.history == nil {
+		return false
+	}
+	s, ok := i.history.Redo()
+	if !ok {
+		return false
+	}
+	i.restoreState(s)
+	return true
+}
+
+// CanUndo returns true if undo is available.
+func (i *Input) CanUndo() bool {
+	if i == nil || !i.historyEnabled || i.history == nil {
+		return false
+	}
+	return i.history.CanUndo()
+}
+
+// CanRedo returns true if redo is available.
+func (i *Input) CanRedo() bool {
+	if i == nil || !i.historyEnabled || i.history == nil {
+		return false
+	}
+	return i.history.CanRedo()
+}
+
+// SetHistoryEnabled enables or disables undo/redo support.
+func (i *Input) SetHistoryEnabled(enabled bool) {
+	if i == nil {
+		return
+	}
+	i.historyEnabled = enabled
+}
+
+// SetHistoryOptions reconfigures the history with new options.
+func (i *Input) SetHistoryOptions(opts ...state.HistoryOption) {
+	if i == nil {
+		return
+	}
+	// Create new history with options, preserving current state
+	currentState := i.captureState()
+	i.history = state.NewHistory(currentState, opts...)
+}
+
+// ClearHistory resets the undo/redo history.
+func (i *Input) ClearHistory() {
+	if i == nil || i.history == nil {
+		return
+	}
+	i.history.Clear()
+}
+
+func (i *Input) captureState() inputState {
+	return inputState{
+		Text:           i.text.String(),
+		CursorPos:      i.cursorPos,
+		SelectionStart: i.selection.Start,
+		SelectionEnd:   i.selection.End,
+	}
+}
+
+func (i *Input) restoreState(s inputState) {
+	i.text.Reset()
+	i.text.WriteString(s.Text)
+	i.cursorPos = s.CursorPos
+	i.selection = Selection{Start: s.SelectionStart, End: s.SelectionEnd}
+	i.syncA11y()
+	i.services.Invalidate()
+}
+
+func (i *Input) pushHistory(grouped bool) {
+	if !i.historyEnabled || i.history == nil {
+		return
+	}
+	s := i.captureState()
+	if grouped {
+		i.history.PushGrouped(s)
+	} else {
+		i.history.Push(s)
+	}
 }
 
 // SetLabel sets the accessibility label for the input.
@@ -353,6 +473,23 @@ func (i *Input) HandleMessage(msg runtime.Message) runtime.HandleResult {
 	}
 
 	switch key.Key {
+	case terminal.KeyCtrlZ:
+		// Ctrl+Shift+Z is redo
+		if key.Shift {
+			if i.Redo() {
+				return runtime.Handled()
+			}
+		} else {
+			if i.Undo() {
+				return runtime.Handled()
+			}
+		}
+		return runtime.Handled()
+	case terminal.KeyCtrlY:
+		if i.Redo() {
+			return runtime.Handled()
+		}
+		return runtime.Handled()
 	case terminal.KeyCtrlC:
 		if i.copyToClipboard() {
 			return runtime.Handled()
@@ -377,10 +514,12 @@ func (i *Input) HandleMessage(msg runtime.Message) runtime.HandleResult {
 
 	case terminal.KeyBackspace:
 		if i.HasSelection() {
+			i.pushHistory(true) // grouped
 			i.deleteSelection()
 			return runtime.Handled()
 		}
 		if i.cursorPos > 0 {
+			i.pushHistory(true) // grouped
 			runes := i.textRunes()
 			if i.cursorPos > len(runes) {
 				i.cursorPos = len(runes)
@@ -394,6 +533,7 @@ func (i *Input) HandleMessage(msg runtime.Message) runtime.HandleResult {
 
 	case terminal.KeyDelete:
 		if i.HasSelection() {
+			i.pushHistory(true) // grouped
 			i.deleteSelection()
 			return runtime.Handled()
 		}
@@ -402,6 +542,7 @@ func (i *Input) HandleMessage(msg runtime.Message) runtime.HandleResult {
 			i.cursorPos = len(runes)
 		}
 		if i.cursorPos < len(runes) {
+			i.pushHistory(true) // grouped
 			runes = append(runes[:i.cursorPos], runes[i.cursorPos+1:]...)
 			i.setTextRunes(runes)
 			i.notifyChange()
@@ -448,6 +589,7 @@ func (i *Input) HandleMessage(msg runtime.Message) runtime.HandleResult {
 
 	case terminal.KeyRune:
 		// Insert character
+		i.pushHistory(true) // grouped
 		if i.HasSelection() {
 			i.deleteSelection()
 		}
@@ -516,6 +658,7 @@ func (i *Input) ClipboardCut() (string, bool) {
 	if i == nil {
 		return "", false
 	}
+	i.pushHistory(true) // grouped
 	if i.HasSelection() {
 		text := i.GetSelectedText()
 		i.deleteSelection()
@@ -552,6 +695,9 @@ func (i *Input) ClipboardPaste(text string) bool {
 	if i == nil || text == "" {
 		return false
 	}
+	// Large pastes (> 100 chars) are not grouped
+	grouped := len(text) <= 100
+	i.pushHistory(grouped)
 	if i.HasSelection() {
 		i.deleteSelection()
 	}

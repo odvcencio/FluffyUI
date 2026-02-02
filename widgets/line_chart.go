@@ -187,4 +187,25 @@ func (c *LineChart) Measure(constraints runtime.Constraints) runtime.Size {
 	})
 }
 
+// Layout updates the bounds and prepares the canvas for rendering.
+func (c *LineChart) Layout(bounds runtime.Rect) {
+	if c == nil {
+		return
+	}
+	c.CanvasWidget.Layout(bounds)
+}
+
+// Render draws the line chart to the buffer.
+func (c *LineChart) Render(ctx runtime.RenderContext) {
+	if c == nil {
+		return
+	}
+	c.CanvasWidget.Render(ctx)
+}
+
+// HandleMessage returns unhandled for all messages.
+func (c *LineChart) HandleMessage(msg runtime.Message) runtime.HandleResult {
+	return runtime.Unhandled()
+}
+
 var _ runtime.Widget = (*LineChart)(nil)

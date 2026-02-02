@@ -197,3 +197,75 @@ func assertMCPError(t *testing.T, err error, code int, msg string) {
 		t.Fatalf("expected message %q, got %q", msg, mcpErr.message)
 	}
 }
+
+// TestTokenComparisonIsConstantTime verifies that token comparison uses
+// constant-time comparison (fix for 2.2 timing attack).
+// Note: This test cannot truly verify constant-time behavior, but it ensures
+// the code path works correctly for both matching and non-matching tokens.
+func TestTokenComparisonIsConstantTime(t *testing.T) {
+	srv := newTestServer(runtime.MCPOptions{Token: "correct-token"})
+	session := testSession{id: "s1", initialized: true, ch: make(chan mcp.JSONRPCNotification, 1)}
+	srv.onRegisterSession(context.Background(), session)
+	ctx := srv.mcpServer.WithContext(context.Background(), session)
+
+	// Test with wrong token - should fail
+	err := srv.onRequestInitialization(ctx, nil, json.RawMessage(`{"method":"initialize","params":{"auth":{"token":"wrong-token"}}}`))
+	assertMCPError(t, err, authErrorCode, "authentication failed")
+
+	// Test with correct token - should succeed
+	err = srv.onRequestInitialization(ctx, nil, json.RawMessage(`{"method":"initialize","params":{"auth":{"token":"correct-token"}}}`))
+	if err != nil {
+		t.Fatalf("unexpected error with correct token: %v", err)
+	}
+
+	// Test with similar-length wrong token (timing attack scenario)
+	srv2 := newTestServer(runtime.MCPOptions{Token: "abcdefghijklmnop"})
+	session2 := testSession{id: "s2", initialized: true, ch: make(chan mcp.JSONRPCNotification, 1)}
+	srv2.onRegisterSession(context.Background(), session2)
+	ctx2 := srv2.mcpServer.WithContext(context.Background(), session2)
+
+	err = srv2.onRequestInitialization(ctx2, nil, json.RawMessage(`{"method":"initialize","params":{"auth":{"token":"abcdefghijklmnox"}}}`))
+	assertMCPError(t, err, authErrorCode, "authentication failed")
+}
+
+// TestTextGatingOnToolHandlers verifies that text-returning tools are
+// properly gated by textAllowed() (fix for 2.3).
+func TestTextGatingOnToolHandlers(t *testing.T) {
+	// Server with text access disabled
+	srv := newTestServer(runtime.MCPOptions{AllowText: false, TestBypassTextGating: false})
+
+	// Verify textAllowed returns false
+	if srv.textAllowed() {
+		t.Fatal("expected textAllowed to return false")
+	}
+
+	// Server with text access enabled via bypass
+	srv2 := newTestServer(runtime.MCPOptions{AllowText: false, TestBypassTextGating: true})
+	if !srv2.textAllowed() {
+		t.Fatal("expected textAllowed to return true with bypass")
+	}
+
+	// Server with text access enabled
+	srv3 := newTestServer(runtime.MCPOptions{AllowText: true})
+	if !srv3.textAllowed() {
+		t.Fatal("expected textAllowed to return true when enabled")
+	}
+}
+
+// TestClipboardGating verifies clipboard gating.
+func TestClipboardGating(t *testing.T) {
+	srv := newTestServer(runtime.MCPOptions{AllowClipboard: false, TestBypassClipboardGating: false})
+	if srv.clipboardAllowed() {
+		t.Fatal("expected clipboardAllowed to return false")
+	}
+
+	srv2 := newTestServer(runtime.MCPOptions{AllowClipboard: false, TestBypassClipboardGating: true})
+	if !srv2.clipboardAllowed() {
+		t.Fatal("expected clipboardAllowed to return true with bypass")
+	}
+
+	srv3 := newTestServer(runtime.MCPOptions{AllowClipboard: true})
+	if !srv3.clipboardAllowed() {
+		t.Fatal("expected clipboardAllowed to return true when enabled")
+	}
+}

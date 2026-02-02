@@ -74,6 +74,11 @@ func (s *Server) startUnix() error {
 	if err != nil {
 		return err
 	}
+	// Restrict socket permissions to owner only for security
+	if err := os.Chmod(path, 0o700); err != nil {
+		_ = ln.Close()
+		return err
+	}
 	s.unixListener = ln
 	s.unixPath = path
 	go s.acceptUnix(ln)

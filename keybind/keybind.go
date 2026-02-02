@@ -250,5 +250,6 @@ var ctrlKeyMap = map[rune]terminal.Key{
 	'p': terminal.KeyCtrlP,
 	'v': terminal.KeyCtrlV,
 	'x': terminal.KeyCtrlX,
+	'y': terminal.KeyCtrlY,
 	'z': terminal.KeyCtrlZ,
 }

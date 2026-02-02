@@ -1,12 +1,12 @@
-//go:build js
+//go:build !darwin
 
 package mtl
 
 import "errors"
 
-// Stub implementation for WASM builds where Metal is not available.
+// Stub implementation for non-Darwin builds where Metal is not available.
 
-var errNotSupported = errors.New("mtl: Metal not supported on WASM")
+var errNotSupported = errors.New("mtl: Metal not supported on this platform")
 
 // Load returns an error on WASM.
 func Load() error {

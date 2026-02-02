@@ -99,3 +99,32 @@ func TestResource_RefetchOnDeps(t *testing.T) {
 		t.Fatalf("expected second fetch count 2, got %d", second)
 	}
 }
+
+// TestResource_ConcurrentRefetch tests that concurrent Refetch calls
+// do not cause race conditions on fetchID (fix for 1.1).
+func TestResource_ConcurrentRefetch(t *testing.T) {
+	var fetchCount int32
+	res := NewResource(func() (int, error) {
+		atomic.AddInt32(&fetchCount, 1)
+		time.Sleep(10 * time.Millisecond)
+		return int(atomic.LoadInt32(&fetchCount)), nil
+	})
+
+	var wg sync.WaitGroup
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			res.Refetch()
+		}()
+	}
+	wg.Wait()
+
+	// Wait for fetches to complete
+	time.Sleep(100 * time.Millisecond)
+
+	state := res.Get()
+	if state.Loading {
+		t.Fatal("expected loading to complete")
+	}
+}

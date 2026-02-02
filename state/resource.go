@@ -2,7 +2,6 @@ package state
 
 import (
 	"sync"
-	"sync/atomic"
 )
 
 // Resource represents asynchronously loaded data with status.
@@ -89,9 +88,10 @@ func (r *Resource[T]) Refetch() {
 	if r == nil || r.fetcher == nil {
 		return
 	}
-	id := atomic.AddUint64(&r.fetchID, 1)
 	var subs []subscriber
 	r.mu.Lock()
+	r.fetchID++
+	id := r.fetchID
 	r.Loading = true
 	r.Error = nil
 	subs = r.copySubscribersLocked()

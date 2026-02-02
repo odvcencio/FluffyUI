@@ -159,3 +159,25 @@ func TestSnapshot_MultiSelect(t *testing.T) {
 	output := renderToString(ms, 20, 4)
 	assertSnapshot(t, "multiselect", output)
 }
+
+func TestSnapshot_MaskedInput(t *testing.T) {
+	mi := NewMaskedInput("(###) ###-####", WithPlaceholder('_'))
+	mi.Focus()
+	// Type a partial phone number
+	for _, d := range "5551234" {
+		mi.HandleMessage(runtime.KeyMsg{Key: terminal.KeyRune, Rune: d})
+	}
+	output := renderToString(mi, 20, 1)
+	assertSnapshot(t, "masked_input", output)
+}
+
+func TestSnapshot_Log(t *testing.T) {
+	log := NewLog(WithShowTime(false), WithAutoScroll(true))
+	log.Debug("Debug message")
+	log.Info("Info message")
+	log.Warn("Warning message")
+	log.Error("Error message")
+	log.Focus()
+	output := renderToString(log, 40, 5)
+	assertSnapshot(t, "log", output)
+}

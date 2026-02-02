@@ -104,5 +104,6 @@ const (
 	KeyCtrlP
 	KeyCtrlV
 	KeyCtrlX
+	KeyCtrlY
 	KeyCtrlZ
 )

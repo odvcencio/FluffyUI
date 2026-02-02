@@ -349,6 +349,8 @@ func convertKey(k tcell.Key) terminal.Key {
 		return terminal.KeyCtrlV
 	case tcell.KeyCtrlX:
 		return terminal.KeyCtrlX
+	case tcell.KeyCtrlY:
+		return terminal.KeyCtrlY
 	case tcell.KeyCtrlZ:
 		return terminal.KeyCtrlZ
 	case tcell.KeyF1:
@@ -494,6 +496,8 @@ func reverseConvertKey(k terminal.Key) tcell.Key {
 		return tcell.KeyCtrlV
 	case terminal.KeyCtrlX:
 		return tcell.KeyCtrlX
+	case terminal.KeyCtrlY:
+		return tcell.KeyCtrlY
 	case terminal.KeyCtrlZ:
 		return tcell.KeyCtrlZ
 	case terminal.KeyF1:

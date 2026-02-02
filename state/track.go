@@ -2,7 +2,6 @@ package state
 
 import (
 	"sync"
-	"sync/atomic"
 )
 
 type dependencyTracker struct {
@@ -38,25 +37,41 @@ func (t *dependencyTracker) list() []Subscribable {
 	return out
 }
 
-var currentTracker atomic.Pointer[dependencyTracker]
+var (
+	trackerStackMu sync.Mutex
+	trackerStack   []*dependencyTracker
+)
 
 // trackDependencies runs fn while recording any signal reads.
 // Note: tracking is global and assumes compute runs on a single goroutine.
+// Uses a stack-based approach to support nested tracking calls.
 func trackDependencies[T any](fn func() T) (T, []Subscribable) {
 	if fn == nil {
 		var zero T
 		return zero, nil
 	}
 	tracker := &dependencyTracker{deps: make(map[Subscribable]struct{})}
-	prev := currentTracker.Load()
-	currentTracker.Store(tracker)
+	trackerStackMu.Lock()
+	trackerStack = append(trackerStack, tracker)
+	trackerStackMu.Unlock()
+
 	result := fn()
-	currentTracker.Store(prev)
+
+	trackerStackMu.Lock()
+	if len(trackerStack) > 0 {
+		trackerStack = trackerStack[:len(trackerStack)-1]
+	}
+	trackerStackMu.Unlock()
 	return result, tracker.list()
 }
 
 func recordDependency(dep Subscribable) {
-	tracker := currentTracker.Load()
+	trackerStackMu.Lock()
+	var tracker *dependencyTracker
+	if len(trackerStack) > 0 {
+		tracker = trackerStack[len(trackerStack)-1]
+	}
+	trackerStackMu.Unlock()
 	if tracker == nil {
 		return
 	}

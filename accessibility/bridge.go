@@ -37,6 +37,8 @@ const (
 	RoleGroup       Role = "group"
 	RoleText        Role = "text"
 	RoleChart       Role = "chart"
+	RoleWindow      Role = "window"
+	RoleApplication Role = "application"
 )
 
 // Accessible is implemented by widgets that expose accessibility metadata.
@@ -112,9 +114,71 @@ type Announcer interface {
 type Priority int
 
 const (
+	// PriorityPolite waits for current speech to complete.
 	PriorityPolite Priority = iota
+	// PriorityAssertive interrupts current speech for important messages.
 	PriorityAssertive
+	// PriorityLow is lower than polite, can be dropped.
+	PriorityLow
+	// PriorityMedium is equivalent to PriorityPolite.
+	PriorityMedium
+	// PriorityHigh is between polite and assertive.
+	PriorityHigh
+	// PriorityUrgent interrupts current speech immediately.
+	PriorityUrgent
 )
+
+// Bridge provides cross-platform screen reader integration.
+// Implementations connect to platform-specific accessibility APIs:
+// - Linux: AT-SPI via D-Bus
+// - macOS: NSAccessibility
+// - Windows: UI Automation
+type Bridge interface {
+	// Register connects the application to the platform accessibility system.
+	// The app parameter provides access to the widget tree.
+	Register(app BridgeApp) error
+
+	// Announce sends text to the screen reader.
+	// Priority controls whether the message interrupts current speech.
+	Announce(text string, priority Priority) error
+
+	// UpdateTree notifies the screen reader that the widget structure changed.
+	// Call this after layout changes.
+	UpdateTree() error
+
+	// NotifyFocusChange informs the screen reader that focus moved to a new widget.
+	NotifyFocusChange(widget Accessible) error
+
+	// NotifyValueChange informs the screen reader that a widget's value changed.
+	// For text inputs, sliders, progress bars, etc.
+	NotifyValueChange(widget Accessible, oldValue, newValue string) error
+
+	// NotifyStateChange informs the screen reader that a widget's state changed.
+	// For checkboxes, expandable items, etc.
+	NotifyStateChange(widget Accessible, state string, value bool) error
+
+	// Close disconnects from the platform accessibility system.
+	Close() error
+}
+
+// BridgeApp provides the bridge with access to application state.
+type BridgeApp interface {
+	// Name returns the application name.
+	Name() string
+
+	// RootAccessible returns the root accessible element.
+	RootAccessible() Accessible
+
+	// FocusedAccessible returns the currently focused element.
+	FocusedAccessible() Accessible
+
+	// AccessibleAt returns the accessible at the given path.
+	// Path is a slash-separated list of indices from root.
+	AccessibleAt(path string) Accessible
+
+	// ChildAccessibles returns the children of the given accessible.
+	ChildAccessibles(parent Accessible) []Accessible
+}
 
 // FocusStyle defines consistent focus rendering.
 type FocusStyle struct {
@@ -313,4 +377,34 @@ func FormatChange(widget Accessible) string {
 		}
 	}
 	return strings.Join(parts, ", ")
+}
+
+// BridgeAnnouncer wraps a Bridge to implement the Announcer interface.
+type BridgeAnnouncer struct {
+	bridge Bridge
+}
+
+// NewBridgeAnnouncer creates an Announcer that uses the given Bridge.
+func NewBridgeAnnouncer(bridge Bridge) *BridgeAnnouncer {
+	return &BridgeAnnouncer{bridge: bridge}
+}
+
+// Announce sends text to the screen reader.
+func (ba *BridgeAnnouncer) Announce(message string, priority Priority) {
+	if ba == nil || ba.bridge == nil {
+		return
+	}
+	_ = ba.bridge.Announce(message, priority)
+}
+
+// AnnounceChange announces the widget state.
+func (ba *BridgeAnnouncer) AnnounceChange(widget Accessible) {
+	if ba == nil {
+		return
+	}
+	message := FormatChange(widget)
+	if message == "" {
+		return
+	}
+	ba.Announce(message, PriorityPolite)
 }
