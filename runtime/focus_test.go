@@ -70,6 +70,28 @@ func TestFocusScope_Register(t *testing.T) {
 	}
 }
 
+func TestFocusScope_AutoFocusLast(t *testing.T) {
+	fs := NewFocusScopeWithPolicy(AutoFocusLast)
+	w1 := newFocusable("w1")
+	w2 := newFocusable("w2")
+
+	root := VBox(
+		Fixed(w1),
+		Fixed(w2),
+	)
+	RegisterFocusables(fs, root)
+
+	if fs.Current() != w2 {
+		t.Error("Current() should be w2 for AutoFocusLast")
+	}
+	if !w2.focused {
+		t.Error("w2 should be focused for AutoFocusLast")
+	}
+	if w1.focused {
+		t.Error("w1 should not be focused for AutoFocusLast")
+	}
+}
+
 func TestFocusScope_RegisterDuplicate(t *testing.T) {
 	fs := NewFocusScope()
 	w := newFocusable("w")

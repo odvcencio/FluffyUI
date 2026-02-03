@@ -65,8 +65,10 @@ func (f *FocusScope) Register(w Focusable) {
 	if f.current != -1 || !w.CanFocus() {
 		return
 	}
+	if f.autoFocusPolicy == AutoFocusLast {
+		return
+	}
 	// AutoFocusFirst: focus this widget (it's the first focusable)
-	// AutoFocusLast: also focus this widget (we'll update on subsequent registrations)
 	f.current = len(f.widgets) - 1
 	w.Focus()
 }

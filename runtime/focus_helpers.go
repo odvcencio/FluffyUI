@@ -6,6 +6,9 @@ func RegisterFocusables(scope *FocusScope, root Widget) {
 		return
 	}
 	registerFocusable(scope, root)
+	if scope.autoFocusPolicy == AutoFocusLast && scope.current == -1 {
+		scope.FocusLast()
+	}
 }
 
 func registerFocusable(scope *FocusScope, widget Widget) {
