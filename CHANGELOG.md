@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.3.1 - 2026-02-03
+
+### Fixes
+- Runtime: AutoFocusLast now defers focus until registration completes, ensuring the last registered widget receives focus.
+
 ## v0.3.0 - 2026-02-03
 
 ### Highlights
