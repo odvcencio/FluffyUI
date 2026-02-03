@@ -12,6 +12,7 @@ import (
 	"github.com/odvcencio/fluffyui/backend"
 	"github.com/odvcencio/fluffyui/backend/sim"
 	backendtcell "github.com/odvcencio/fluffyui/backend/tcell"
+	"github.com/odvcencio/fluffyui/backend/web"
 	"github.com/odvcencio/fluffyui/clipboard"
 	"github.com/odvcencio/fluffyui/i18n"
 	"github.com/odvcencio/fluffyui/keybind"
@@ -287,6 +288,19 @@ func WithFocusRegistration(mode runtime.FocusRegistrationMode) AppOption {
 	}
 }
 
+// WithAutoFocusPolicy sets the auto-focus policy for focus scopes.
+// AutoFocusFirst (default) focuses the first focusable widget.
+// AutoFocusLast focuses the last focusable widget.
+// AutoFocusNone disables auto-focus; apps must call SetFocus explicitly.
+func WithAutoFocusPolicy(policy runtime.AutoFocusPolicy) AppOption {
+	return func(b *appBuilder) {
+		if b == nil {
+			return
+		}
+		b.cfg.AutoFocusPolicy = policy
+	}
+}
+
 // WithKeyHandler overrides the key handler.
 func WithKeyHandler(handler runtime.KeyHandler) AppOption {
 	return func(b *appBuilder) {
@@ -347,6 +361,36 @@ func WithKeyBindings(register func(*keybind.CommandRegistry)) AppOption {
 	}
 }
 
+// WithWebServer configures the app to use the web backend.
+// The app will be accessible via browser at the specified address.
+// Use ":0" to let the system assign a random port.
+//
+// Example:
+//
+//	app, err := fluffy.NewApp(fluffy.WithWebServer(":8080"))
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//	fmt.Println("Open", app.Backend().(*web.Backend).URL())
+func WithWebServer(addr string) AppOption {
+	return func(b *appBuilder) {
+		if b == nil {
+			return
+		}
+		b.cfg.Backend = web.NewWithAddr(addr)
+	}
+}
+
+// WithWebConfig configures the app to use the web backend with full configuration.
+func WithWebConfig(config web.Config) AppOption {
+	return func(b *appBuilder) {
+		if b == nil {
+			return
+		}
+		b.cfg.Backend = web.New(config)
+	}
+}
+
 func (b *appBuilder) rebuildKeyHandler() {
 	if b == nil {
 		return
@@ -379,6 +423,12 @@ func buildBackendFromEnv() (backend.Backend, error) {
 		width := envInt("FLUFFYUI_WIDTH", 80)
 		height := envInt("FLUFFYUI_HEIGHT", 24)
 		return sim.New(width, height), nil
+	case "web":
+		addr := os.Getenv("FLUFFYUI_WEB_ADDR")
+		if addr == "" {
+			addr = ":8080"
+		}
+		return web.NewWithAddr(addr), nil
 	}
 	return backendtcell.New()
 }

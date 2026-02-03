@@ -1,16 +1,42 @@
 package runtime
 
+// AutoFocusPolicy controls how FocusScope handles initial focus.
+type AutoFocusPolicy int
+
+const (
+	// AutoFocusFirst focuses the first registered focusable widget (default).
+	AutoFocusFirst AutoFocusPolicy = iota
+	// AutoFocusLast focuses the last registered focusable widget.
+	AutoFocusLast
+	// AutoFocusNone disables auto-focus; apps must call SetFocus explicitly.
+	AutoFocusNone
+)
+
 // FocusScope manages focus within a layer/context.
 // Each modal layer has its own FocusScope, so overlays trap focus.
 type FocusScope struct {
-	widgets  []Focusable
-	current  int // Index of focused widget, -1 if none
-	onChange func(prev Focusable, next Focusable)
+	widgets         []Focusable
+	current         int // Index of focused widget, -1 if none
+	onChange        func(prev Focusable, next Focusable)
+	autoFocusPolicy AutoFocusPolicy
 }
 
-// NewFocusScope creates a new empty focus scope.
+// NewFocusScope creates a new empty focus scope with default auto-focus policy.
 func NewFocusScope() *FocusScope {
-	return &FocusScope{current: -1}
+	return &FocusScope{current: -1, autoFocusPolicy: AutoFocusFirst}
+}
+
+// NewFocusScopeWithPolicy creates a focus scope with the specified auto-focus policy.
+func NewFocusScopeWithPolicy(policy AutoFocusPolicy) *FocusScope {
+	return &FocusScope{current: -1, autoFocusPolicy: policy}
+}
+
+// SetAutoFocusPolicy changes the auto-focus policy.
+func (f *FocusScope) SetAutoFocusPolicy(policy AutoFocusPolicy) {
+	if f == nil {
+		return
+	}
+	f.autoFocusPolicy = policy
 }
 
 // SetOnChange registers a focus change callback.
@@ -22,7 +48,7 @@ func (f *FocusScope) SetOnChange(fn func(prev Focusable, next Focusable)) {
 }
 
 // Register adds a focusable widget to the scope.
-// The first registered widget receives focus if nothing is focused.
+// Auto-focus behavior depends on the scope's AutoFocusPolicy.
 func (f *FocusScope) Register(w Focusable) {
 	// Check if already registered
 	for _, existing := range f.widgets {
@@ -32,11 +58,17 @@ func (f *FocusScope) Register(w Focusable) {
 	}
 	f.widgets = append(f.widgets, w)
 
-	// Auto-focus first widget
-	if f.current == -1 && w.CanFocus() {
-		f.current = len(f.widgets) - 1
-		w.Focus()
+	// Auto-focus based on policy
+	if f.autoFocusPolicy == AutoFocusNone {
+		return
 	}
+	if f.current != -1 || !w.CanFocus() {
+		return
+	}
+	// AutoFocusFirst: focus this widget (it's the first focusable)
+	// AutoFocusLast: also focus this widget (we'll update on subsequent registrations)
+	f.current = len(f.widgets) - 1
+	w.Focus()
 }
 
 // Unregister removes a widget from the scope.

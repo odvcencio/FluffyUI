@@ -45,6 +45,7 @@ type AppConfig struct {
 	Recorder          Recorder
 	RenderObserver    RenderObserver
 	FocusRegistration FocusRegistrationMode
+	AutoFocusPolicy   AutoFocusPolicy
 	Audio             audio.Service
 	Theme             *theme.Theme
 	Stylesheet        *style.Stylesheet
@@ -75,6 +76,7 @@ type App struct {
 	recorder          Recorder
 	renderObserver    RenderObserver
 	focusRegistration FocusRegistrationMode
+	autoFocusPolicy   AutoFocusPolicy
 	audio             audio.Service
 	theme             *theme.Theme
 	stylesheet        *style.Stylesheet
@@ -131,6 +133,7 @@ func NewApp(cfg AppConfig) *App {
 		recorder:          cfg.Recorder,
 		renderObserver:    cfg.RenderObserver,
 		focusRegistration: cfg.FocusRegistration,
+		autoFocusPolicy:   cfg.AutoFocusPolicy,
 		audio:             cfg.Audio,
 		theme:             appTheme,
 		stylesheet:        sheet,
@@ -355,6 +358,7 @@ func (a *App) Run(ctx context.Context) error {
 	a.screen = NewScreen(w, h)
 	a.screen.SetServices(a.Services())
 	a.screen.SetErrorReporter(a.errorReporter)
+	a.screen.SetAutoFocusPolicy(a.autoFocusPolicy)
 	a.screen.SetAutoRegisterFocus(a.focusRegistration == FocusRegistrationAuto)
 	if a.root != nil {
 		a.screen.SetRoot(a.root)

@@ -24,6 +24,7 @@ type Screen struct {
 	services           Services
 	errorReporter      *ErrorReporter
 	autoRegisterFocus  bool
+	autoFocusPolicy    AutoFocusPolicy
 	hitGridDirty       bool
 	relayoutOnFocus    bool
 	styleResolver      *StyleResolver
@@ -93,6 +94,20 @@ func (s *Screen) SetAutoRegisterFocus(enabled bool) {
 	}
 }
 
+// SetAutoFocusPolicy sets the auto-focus policy for newly created focus scopes.
+func (s *Screen) SetAutoFocusPolicy(policy AutoFocusPolicy) {
+	if s == nil {
+		return
+	}
+	s.autoFocusPolicy = policy
+	// Apply to existing scopes
+	for _, layer := range s.layers {
+		if layer != nil && layer.FocusScope != nil {
+			layer.FocusScope.SetAutoFocusPolicy(policy)
+		}
+	}
+}
+
 // RefreshFocusables rescans all layers for focusable widgets.
 func (s *Screen) RefreshFocusables() {
 	if s == nil {
@@ -134,7 +149,7 @@ func (s *Screen) SetRoot(root Widget) {
 	if len(s.layers) == 0 {
 		s.layers = append(s.layers, &Layer{
 			Root:       root,
-			FocusScope: NewFocusScope(),
+			FocusScope: NewFocusScopeWithPolicy(s.autoFocusPolicy),
 			Modal:      false,
 		})
 		s.configureFocusScope(s.layers[0].FocusScope)
@@ -174,7 +189,7 @@ func (s *Screen) Root() Widget {
 func (s *Screen) PushLayer(root Widget, modal bool) {
 	layer := &Layer{
 		Root:       root,
-		FocusScope: NewFocusScope(),
+		FocusScope: NewFocusScopeWithPolicy(s.autoFocusPolicy),
 		Modal:      modal,
 	}
 	s.configureFocusScope(layer.FocusScope)
