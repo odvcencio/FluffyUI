@@ -238,9 +238,12 @@ func (t *TextArea) StyleType() string {
 }
 
 // Measure returns the desired size.
+// TextArea returns minimal preferred size (1x1) to work correctly in flex layouts.
+// When flex containers measure children with unbounded constraints (maxInt),
+// returning maxInt would cause the flex shrink algorithm to shrink this widget to 0.
 func (t *TextArea) Measure(constraints runtime.Constraints) runtime.Size {
 	return t.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {
-		return contentConstraints.Constrain(runtime.Size{Width: contentConstraints.MaxWidth, Height: contentConstraints.MaxHeight})
+		return contentConstraints.Constrain(runtime.Size{Width: 1, Height: 1})
 	})
 }
 
