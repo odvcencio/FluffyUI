@@ -564,6 +564,7 @@ func TestGolden_DatePicker(t *testing.T) {
 			func() *DatePicker {
 				dp := NewDatePicker()
 				dp.calendar.now = func() time.Time { return fixedNow }
+				dp.calendar.SetSelectedDate(fixedNow)
 				dp.calendar.SetDisplayedMonth(fixedNow)
 				return dp
 			},

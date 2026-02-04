@@ -5,7 +5,7 @@ package tcell
 import (
 	"sync"
 
-	"github.com/gdamore/tcell/v2"
+	"github.com/gdamore/tcell/v3"
 )
 
 type rawTty struct {
@@ -25,8 +25,9 @@ func (t *rawTty) Drain() error {
 	return t.inner.Drain()
 }
 
-func (t *rawTty) NotifyResize(cb func()) {
-	t.inner.NotifyResize(cb)
+// NotifyResize in v3 takes a channel instead of a callback function
+func (t *rawTty) NotifyResize(ch chan<- bool) {
+	t.inner.NotifyResize(ch)
 }
 
 func (t *rawTty) WindowSize() (tcell.WindowSize, error) {

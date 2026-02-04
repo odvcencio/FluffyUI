@@ -5,9 +5,8 @@ package tcell
 
 import (
 	"strings"
-	"time"
 
-	"github.com/gdamore/tcell/v2"
+	"github.com/gdamore/tcell/v3"
 	"github.com/odvcencio/fluffyui/backend"
 	"github.com/odvcencio/fluffyui/terminal"
 )
@@ -127,8 +126,8 @@ func (b *Backend) SetCursorPos(x, y int) {
 // PollEvent blocks until an event is available.
 func (b *Backend) PollEvent() terminal.Event {
 	for {
-		ev := b.screen.PollEvent()
-		if ev == nil {
+		ev, ok := <-b.screen.EventQ()
+		if !ok || ev == nil {
 			return nil
 		}
 
@@ -154,9 +153,9 @@ func (b *Backend) PollEvent() terminal.Event {
 
 		case *tcell.EventKey:
 			if b.inPaste {
-				// Accumulate runes during paste
+				// Accumulate string during paste (v3 uses Str() instead of Rune())
 				if e.Key() == tcell.KeyRune {
-					b.pasteBuffer.WriteRune(e.Rune())
+					b.pasteBuffer.WriteString(e.Str())
 				} else if e.Key() == tcell.KeyEnter {
 					b.pasteBuffer.WriteRune('\n')
 				} else if e.Key() == tcell.KeyTab {
@@ -172,28 +171,21 @@ func (b *Backend) PollEvent() terminal.Event {
 }
 
 // PostEvent injects an event into the queue.
-// Retries with exponential backoff if the queue is temporarily full.
 func (b *Backend) PostEvent(ev terminal.Event) error {
 	tev := reverseConvertEvent(ev)
 	if tev == nil {
 		return nil
 	}
 
-	// Try posting with retry and exponential backoff
-	const maxRetries = 5
-	delay := time.Millisecond
-
-	for i := 0; i < maxRetries; i++ {
-		err := b.screen.PostEvent(tev)
-		if err == nil {
-			return nil
-		}
-		// If queue is full, wait and retry
-		time.Sleep(delay)
-		delay *= 2 // Exponential backoff: 1ms, 2ms, 4ms, 8ms, 16ms
+	// In tcell v3, we write directly to the EventQ channel
+	select {
+	case b.screen.EventQ() <- tev:
+		return nil
+	default:
+		// Channel full, try blocking send
+		b.screen.EventQ() <- tev
+		return nil
 	}
-
-	return b.screen.PostEvent(tev) // Final attempt, return any error
 }
 
 // Beep emits an audible bell.
@@ -275,9 +267,16 @@ func convertColor(c backend.Color) tcell.Color {
 func convertEvent(ev tcell.Event) terminal.Event {
 	switch e := ev.(type) {
 	case *tcell.EventKey:
+		// In tcell v3, Str() returns a string instead of Rune()
+		// Extract first rune for compatibility
+		str := e.Str()
+		r := rune(0)
+		if len(str) > 0 {
+			r = []rune(str)[0]
+		}
 		return terminal.KeyEvent{
 			Key:   convertKey(e.Key()),
-			Rune:  e.Rune(),
+			Rune:  r,
 			Alt:   e.Modifiers()&tcell.ModAlt != 0,
 			Ctrl:  e.Modifiers()&tcell.ModCtrl != 0,
 			Shift: e.Modifiers()&tcell.ModShift != 0,
@@ -327,7 +326,7 @@ func convertKey(k tcell.Key) terminal.Key {
 		return terminal.KeyInsert
 	case tcell.KeyDelete:
 		return terminal.KeyDelete
-	case tcell.KeyBackspace, tcell.KeyBackspace2:
+	case tcell.KeyBackspace, tcell.KeyDEL:
 		return terminal.KeyBackspace
 	case tcell.KeyTab:
 		return terminal.KeyTab
@@ -425,7 +424,7 @@ func reverseConvertEvent(ev terminal.Event) tcell.Event {
 		if e.Shift {
 			mod |= tcell.ModShift
 		}
-		return tcell.NewEventKey(reverseConvertKey(e.Key), e.Rune, mod)
+		return tcell.NewEventKey(reverseConvertKey(e.Key), string(e.Rune), mod)
 	case terminal.MouseEvent:
 		mod := tcell.ModNone
 		if e.Alt {
@@ -475,7 +474,7 @@ func reverseConvertKey(k terminal.Key) tcell.Key {
 	case terminal.KeyDelete:
 		return tcell.KeyDelete
 	case terminal.KeyBackspace:
-		return tcell.KeyBackspace2
+		return tcell.KeyDEL
 	case terminal.KeyTab:
 		return tcell.KeyTab
 	case terminal.KeyEnter:
