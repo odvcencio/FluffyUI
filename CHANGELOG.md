@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.3.3 - 2026-02-04
+
+### Fixes
+- TextArea: return a minimal preferred size (1x1) so flex layouts with unbounded constraints don't shrink it to 0.
+
 ## v0.3.2 - 2026-02-04
 
 ### Dependencies
