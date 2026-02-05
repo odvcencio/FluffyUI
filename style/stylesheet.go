@@ -3,6 +3,7 @@ package style
 import (
 	"sort"
 	"strings"
+	"sync"
 )
 
 // Rule binds a selector to a style.
@@ -18,6 +19,7 @@ type Rule struct {
 
 // Stylesheet is a collection of style rules.
 type Stylesheet struct {
+	mu        sync.RWMutex
 	rules     []Rule
 	nextOrder int
 	variables map[string]string
@@ -37,6 +39,8 @@ func (s *Stylesheet) SetVariable(name, value string) *Stylesheet {
 	if key == "" {
 		return s
 	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	if s.variables == nil {
 		s.variables = make(map[string]string)
 	}
@@ -46,11 +50,16 @@ func (s *Stylesheet) SetVariable(name, value string) *Stylesheet {
 
 // GetVariable returns a variable value if set.
 func (s *Stylesheet) GetVariable(name string) (string, bool) {
-	if s == nil || s.variables == nil {
+	if s == nil {
 		return "", false
 	}
 	key := strings.ToLower(strings.TrimSpace(name))
 	if key == "" {
+		return "", false
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if s.variables == nil {
 		return "", false
 	}
 	value, ok := s.variables[key]
@@ -84,6 +93,11 @@ func (s *Stylesheet) AddWithMedia(selector *SelectorBuilder, style Style, media 
 }
 
 func (s *Stylesheet) addRule(selector Selector, style Style, important Style, media []MediaQuery) {
+	if s == nil {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	rule := Rule{
 		Selector:    selector,
 		Style:       style,
@@ -106,6 +120,8 @@ func (s *Stylesheet) ResolveWithContext(node Node, ancestors []Node, ctx MediaCo
 	if s == nil || node == nil {
 		return Style{}
 	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	var matches []Rule
 	for _, rule := range s.rules {
 		if rule.Selector.Matches(node, ancestors) && mediaMatches(rule.Media, ctx) {
@@ -136,6 +152,8 @@ func (s *Stylesheet) RelayoutOnFocus() bool {
 	if s == nil {
 		return false
 	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	for _, rule := range s.rules {
 		if !rule.Selector.HasPseudo(PseudoFocus) {
 			continue
@@ -154,16 +172,23 @@ func Merge(sheets ...*Stylesheet) *Stylesheet {
 		if sheet == nil {
 			continue
 		}
-		for _, rule := range sheet.rules {
+		sheet.mu.RLock()
+		rules := append([]Rule(nil), sheet.rules...)
+		vars := make(map[string]string, len(sheet.variables))
+		for key, value := range sheet.variables {
+			vars[key] = value
+		}
+		sheet.mu.RUnlock()
+		for _, rule := range rules {
 			rule.order = merged.nextOrder
 			merged.nextOrder++
 			merged.rules = append(merged.rules, rule)
 		}
-		if len(sheet.variables) > 0 {
+		if len(vars) > 0 {
 			if merged.variables == nil {
 				merged.variables = make(map[string]string)
 			}
-			for key, value := range sheet.variables {
+			for key, value := range vars {
 				merged.variables[key] = value
 			}
 		}

@@ -48,13 +48,13 @@ func (f *fakeTty) Close() error { f.closed = true; return nil }
 
 // testScreen is a minimal tcell.Screen implementation for testing
 type testScreen struct {
-	mu       sync.Mutex
-	width    int
-	height   int
-	cells    map[int]map[int]string
-	eventQ   chan tcell.Event
-	cursorX  int
-	cursorY  int
+	mu      sync.Mutex
+	width   int
+	height  int
+	cells   map[int]map[int]string
+	eventQ  chan tcell.Event
+	cursorX int
+	cursorY int
 }
 
 func newTestScreen(w, h int) *testScreen {
@@ -68,38 +68,38 @@ func newTestScreen(w, h int) *testScreen {
 	}
 }
 
-func (s *testScreen) Init() error                                               { return nil }
-func (s *testScreen) Fini()                                                     { close(s.eventQ) }
-func (s *testScreen) Clear()                                                    {}
-func (s *testScreen) Fill(r rune, style tcell.Style)                            {}
-func (s *testScreen) SetStyle(style tcell.Style)                                {}
-func (s *testScreen) ShowCursor(x, y int)                                       { s.cursorX = x; s.cursorY = y }
-func (s *testScreen) HideCursor()                                               { s.cursorX = -1; s.cursorY = -1 }
+func (s *testScreen) Init() error                                                { return nil }
+func (s *testScreen) Fini()                                                      { close(s.eventQ) }
+func (s *testScreen) Clear()                                                     {}
+func (s *testScreen) Fill(r rune, style tcell.Style)                             {}
+func (s *testScreen) SetStyle(style tcell.Style)                                 {}
+func (s *testScreen) ShowCursor(x, y int)                                        { s.cursorX = x; s.cursorY = y }
+func (s *testScreen) HideCursor()                                                { s.cursorX = -1; s.cursorY = -1 }
 func (s *testScreen) SetCursorStyle(cs tcell.CursorStyle, c ...tcellcolor.Color) {}
-func (s *testScreen) Show()                                                     {}
-func (s *testScreen) Sync()                                                     {}
-func (s *testScreen) CharacterSet() string                                      { return "UTF-8" }
-func (s *testScreen) RegisterRuneFallback(r rune, subst string)                 {}
-func (s *testScreen) UnregisterRuneFallback(r rune)                             {}
-func (s *testScreen) Resize(int, int, int, int)                                 {}
-func (s *testScreen) Suspend() error                                            { return nil }
-func (s *testScreen) Resume() error                                             { return nil }
-func (s *testScreen) Beep() error                                               { return nil }
-func (s *testScreen) LockRegion(x, y, w, h int, lock bool)                      {}
-func (s *testScreen) Tty() (tcell.Tty, bool)                                    { return nil, false }
-func (s *testScreen) SetTitle(string)                                           {}
-func (s *testScreen) SetClipboard([]byte)                                       {}
-func (s *testScreen) GetClipboard()                                             {}
-func (s *testScreen) HasClipboard() bool                                        { return false }
-func (s *testScreen) ShowNotification(title, body string)                       {}
-func (s *testScreen) Terminal() (string, string)                                { return "test", "1.0" }
-func (s *testScreen) EnableMouse(...tcell.MouseFlags)                           {}
-func (s *testScreen) DisableMouse()                                             {}
-func (s *testScreen) EnablePaste()                                              {}
-func (s *testScreen) DisablePaste()                                             {}
-func (s *testScreen) EnableFocus()                                              {}
-func (s *testScreen) DisableFocus()                                             {}
-func (s *testScreen) Colors() int                                               { return 256 }
+func (s *testScreen) Show()                                                      {}
+func (s *testScreen) Sync()                                                      {}
+func (s *testScreen) CharacterSet() string                                       { return "UTF-8" }
+func (s *testScreen) RegisterRuneFallback(r rune, subst string)                  {}
+func (s *testScreen) UnregisterRuneFallback(r rune)                              {}
+func (s *testScreen) Resize(int, int, int, int)                                  {}
+func (s *testScreen) Suspend() error                                             { return nil }
+func (s *testScreen) Resume() error                                              { return nil }
+func (s *testScreen) Beep() error                                                { return nil }
+func (s *testScreen) LockRegion(x, y, w, h int, lock bool)                       {}
+func (s *testScreen) Tty() (tcell.Tty, bool)                                     { return nil, false }
+func (s *testScreen) SetTitle(string)                                            {}
+func (s *testScreen) SetClipboard([]byte)                                        {}
+func (s *testScreen) GetClipboard()                                              {}
+func (s *testScreen) HasClipboard() bool                                         { return false }
+func (s *testScreen) ShowNotification(title, body string)                        {}
+func (s *testScreen) Terminal() (string, string)                                 { return "test", "1.0" }
+func (s *testScreen) EnableMouse(...tcell.MouseFlags)                            {}
+func (s *testScreen) DisableMouse()                                              {}
+func (s *testScreen) EnablePaste()                                               {}
+func (s *testScreen) DisablePaste()                                              {}
+func (s *testScreen) EnableFocus()                                               {}
+func (s *testScreen) DisableFocus()                                              {}
+func (s *testScreen) Colors() int                                                { return 256 }
 
 func (s *testScreen) Size() (int, int) {
 	s.mu.Lock()
@@ -289,6 +289,93 @@ func TestRawTTYWrapperAndImageWrites(t *testing.T) {
 func TestCursorTo(t *testing.T) {
 	if cursorTo(0, 0) != "\x1b[1;1H" {
 		t.Fatalf("unexpected cursor sequence")
+	}
+}
+
+func TestBackendInlineViewportSizeAndCoordinates(t *testing.T) {
+	screen := newTestScreen(20, 10)
+	be := NewWithScreen(screen)
+	be.SetInlineMode(true)
+	be.SetInlineHeight(3)
+
+	w, h := be.Size()
+	if w != 20 || h != 3 {
+		t.Fatalf("inline size = %dx%d, want 20x3", w, h)
+	}
+
+	be.SetContent(2, 0, 'A', nil, backend.DefaultStyle())
+	str, _, _ := screen.Get(2, 7)
+	if str != "A" {
+		t.Fatalf("expected content at inline origin row, got %q", str)
+	}
+
+	// Negative Y in inline coordinates should be ignored.
+	be.SetContent(3, -1, 'Z', nil, backend.DefaultStyle())
+	str, _, _ = screen.Get(3, 6)
+	if str == "Z" {
+		t.Fatalf("expected negative inline Y write to be ignored")
+	}
+
+	be.SetRow(1, 0, []backend.Cell{
+		{Rune: 'B', Style: backend.DefaultStyle()},
+		{Rune: 'C', Style: backend.DefaultStyle()},
+	})
+	str, _, _ = screen.Get(0, 8)
+	if str != "B" {
+		t.Fatalf("expected row write at inline offset, got %q", str)
+	}
+
+	be.SetCursorPos(1, 2)
+	if screen.cursorX != 1 || screen.cursorY != 9 {
+		t.Fatalf("cursor = (%d,%d), want (1,9)", screen.cursorX, screen.cursorY)
+	}
+}
+
+func TestBackendInlineViewportEventMapping(t *testing.T) {
+	screen := newTestScreen(20, 10)
+	be := NewWithScreen(screen)
+	be.SetInlineMode(true)
+	be.SetInlineHeight(3)
+
+	screen.eventQ <- tcell.NewEventResize(20, 10)
+	ev := be.PollEvent()
+	resize, ok := ev.(terminal.ResizeEvent)
+	if !ok {
+		t.Fatalf("expected resize event, got %T", ev)
+	}
+	if resize.Width != 20 || resize.Height != 3 {
+		t.Fatalf("resize = %dx%d, want 20x3", resize.Width, resize.Height)
+	}
+
+	// First mouse event is outside inline viewport and should be skipped.
+	screen.eventQ <- tcell.NewEventMouse(2, 2, tcell.Button1, tcell.ModNone)
+	screen.eventQ <- tcell.NewEventMouse(2, 8, tcell.Button1, tcell.ModNone)
+	ev = be.PollEvent()
+	mouse, ok := ev.(terminal.MouseEvent)
+	if !ok {
+		t.Fatalf("expected mouse event, got %T", ev)
+	}
+	if mouse.X != 2 || mouse.Y != 1 {
+		t.Fatalf("mouse = (%d,%d), want (2,1)", mouse.X, mouse.Y)
+	}
+}
+
+func TestRawTTYInlineModeStripsAltScreen(t *testing.T) {
+	fake := &fakeTty{}
+	raw := &rawTty{inner: fake}
+	raw.SetInlineMode(true)
+
+	_, _ = raw.Write([]byte("\x1b[?1049hhello\x1b[?1049l"))
+
+	if len(fake.wrote) != 1 {
+		t.Fatalf("expected one write, got %d", len(fake.wrote))
+	}
+	out := string(fake.wrote[0])
+	if strings.Contains(out, "\x1b[?1049h") || strings.Contains(out, "\x1b[?1049l") {
+		t.Fatalf("alternate-screen escape leaked in inline mode: %q", out)
+	}
+	if out != "hello" {
+		t.Fatalf("unexpected filtered output: %q", out)
 	}
 }
 

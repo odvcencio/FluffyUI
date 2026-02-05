@@ -16,6 +16,12 @@ var errNotSupported = errors.New("tcell backend not supported on WASM")
 // Backend is a stub implementation for WASM.
 type Backend struct{}
 
+// SetInlineMode is a no-op on WASM.
+func (b *Backend) SetInlineMode(enabled bool) {}
+
+// SetInlineHeight is a no-op on WASM.
+func (b *Backend) SetInlineHeight(lines int) {}
+
 // New returns an error on WASM.
 func New() (*Backend, error) {
 	return nil, errNotSupported

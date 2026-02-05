@@ -15,6 +15,9 @@ import (
 type Backend struct {
 	screen tcell.Screen
 	raw    *rawTty
+	// Inline rendering mode (no alternate screen, bounded viewport).
+	inlineMode   bool
+	inlineHeight int
 
 	// Bracketed paste state
 	inPaste     bool
@@ -46,6 +49,26 @@ func NewWithScreen(screen tcell.Screen) *Backend {
 	return &Backend{screen: screen}
 }
 
+// SetInlineMode enables/disables inline rendering mode.
+func (b *Backend) SetInlineMode(enabled bool) {
+	if b == nil {
+		return
+	}
+	b.inlineMode = enabled
+	if b.raw != nil {
+		b.raw.SetInlineMode(enabled)
+	}
+}
+
+// SetInlineHeight constrains inline rendering to a fixed number of rows.
+// Values <= 0 use the backend default.
+func (b *Backend) SetInlineHeight(lines int) {
+	if b == nil {
+		return
+	}
+	b.inlineHeight = lines
+}
+
 // Init initializes the backend.
 func (b *Backend) Init() error {
 	if err := b.screen.Init(); err != nil {
@@ -63,38 +86,99 @@ func (b *Backend) Fini() {
 
 // Size returns the terminal dimensions.
 func (b *Backend) Size() (width, height int) {
-	return b.screen.Size()
+	if b == nil || b.screen == nil {
+		return 0, 0
+	}
+	width, fullHeight := b.screen.Size()
+	if !b.inlineMode {
+		return width, fullHeight
+	}
+	return width, b.inlineViewportHeight(fullHeight)
 }
 
 // SetContent sets a cell at position (x, y).
 func (b *Backend) SetContent(x, y int, mainc rune, comb []rune, style backend.Style) {
+	if b == nil || b.screen == nil {
+		return
+	}
+	width, fullHeight := b.screen.Size()
+	if x < 0 || x >= width || y < 0 {
+		return
+	}
+	if b.inlineMode {
+		y += b.inlineOffsetY()
+	}
+	if y < 0 || y >= fullHeight {
+		return
+	}
 	b.screen.SetContent(x, y, mainc, comb, b.cachedStyle(style))
 }
 
 // SetRow updates a row using the runtime row-writer fast path.
 func (b *Backend) SetRow(y int, startX int, cells []backend.Cell) {
-	if startX < 0 || len(cells) == 0 {
+	if b == nil || b.screen == nil || startX < 0 || y < 0 || len(cells) == 0 {
 		return
 	}
-	x := startX
-	for _, cell := range cells {
-		b.screen.SetContent(x, y, cell.Rune, nil, b.cachedStyle(cell.Style))
-		x++
+
+	width, fullHeight := b.screen.Size()
+	if startX >= width {
+		return
+	}
+	if b.inlineMode {
+		y += b.inlineOffsetY()
+	}
+	if y < 0 || y >= fullHeight {
+		return
+	}
+
+	maxCols := min(len(cells), width-startX)
+	for i := 0; i < maxCols; i++ {
+		cell := cells[i]
+		b.screen.SetContent(startX+i, y, cell.Rune, nil, b.cachedStyle(cell.Style))
 	}
 }
 
 // SetRect updates a rectangle using row-major cells.
 func (b *Backend) SetRect(x, y, width, height int, cells []backend.Cell) {
-	if width <= 0 || height <= 0 {
+	if b == nil || b.screen == nil || width <= 0 || height <= 0 {
 		return
 	}
 	expected := width * height
 	if len(cells) < expected {
 		return
 	}
+
+	screenWidth, fullHeight := b.screen.Size()
+	offsetY := 0
+	if b.inlineMode {
+		offsetY = b.inlineOffsetY()
+	}
+
 	for row := 0; row < height; row++ {
+		dstY := y + row
+		if dstY < 0 {
+			continue
+		}
+		absY := dstY + offsetY
+		if absY < 0 || absY >= fullHeight {
+			continue
+		}
+
 		rowStart := row * width
-		b.SetRow(y+row, x, cells[rowStart:rowStart+width])
+		rowEnd := rowStart + width
+		rowCells := cells[rowStart:rowEnd]
+
+		startX := max(0, x)
+		endX := min(screenWidth, x+width)
+		if startX >= endX {
+			continue
+		}
+		srcOffset := startX - x
+		for col := startX; col < endX; col++ {
+			cell := rowCells[srcOffset]
+			b.screen.SetContent(col, absY, cell.Rune, nil, b.cachedStyle(cell.Style))
+			srcOffset++
+		}
 	}
 }
 
@@ -105,6 +189,22 @@ func (b *Backend) Show() {
 
 // Clear clears the screen.
 func (b *Backend) Clear() {
+	if b == nil || b.screen == nil {
+		return
+	}
+	if b.inlineMode {
+		width, fullHeight := b.screen.Size()
+		top := b.inlineOffsetY()
+		height := b.inlineViewportHeight(fullHeight)
+		defaultStyle := tcell.StyleDefault
+		for y := 0; y < height; y++ {
+			row := top + y
+			for x := 0; x < width; x++ {
+				b.screen.SetContent(x, row, ' ', nil, defaultStyle)
+			}
+		}
+		return
+	}
 	b.screen.Clear()
 }
 
@@ -120,6 +220,9 @@ func (b *Backend) ShowCursor() {
 
 // SetCursorPos sets the cursor position.
 func (b *Backend) SetCursorPos(x, y int) {
+	if b.inlineMode {
+		y += b.inlineOffsetY()
+	}
 	b.screen.ShowCursor(x, y)
 }
 
@@ -166,12 +269,22 @@ func (b *Backend) PollEvent() terminal.Event {
 		}
 
 		// Normal event handling
-		return convertEvent(ev)
+		mapped := b.mapInlineEvent(convertEvent(ev))
+		if mapped == nil {
+			continue
+		}
+		return mapped
 	}
 }
 
 // PostEvent injects an event into the queue.
 func (b *Backend) PostEvent(ev terminal.Event) error {
+	if b.inlineMode {
+		if mouse, ok := ev.(terminal.MouseEvent); ok {
+			mouse.Y += b.inlineOffsetY()
+			ev = mouse
+		}
+	}
 	tev := reverseConvertEvent(ev)
 	if tev == nil {
 		return nil
@@ -196,6 +309,57 @@ func (b *Backend) Beep() {
 // Sync forces a full redraw.
 func (b *Backend) Sync() {
 	b.screen.Sync()
+}
+
+func (b *Backend) inlineViewportHeight(fullHeight int) int {
+	if fullHeight <= 0 {
+		return 0
+	}
+	view := b.inlineHeight
+	if view <= 0 {
+		view = 12
+	}
+	if view > fullHeight {
+		view = fullHeight
+	}
+	return view
+}
+
+func (b *Backend) inlineOffsetY() int {
+	if b == nil || b.screen == nil || !b.inlineMode {
+		return 0
+	}
+	_, fullHeight := b.screen.Size()
+	view := b.inlineViewportHeight(fullHeight)
+	if view >= fullHeight {
+		return 0
+	}
+	return fullHeight - view
+}
+
+func (b *Backend) mapInlineEvent(ev terminal.Event) terminal.Event {
+	if !b.inlineMode || ev == nil {
+		return ev
+	}
+	switch e := ev.(type) {
+	case terminal.ResizeEvent:
+		e.Height = b.inlineViewportHeight(e.Height)
+		return e
+	case terminal.MouseEvent:
+		relativeY := e.Y - b.inlineOffsetY()
+		if relativeY < 0 {
+			return nil
+		}
+		width, _ := b.Size()
+		_, height := b.Size()
+		if e.X < 0 || e.X >= width || relativeY >= height {
+			return nil
+		}
+		e.Y = relativeY
+		return e
+	default:
+		return ev
+	}
 }
 
 const defaultStyleCacheCap = 256

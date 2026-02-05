@@ -16,6 +16,12 @@ go run ./examples/counter
 ```
 Demonstrates reactive state management with signals. Shows a counter that can be incremented/decremented with history tracking.
 
+### Inline Mode
+```bash
+go run ./examples/inline
+```
+Demonstrates bounded inline rendering without alternate-screen takeover.
+
 ## Widget Showcase
 
 ### Widget Gallery

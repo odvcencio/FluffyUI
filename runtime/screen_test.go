@@ -81,6 +81,51 @@ func TestScreen_PushPopLayer(t *testing.T) {
 	}
 }
 
+func TestScreen_OverlayCount(t *testing.T) {
+	s := NewScreen(80, 24)
+
+	// No layers yet
+	if s.OverlayCount() != 0 {
+		t.Errorf("expected 0 overlays with no layers, got %d", s.OverlayCount())
+	}
+
+	// Set base layer
+	root := &mockWidget{}
+	s.SetRoot(root)
+
+	if s.OverlayCount() != 0 {
+		t.Errorf("expected 0 overlays with only base layer, got %d", s.OverlayCount())
+	}
+
+	// Push one overlay
+	overlay1 := &mockWidget{}
+	s.PushLayer(overlay1, true)
+
+	if s.OverlayCount() != 1 {
+		t.Errorf("expected 1 overlay, got %d", s.OverlayCount())
+	}
+
+	// Push another overlay
+	overlay2 := &mockWidget{}
+	s.PushLayer(overlay2, false)
+
+	if s.OverlayCount() != 2 {
+		t.Errorf("expected 2 overlays, got %d", s.OverlayCount())
+	}
+
+	// Pop one
+	s.PopLayer()
+	if s.OverlayCount() != 1 {
+		t.Errorf("expected 1 overlay after pop, got %d", s.OverlayCount())
+	}
+
+	// Pop last overlay
+	s.PopLayer()
+	if s.OverlayCount() != 0 {
+		t.Errorf("expected 0 overlays after popping all, got %d", s.OverlayCount())
+	}
+}
+
 func TestScreen_ModalLayerBlocksInput(t *testing.T) {
 	s := NewScreen(80, 24)
 

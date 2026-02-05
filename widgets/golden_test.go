@@ -6,9 +6,11 @@ import (
 	"time"
 
 	"github.com/odvcencio/fluffyui/backend"
+	"github.com/odvcencio/fluffyui/keybind"
 	"github.com/odvcencio/fluffyui/runtime"
 	"github.com/odvcencio/fluffyui/state"
 	testing2 "github.com/odvcencio/fluffyui/testing"
+	"github.com/odvcencio/fluffyui/toast"
 )
 
 // goldenPath returns the path to a golden file.
@@ -1283,7 +1285,9 @@ func TestGolden_Text(t *testing.T) {
 		},
 		{
 			"wrapped",
-			func() *Text { return NewText("This is a long piece of text that should wrap to multiple lines when rendered") },
+			func() *Text {
+				return NewText("This is a long piece of text that should wrap to multiple lines when rendered")
+			},
 			25, 5,
 		},
 	}
@@ -1292,4 +1296,158 @@ func TestGolden_Text(t *testing.T) {
 			assertGolden(t, tt.setup(), tt.width, tt.height, "text_"+tt.name)
 		})
 	}
+}
+
+// ============================================================================
+// Coverage Expansion
+// ============================================================================
+
+func TestGolden_Grid(t *testing.T) {
+	grid := NewGrid(2, 2)
+	grid.Add(NewLabel("A"), 0, 0, 1, 1)
+	grid.Add(NewLabel("B"), 0, 1, 1, 1)
+	grid.Add(NewLabel("C"), 1, 0, 1, 1)
+	grid.Add(NewLabel("D"), 1, 1, 1, 1)
+	assertGolden(t, grid, 20, 4, "grid_basic")
+}
+
+func TestGolden_Stack(t *testing.T) {
+	stack := NewStack(
+		NewLabel("Top"),
+		NewLabel("Middle"),
+		NewLabel("Bottom"),
+	)
+	assertGolden(t, stack, 20, 5, "stack_basic")
+}
+
+func TestGolden_AspectRatio(t *testing.T) {
+	widget := NewAspectRatio(NewPanel(NewLabel("16:9")), 16.0/9.0)
+	assertGolden(t, widget, 24, 8, "aspect_ratio_basic")
+}
+
+func TestGolden_List(t *testing.T) {
+	items := []string{"Alpha", "Beta", "Gamma"}
+	adapter := NewSliceAdapter(items, func(item string, index int, selected bool, ctx runtime.RenderContext) {
+		style := backend.DefaultStyle()
+		if selected {
+			style = style.Reverse(true)
+		}
+		ctx.Buffer.SetString(ctx.Bounds.X, ctx.Bounds.Y, item, style)
+	})
+	list := NewList[string](adapter)
+	list.Focus()
+	assertGolden(t, list, 20, 4, "list_basic")
+}
+
+func TestGolden_SearchWidget(t *testing.T) {
+	search := NewSearchWidget()
+	search.SetQuery("fluffy")
+	search.SetMatchInfo(2, 7)
+	assertGolden(t, search, 30, 1, "search_widget_basic")
+}
+
+func TestGolden_EnhancedPalette(t *testing.T) {
+	registry := keybind.NewRegistry()
+	registry.Register(keybind.Command{ID: "file.open", Title: "Open File", Category: "File"})
+	registry.Register(keybind.Command{ID: "file.save", Title: "Save File", Category: "File"})
+	registry.Register(keybind.Command{ID: "app.quit", Title: "Quit", Category: "App"})
+
+	palette := NewEnhancedPalette(registry)
+	assertGolden(t, palette.Widget, 60, 10, "enhanced_palette_basic")
+}
+
+func TestGolden_Section(t *testing.T) {
+	section := NewSection("Build")
+	section.SetItems([]SectionItem{
+		{Icon: '✓', Text: "Compile"},
+		{Icon: '⟳', Text: "Test", Active: true, SubText: "running"},
+		{Icon: '○', Text: "Release"},
+	})
+	assertGolden(t, section, 30, 6, "section_basic")
+}
+
+func TestGolden_ToastStack(t *testing.T) {
+	now := time.Date(2026, time.January, 2, 12, 0, 0, 0, time.UTC)
+	stack := NewToastStack()
+	stack.SetAnimationsEnabled(false)
+	stack.SetNow(now)
+	stack.SetToasts([]*toast.Toast{
+		{
+			ID:        "t1",
+			Level:     toast.ToastInfo,
+			Title:     "Saved",
+			Message:   "Project updated",
+			Duration:  5 * time.Second,
+			CreatedAt: now.Add(-1 * time.Second),
+		},
+		{
+			ID:        "t2",
+			Level:     toast.ToastWarning,
+			Title:     "Network",
+			Message:   "Retrying connection",
+			Duration:  5 * time.Second,
+			CreatedAt: now.Add(-2 * time.Second),
+		},
+	})
+	assertGolden(t, stack, 70, 8, "toast_stack_basic")
+}
+
+func TestGolden_ChartsAdditional(t *testing.T) {
+	t.Run("sparkline", func(t *testing.T) {
+		data := state.NewSignal([]float64{1, 3, 2, 5, 4, 8, 6})
+		spark := NewSparkline(data)
+		assertGolden(t, spark, 20, 1, "sparkline_basic")
+	})
+
+	t.Run("barchart", func(t *testing.T) {
+		data := state.NewSignal([]BarData{
+			{Label: "A", Value: 3},
+			{Label: "B", Value: 5},
+			{Label: "C", Value: 2},
+		})
+		chart := NewBarChart(data)
+		assertGolden(t, chart, 24, 3, "barchart_basic")
+	})
+
+	t.Run("linechart", func(t *testing.T) {
+		chart := NewLineChart()
+		chart.SetSeries([]ChartSeries{
+			{
+				Data:  []float64{1, 3, 2, 4, 3, 5},
+				Color: backend.ColorCyan,
+			},
+		})
+		assertGolden(t, chart, 30, 8, "linechart_basic")
+	})
+}
+
+func TestGolden_SimpleWidget(t *testing.T) {
+	w := NewSimpleWidget()
+	w.MeasureFunc = func(constraints runtime.Constraints) runtime.Size {
+		return constraints.Constrain(runtime.Size{Width: 12, Height: 1})
+	}
+	w.RenderFunc = func(ctx runtime.RenderContext) {
+		b := w.ContentBounds()
+		ctx.Buffer.SetString(b.X, b.Y, "simple widget", backend.DefaultStyle())
+	}
+	assertGolden(t, w, 16, 2, "simple_widget_basic")
+}
+
+func TestGolden_DebugOverlay(t *testing.T) {
+	root := NewPanel(NewLabel("debug target"))
+	overlay := NewDebugOverlay(root, WithDebugLabels(true))
+	assertGolden(t, overlay, 30, 6, "debug_overlay_basic")
+}
+
+func TestGolden_DirectoryTree(t *testing.T) {
+	root := filepath.Join("testdata", "directory_tree_fixture")
+	tree := NewDirectoryTree(root)
+	assertGolden(t, tree, 40, 8, "directory_tree_basic")
+}
+
+func TestGolden_RangeSlider(t *testing.T) {
+	minValue := state.NewSignal(20.0)
+	maxValue := state.NewSignal(80.0)
+	slider := NewRangeSlider(minValue, maxValue, WithRangeSliderShowValue(true))
+	assertGolden(t, slider, 32, 1, "range_slider_basic")
 }

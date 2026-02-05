@@ -92,6 +92,11 @@ func NewLabel(text string) *widgets.Label {
 	return widgets.NewLabel(text)
 }
 
+// Label creates a text label.
+func Label(text string, opts ...widgets.LabelOption) *widgets.Label {
+	return widgets.NewLabel(text, opts...)
+}
+
 // Labelf creates a formatted text label.
 func Labelf(format string, args ...any) *widgets.Label {
 	return widgets.NewLabel(fmt.Sprintf(format, args...))
@@ -100,6 +105,11 @@ func Labelf(format string, args ...any) *widgets.Label {
 // Text creates a styled text widget.
 func NewText(text string) *widgets.Text {
 	return widgets.NewText(text)
+}
+
+// Text creates a styled text widget.
+func Text(text string, opts ...widgets.TextOption) *widgets.Text {
+	return widgets.NewText(text, opts...)
 }
 
 // Button creates a button with optional configuration.

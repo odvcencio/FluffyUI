@@ -8,6 +8,8 @@ A batteries-included Terminal User Interface (TUI) framework for Go. Build inter
 
 **Reactive. Accessible. Testable. Terminal UI for Go.**
 
+Inspired by prior art in terminal UI development, especially Textual and Bubble Tea.
+
 ```bash
 go get github.com/odvcencio/fluffyui@latest
 ```
@@ -22,6 +24,7 @@ go get github.com/odvcencio/fluffyui@latest
 - **Performance Dashboard** - Render sampler + live FPS/dirty stats
 - **Recording & Export** - Capture terminal sessions as asciicast or video
 - **Simulation Backend** - Deterministic testing without a real terminal
+- **Inline Mode (Experimental)** - Optional backend inline rendering for CLI-style embedding
 - **Audio Hooks** - Opinionated music and SFX service for apps
 - **Plugin Registry** - Lightweight discovery for third-party widgets
 - **i18n Support** - Simple localization bundle and runtime wiring
@@ -30,16 +33,20 @@ go get github.com/odvcencio/fluffyui@latest
 ## Quick Links
 
 - [Getting Started](docs/getting-started.md)
+- [Inline Mode](docs/inline-mode.md)
+- [Bubble Tea Migration](docs/migration/bubbletea.md)
 - [Widget Catalog](docs/widgets/overview.md)
 - [Examples](#examples)
 - [Candy Wars Showcase](#candy-wars---showcase-game)
 - [Testing Guide](docs/testing.md)
 - [Recording](docs/recording.md)
 - [Agent Integration](#agent-interaction-out-of-process)
+- [AI Agent Tutorial](docs/tutorials/04-ai-agent-integration.md)
 
 ## Modern Conveniences
 
 - **Dev Loop** - Hot-reload your app with `go run ./cmd/fluffy dev -- <command>`
+- **Doctor Command** - Diagnose terminal graphics, Unicode, and accessibility with `go run ./cmd/fluffy doctor`
 - **Deterministic Testing** - Simulation backend and test helpers for pixel-perfect assertions
 - **Recording Toolchain** - Asciicast capture and video export helpers
 - **Debug Overlays** - Visualize layout bounds and widget trees during development
@@ -70,22 +77,16 @@ Import path is the GitHub module path above (vanity domain is not set up yet).
 package main
 
 import (
-    "context"
     "log"
 
     "github.com/odvcencio/fluffyui/fluffy"
 )
 
 func main() {
-    // Create the application with defaults
-    app, err := fluffy.NewApp()
+    err := fluffy.Run(fluffy.Label("Hello from FluffyUI!"))
     if err != nil {
         log.Fatal(err)
     }
-
-    // Set root widget and run
-    app.SetRoot(fluffy.NewLabel("Hello from FluffyUI!"))
-    app.Run(context.Background())
 }
 ```
 
@@ -101,6 +102,15 @@ Dev loop (auto-restart on code/style changes):
 go run ./cmd/fluffy dev -- go run ./examples/quickstart
 ```
 
+Inline mode example (render in a bounded terminal region):
+
+```go
+root := fluffy.Label("Inline demo")
+if err := fluffy.RunInline(root, 8); err != nil {
+    log.Fatal(err)
+}
+```
+
 Audio note: the quickstart ships with tiny WAVs in `examples/quickstart/assets/audio` and auto-detects a player. Override with `FLUFFYUI_AUDIO_ASSETS=/path` or disable via `FLUFFYUI_AUDIO_ASSETS=off`.
 
 ## Documentation
@@ -111,6 +121,7 @@ Audio note: the quickstart ships with tiny WAVs in `examples/quickstart/assets/a
 - `docs/api-stability.md` — stability and deprecation policy
 - `docs/advanced-patterns.md` — custom widgets, performance, and scaling
 - `docs/performance.md` — profiling and optimization tips
+- `docs/inline-mode.md` — inline viewport behavior and terminal matrix
 - `docs/i18n.md` — internationalization helpers
 - `docs/plugins.md` — plugin registry
 - `docs/showcase.md` — widget showcase overview

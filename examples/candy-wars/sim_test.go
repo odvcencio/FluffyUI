@@ -60,7 +60,9 @@ func TestCandyWarsSimRun(t *testing.T) {
 	if err := sync.WaitForRender(500 * time.Millisecond); err != nil {
 		t.Fatalf("buy dialog render timeout: %v", err)
 	}
-	if !view.gameView.showTrade {
+	if !waitForAppCondition(app, 500*time.Millisecond, func() bool {
+		return view.gameView.showTrade
+	}) {
 		t.Fatalf("expected trade dialog to open\n\nScreen:\n%s", be.Capture())
 	}
 	if err := app.Call(context.Background(), func(*runtime.App) error {
@@ -73,7 +75,9 @@ func TestCandyWarsSimRun(t *testing.T) {
 	if err := sync.WaitForRender(500 * time.Millisecond); err != nil {
 		t.Fatalf("buy confirm render timeout: %v", err)
 	}
-	if view.gameView.showTrade {
+	if waitForAppCondition(app, 200*time.Millisecond, func() bool {
+		return view.gameView.showTrade
+	}) {
 		t.Fatalf("expected trade dialog to close\n\nScreen:\n%s", be.Capture())
 	}
 
@@ -112,8 +116,11 @@ func TestCandyWarsSimRun(t *testing.T) {
 	if view.gameView.tabs.SelectedIndex() != 4 {
 		t.Fatalf("expected log tab selected, got %d", view.gameView.tabs.SelectedIndex())
 	}
-	if !be.ContainsText("Event Log") {
-		t.Fatalf("expected Event Log tab to render\n\nScreen:\n%s", be.Capture())
+	if bounds := view.gameView.logPanel.Bounds(); bounds.Width <= 0 || bounds.Height <= 0 {
+		t.Fatalf("expected log panel bounds to be laid out, got %+v\n\nScreen:\n%s", bounds, be.Capture())
+	}
+	if view.gameView.eventLog.EntryCount() == 0 {
+		t.Fatalf("expected event log to contain entries after gameplay\n\nScreen:\n%s", be.Capture())
 	}
 
 	// Switch to Showcase tab.
@@ -134,4 +141,22 @@ func TestCandyWarsSimRun(t *testing.T) {
 	if bounds := view.gameView.showcaseTab.Bounds(); bounds.Width <= 0 || bounds.Height <= 0 {
 		t.Fatalf("expected showcase bounds to be laid out, got %+v\n\nScreen:\n%s", bounds, be.Capture())
 	}
+}
+
+func waitForAppCondition(app *runtime.App, timeout time.Duration, fn func() bool) bool {
+	if app == nil || fn == nil {
+		return false
+	}
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		matched := false
+		if err := app.Call(context.Background(), func(*runtime.App) error {
+			matched = fn()
+			return nil
+		}); err == nil && matched {
+			return true
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	return false
 }

@@ -4,6 +4,10 @@ FluffyUI is built around a small runtime loop, a widget tree, and reactive
 state. The core goal is predictable rendering with low overhead for terminal
 UIs.
 
+If you are familiar with Flutter, the mental model is intentionally similar:
+widgets are measured with constraints, laid out by parents, then rendered into a
+frame buffer.
+
 ## Core concepts
 
 - Runtime app: owns the backend, message loop, and render pipeline.
@@ -31,6 +35,13 @@ Each frame follows a simple flow:
 
 Dirty tracking happens at the cell level, so large buffers do not need full
 repaints when only a small area changes.
+
+In Flutter terms:
+
+- `Constraints` map to Flutter-style box constraints.
+- `Measure` is analogous to sizing in the layout pass.
+- `Layout` assigns final `Rect` bounds.
+- `Render` writes to the terminal buffer instead of a GPU scene graph.
 
 ## Messages and commands
 

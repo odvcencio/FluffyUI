@@ -9,7 +9,10 @@ package runtime
 // compositor.Screen exists as an alternative for pure-ANSI output but
 // is not used in the tcell backend path.
 
-import "github.com/odvcencio/fluffyui/backend"
+import (
+	"github.com/mattn/go-runewidth"
+	"github.com/odvcencio/fluffyui/backend"
+)
 
 // Cell represents a single character cell in the buffer.
 type Cell = backend.Cell
@@ -192,11 +195,18 @@ func (b *Buffer) SetString(x, y int, s string, style backend.Style) {
 			return
 		}
 		for _, r := range s[i:] {
+			rw := runewidth.RuneWidth(r)
+			if rw <= 0 {
+				rw = 1
+			}
 			if px < 0 {
-				px++
+				px += rw
 				continue
 			}
 			if px >= b.width {
+				break
+			}
+			if rw > 1 && px+rw > b.width {
 				break
 			}
 			idx := y*b.width + px
@@ -205,17 +215,35 @@ func (b *Buffer) SetString(x, y int, s string, style backend.Style) {
 				b.cells[idx] = Cell{Rune: r, Style: style}
 				b.markCellDirty(px, y, idx)
 			}
-			px++
+			if rw > 1 {
+				for fill := 1; fill < rw; fill++ {
+					fillX := px + fill
+					fillIdx := y*b.width + fillX
+					fillOld := b.cells[fillIdx]
+					if fillOld.Rune != ' ' || fillOld.Style != style {
+						b.cells[fillIdx] = Cell{Rune: ' ', Style: style}
+						b.markCellDirty(fillX, y, fillIdx)
+					}
+				}
+			}
+			px += rw
 		}
 		return
 	}
 	px := x
 	for _, r := range s {
+		rw := runewidth.RuneWidth(r)
+		if rw <= 0 {
+			rw = 1
+		}
 		if px < 0 {
-			px++
+			px += rw
 			continue
 		}
 		if px >= b.width {
+			break
+		}
+		if rw > 1 && px+rw > b.width {
 			break
 		}
 		idx := y*b.width + px
@@ -224,7 +252,18 @@ func (b *Buffer) SetString(x, y int, s string, style backend.Style) {
 			b.cells[idx] = Cell{Rune: r, Style: style}
 			b.markCellDirty(px, y, idx)
 		}
-		px++
+		if rw > 1 {
+			for fill := 1; fill < rw; fill++ {
+				fillX := px + fill
+				fillIdx := y*b.width + fillX
+				fillOld := b.cells[fillIdx]
+				if fillOld.Rune != ' ' || fillOld.Style != style {
+					b.cells[fillIdx] = Cell{Rune: ' ', Style: style}
+					b.markCellDirty(fillX, y, fillIdx)
+				}
+			}
+		}
+		px += rw
 	}
 }
 

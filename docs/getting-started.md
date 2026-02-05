@@ -15,7 +15,6 @@ go get github.com/odvcencio/fluffyui@latest
 package main
 
 import (
-    "context"
     "fmt"
     "os"
 
@@ -23,19 +22,34 @@ import (
 )
 
 func main() {
-    app, err := fluffy.NewApp()
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "app init failed: %v\n", err)
-        os.Exit(1)
-    }
-    app.SetRoot(fluffy.NewLabel("Hello from FluffyUI"))
-
-    if err := app.Run(context.Background()); err != nil && err != context.Canceled {
+    if err := fluffy.Run(fluffy.Label("Hello from FluffyUI")); err != nil {
         fmt.Fprintf(os.Stderr, "app run failed: %v\n", err)
         os.Exit(1)
     }
 }
 ```
+
+For advanced wiring (custom backend, keymaps, lifecycle hooks), use
+`fluffy.NewApp(...)` and `app.Run(...)` directly.
+
+For inline/embedded terminal UIs, use:
+
+```go
+root := fluffy.Label("Inline demo")
+if err := fluffy.RunInline(root, 8); err != nil {
+    panic(err)
+}
+```
+
+Useful app options:
+
+- `fluffy.WithOnReady(...)`
+- `fluffy.WithOnResize(...)`
+- `fluffy.WithOnQuit(...)`
+- `fluffy.WithInlineMode(true)` (backend-dependent inline rendering)
+- `fluffy.WithInlineHeight(8)` (reserve 8 rows for inline mode)
+
+See `docs/inline-mode.md` for terminal capability notes and caveats.
 
 ## Examples
 

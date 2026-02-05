@@ -11,10 +11,11 @@ func (a *App) SnapshotText() string {
 	a.renderMu.Lock()
 	defer a.renderMu.Unlock()
 
-	if a.screen == nil {
+	screen := a.Screen()
+	if screen == nil {
 		return ""
 	}
-	buf := a.screen.Buffer()
+	buf := screen.Buffer()
 	if buf == nil {
 		return ""
 	}

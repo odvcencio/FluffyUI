@@ -50,10 +50,17 @@ func TestWatchStylesheetFile(t *testing.T) {
 
 	deadline := time.Now().Add(2 * time.Second)
 	for time.Now().Before(deadline) {
-		if sheet := app.Stylesheet(); sheet != nil {
-			if value, ok := sheet.GetVariable("accent"); ok && value == "#222222" {
-				return
+		var matched bool
+		_ = app.Call(context.Background(), func(*App) error {
+			if sheet := app.Stylesheet(); sheet != nil {
+				if value, ok := sheet.GetVariable("accent"); ok && value == "#222222" {
+					matched = true
+				}
 			}
+			return nil
+		})
+		if matched {
+			return
 		}
 		time.Sleep(10 * time.Millisecond)
 	}

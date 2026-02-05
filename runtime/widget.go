@@ -61,6 +61,7 @@ func Unbounded() Constraints {
 
 // Constrain clamps a size to fit within these constraints.
 func (c Constraints) Constrain(s Size) Size {
+	WarnInvalidConstraints("runtime.Constraints.Constrain", c)
 	return Size{
 		Width:  clamp(s.Width, c.MinWidth, c.MaxWidth),
 		Height: clamp(s.Height, c.MinHeight, c.MaxHeight),

@@ -77,6 +77,38 @@ func TestBuffer_SetStringClips(t *testing.T) {
 	}
 }
 
+func TestBuffer_SetStringWideRune(t *testing.T) {
+	b := NewBuffer(6, 2)
+	style := backend.DefaultStyle()
+
+	b.Set(2, 0, 'X', style)
+	b.SetString(1, 0, "界A", style)
+
+	if got := b.Get(1, 0).Rune; got != '界' {
+		t.Fatalf("expected wide rune at (1,0), got %q", got)
+	}
+	// Trailing cell occupied by wide rune should be cleared to avoid stale overlap.
+	if got := b.Get(2, 0).Rune; got != ' ' {
+		t.Fatalf("expected trailing wide cell blank at (2,0), got %q", got)
+	}
+	if got := b.Get(3, 0).Rune; got != 'A' {
+		t.Fatalf("expected 'A' at (3,0), got %q", got)
+	}
+}
+
+func TestBuffer_SetStringWideRuneClipsAtEdge(t *testing.T) {
+	b := NewBuffer(3, 1)
+	style := backend.DefaultStyle()
+	b.Set(2, 0, 'Z', style)
+
+	// Wide rune at last column should not write partially.
+	b.SetString(2, 0, "界", style)
+
+	if got := b.Get(2, 0).Rune; got != 'Z' {
+		t.Fatalf("expected edge cell unchanged, got %q", got)
+	}
+}
+
 func TestBuffer_Fill(t *testing.T) {
 	b := NewBuffer(10, 10)
 	style := backend.DefaultStyle()

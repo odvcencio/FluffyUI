@@ -52,6 +52,18 @@ type Backend interface {
 	Sync()
 }
 
+// InlineModeSetter allows backends to opt into inline rendering mode.
+// Inline mode should avoid switching to the alternate screen when possible.
+type InlineModeSetter interface {
+	SetInlineMode(enabled bool)
+}
+
+// InlineHeightSetter allows backends to constrain inline rendering to a fixed
+// number of terminal rows.
+type InlineHeightSetter interface {
+	SetInlineHeight(lines int)
+}
+
 // RenderTarget is a subset of Backend for rendering operations only.
 // Widgets render to this interface, not the full Backend.
 type RenderTarget interface {

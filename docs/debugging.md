@@ -34,3 +34,36 @@ app.SetRoot(root)
 ```
 
 Use this in development to quickly spot layout and clipping issues.
+
+## Layout diagnostics
+
+Enable layout diagnostics to warn about suspicious measurements (for example
+zero-size measurements under non-zero constraints):
+
+```bash
+FLUFFYUI_LAYOUT_DEBUG=1 go run ./examples/quickstart
+```
+
+Or toggle at runtime:
+
+```go
+runtime.SetLayoutDebug(true)
+```
+
+## `fluffy doctor`
+
+Use the CLI diagnostic to validate terminal capabilities before debugging app
+render issues:
+
+```bash
+go run ./cmd/fluffy doctor
+```
+
+It reports terminal baseline support, true color, mouse assumptions, Unicode
+width checks, Kitty/Sixel detection, and accessibility bridge readiness.
+
+Inline rendering tip:
+
+Use `fluffy.WithInlineMode(true)` and optionally `fluffy.WithInlineHeight(n)`
+to run a bounded in-terminal UI without alternate-screen takeover.
+For environment-specific caveats, see `docs/inline-mode.md`.

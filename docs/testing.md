@@ -165,6 +165,20 @@ func TestSnapshot(t *testing.T) {
 }
 ```
 
+FluffyUI's widget suite includes a catalog coverage guard
+(`TestGoldenCoverage_CoreWidgetCatalog`) to ensure core widgets retain golden
+coverage. Run:
+
+```bash
+go test ./widgets -run TestGoldenCoverage_CoreWidgetCatalog
+```
+
+Update snapshots when intentional UI changes are made:
+
+```bash
+FLUFFYUI_UPDATE_SNAPSHOTS=1 go test ./widgets -run '^TestGolden_'
+```
+
 ### Pattern 2: Widget-Only Testing
 
 Test widgets without the full runtime:

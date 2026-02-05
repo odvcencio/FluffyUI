@@ -31,6 +31,8 @@ type CommandHandler func(cmd Command) bool
 // AppConfig configures a runtime App.
 type AppConfig struct {
 	Backend           backend.Backend
+	InlineMode        bool
+	InlineHeight      int
 	Root              Widget
 	Update            UpdateFunc
 	CommandHandler    CommandHandler
@@ -54,11 +56,17 @@ type AppConfig struct {
 	FrameBudget       time.Duration
 	Localizer         i18n.Localizer
 	ErrorReporter     *ErrorReporter
+	OnReady           func(app *App)
+	OnResize          func(app *App, width, height int)
+	OnQuit            func(app *App)
 }
 
 // App runs a widget tree against a terminal backend.
 type App struct {
+	stateMu           sync.RWMutex
 	backend           backend.Backend
+	inlineMode        bool
+	inlineHeight      int
 	screen            *Screen
 	root              Widget
 	update            UpdateFunc
@@ -86,6 +94,9 @@ type App struct {
 	lastFrameDuration time.Duration
 	localizer         i18n.Localizer
 	errorReporter     *ErrorReporter
+	onReady           func(app *App)
+	onResize          func(app *App, width, height int)
+	onQuit            func(app *App)
 	taskCtx           context.Context
 	taskCancel        context.CancelFunc
 	pendingMu         sync.Mutex
@@ -119,6 +130,8 @@ func NewApp(cfg AppConfig) *App {
 
 	app := &App{
 		backend:           cfg.Backend,
+		inlineMode:        cfg.InlineMode,
+		inlineHeight:      cfg.InlineHeight,
 		root:              cfg.Root,
 		update:            cfg.Update,
 		commandHandler:    cfg.CommandHandler,
@@ -142,6 +155,9 @@ func NewApp(cfg AppConfig) *App {
 		frameBudget:       cfg.FrameBudget,
 		localizer:         cfg.Localizer,
 		errorReporter:     cfg.ErrorReporter,
+		onReady:           cfg.OnReady,
+		onResize:          cfg.OnResize,
+		onQuit:            cfg.OnQuit,
 	}
 	if app.flushPolicy == 0 {
 		app.flushPolicy = FlushOnMessageAndTick
@@ -153,7 +169,13 @@ func NewApp(cfg AppConfig) *App {
 
 // Screen returns the active screen, if initialized.
 func (a *App) Screen() *Screen {
-	return a.screen
+	if a == nil {
+		return nil
+	}
+	a.stateMu.RLock()
+	screen := a.screen
+	a.stateMu.RUnlock()
+	return screen
 }
 
 // StateQueue returns the app's state queue.
@@ -169,7 +191,10 @@ func (a *App) Stylesheet() *style.Stylesheet {
 	if a == nil {
 		return nil
 	}
-	return a.stylesheet
+	a.stateMu.RLock()
+	sheet := a.stylesheet
+	a.stateMu.RUnlock()
+	return sheet
 }
 
 // Theme returns the active theme, if set.
@@ -177,7 +202,10 @@ func (a *App) Theme() *theme.Theme {
 	if a == nil {
 		return nil
 	}
-	return a.theme
+	a.stateMu.RLock()
+	th := a.theme
+	a.stateMu.RUnlock()
+	return th
 }
 
 // Localizer returns the active localizer.
@@ -185,7 +213,10 @@ func (a *App) Localizer() i18n.Localizer {
 	if a == nil {
 		return nil
 	}
-	return a.localizer
+	a.stateMu.RLock()
+	localizer := a.localizer
+	a.stateMu.RUnlock()
+	return localizer
 }
 
 // Animator returns the app animator.
@@ -193,7 +224,10 @@ func (a *App) Animator() *animation.Animator {
 	if a == nil {
 		return nil
 	}
-	return a.animator
+	a.stateMu.RLock()
+	animator := a.animator
+	a.stateMu.RUnlock()
+	return animator
 }
 
 // SetLocalizer updates the app localizer.
@@ -201,7 +235,9 @@ func (a *App) SetLocalizer(localizer i18n.Localizer) {
 	if a == nil {
 		return
 	}
+	a.stateMu.Lock()
 	a.localizer = localizer
+	a.stateMu.Unlock()
 	a.Invalidate()
 }
 
@@ -210,9 +246,12 @@ func (a *App) SetStylesheet(sheet *style.Stylesheet) {
 	if a == nil {
 		return
 	}
+	a.stateMu.Lock()
 	a.stylesheet = sheet
-	if a.screen != nil {
-		a.screen.relayout()
+	screen := a.screen
+	a.stateMu.Unlock()
+	if screen != nil {
+		screen.relayout()
 	}
 	a.Invalidate()
 }
@@ -222,7 +261,9 @@ func (a *App) SetTheme(th *theme.Theme) {
 	if a == nil {
 		return
 	}
+	a.stateMu.Lock()
 	a.theme = th
+	a.stateMu.Unlock()
 	if th == nil {
 		a.SetStylesheet(nil)
 		return
@@ -232,10 +273,14 @@ func (a *App) SetTheme(th *theme.Theme) {
 
 // Relayout recomputes layout and invalidates the render pass.
 func (a *App) Relayout() {
-	if a == nil || a.screen == nil {
+	if a == nil {
 		return
 	}
-	a.screen.relayout()
+	screen := a.Screen()
+	if screen == nil {
+		return
+	}
+	screen.relayout()
 	a.Invalidate()
 }
 
@@ -274,7 +319,10 @@ func (a *App) Spawn(effect Effect) {
 	if a == nil || effect.Run == nil {
 		return
 	}
-	if a.taskCtx == nil {
+	a.stateMu.RLock()
+	hasTaskCtx := a.taskCtx != nil
+	a.stateMu.RUnlock()
+	if !hasTaskCtx {
 		a.pendingMu.Lock()
 		a.pendingEffects = append(a.pendingEffects, effect)
 		a.pendingMu.Unlock()
@@ -295,9 +343,15 @@ func (a *App) Every(interval time.Duration, fn func(time.Time) Message) {
 
 // SetRoot swaps the root widget.
 func (a *App) SetRoot(root Widget) {
+	if a == nil {
+		return
+	}
+	a.stateMu.Lock()
 	a.root = root
-	if a.screen != nil {
-		a.screen.SetRoot(root)
+	screen := a.screen
+	a.stateMu.Unlock()
+	if screen != nil {
+		screen.SetRoot(root)
 		a.dirty = true
 	}
 }
@@ -335,13 +389,23 @@ func (a *App) Run(ctx context.Context) error {
 	if err := a.enableMCPFromEnv(); err != nil {
 		return err
 	}
+	if inlineSetter, ok := a.backend.(backend.InlineModeSetter); ok {
+		inlineSetter.SetInlineMode(a.inlineMode)
+	}
+	if inlineHeightSetter, ok := a.backend.(backend.InlineHeightSetter); ok {
+		inlineHeightSetter.SetInlineHeight(a.inlineHeight)
+	}
 	taskCtx, taskCancel := context.WithCancel(ctx)
+	a.stateMu.Lock()
 	a.taskCtx = taskCtx
 	a.taskCancel = taskCancel
+	a.stateMu.Unlock()
 	defer func() {
 		taskCancel()
+		a.stateMu.Lock()
 		a.taskCtx = nil
 		a.taskCancel = nil
+		a.stateMu.Unlock()
 	}()
 	if a.mcpCloser != nil {
 		defer func() {
@@ -353,16 +417,24 @@ func (a *App) Run(ctx context.Context) error {
 	}
 	defer a.backend.Fini()
 
-	a.backend.HideCursor()
-	w, h := a.backend.Size()
-	a.screen = NewScreen(w, h)
-	a.screen.SetServices(a.Services())
-	a.screen.SetErrorReporter(a.errorReporter)
-	a.screen.SetAutoFocusPolicy(a.autoFocusPolicy)
-	a.screen.SetAutoRegisterFocus(a.focusRegistration == FocusRegistrationAuto)
-	if a.root != nil {
-		a.screen.SetRoot(a.root)
+	if !a.inlineMode {
+		a.backend.HideCursor()
 	}
+	w, h := a.backend.Size()
+	screen := NewScreen(w, h)
+	screen.SetServices(a.Services())
+	screen.SetErrorReporter(a.errorReporter)
+	screen.SetAutoFocusPolicy(a.autoFocusPolicy)
+	screen.SetAutoRegisterFocus(a.focusRegistration == FocusRegistrationAuto)
+	a.stateMu.RLock()
+	root := a.root
+	a.stateMu.RUnlock()
+	if root != nil {
+		screen.SetRoot(root)
+	}
+	a.stateMu.Lock()
+	a.screen = screen
+	a.stateMu.Unlock()
 	if a.recorder != nil {
 		if err := a.recorder.Start(w, h, time.Now()); err != nil {
 			return fmt.Errorf("start recorder: %w", err)
@@ -380,6 +452,14 @@ func (a *App) Run(ctx context.Context) error {
 	a.dirty = true
 
 	a.startPendingEffects()
+
+	if a.onResize != nil {
+		a.onResize(a, w, h)
+	}
+
+	if a.onReady != nil {
+		a.onReady(a)
+	}
 
 	go a.pollEvents()
 
@@ -443,6 +523,10 @@ func (a *App) Run(ctx context.Context) error {
 		}
 	}
 
+	if a.onQuit != nil {
+		a.onQuit(a)
+	}
+
 	return ctx.Err()
 }
 
@@ -457,6 +541,9 @@ func DefaultUpdate(app *App, msg Message) bool {
 		app.screen.Resize(m.Width, m.Height)
 		if app.recorder != nil {
 			_ = app.recorder.Resize(m.Width, m.Height)
+		}
+		if app.onResize != nil {
+			app.onResize(app, m.Width, m.Height)
 		}
 		return true
 	case KeyMsg:
@@ -480,10 +567,14 @@ func DefaultUpdate(app *App, msg Message) bool {
 }
 
 func (a *App) dispatchMessage(msg Message) bool {
-	if a == nil || a.screen == nil {
+	if a == nil {
 		return false
 	}
-	result := a.screen.HandleMessage(msg)
+	screen := a.Screen()
+	if screen == nil {
+		return false
+	}
+	result := screen.HandleMessage(msg)
 	dirty := result.Handled
 	for _, cmd := range result.Commands {
 		if a.handleCommand(cmd) {
@@ -500,8 +591,9 @@ func (a *App) handleCommand(cmd Command) bool {
 		a.cancelTasks()
 		return false
 	case Refresh:
-		if a.screen != nil {
-			a.screen.Buffer().MarkAllDirty()
+		screen := a.Screen()
+		if screen != nil {
+			screen.Buffer().MarkAllDirty()
 		}
 		return true
 	case SendMsg:
@@ -566,7 +658,8 @@ func (a *App) render() {
 	a.renderMu.Lock()
 	defer a.renderMu.Unlock()
 
-	if a.screen == nil {
+	screen := a.Screen()
+	if screen == nil {
 		return
 	}
 
@@ -576,18 +669,18 @@ func (a *App) render() {
 	if observer != nil {
 		stats.Frame = atomic.AddInt64(&a.renderFrame, 1)
 		stats.Started = frameStart
-		stats.LayerCount = a.screen.LayerCount()
+		stats.LayerCount = screen.LayerCount()
 	}
 
 	renderStart := time.Time{}
 	if observer != nil {
 		renderStart = time.Now()
 	}
-	a.screen.Render()
+	screen.Render()
 	if observer != nil {
 		stats.RenderDuration = time.Since(renderStart)
 	}
-	buf := a.screen.Buffer()
+	buf := screen.Buffer()
 	if observer != nil && buf != nil {
 		w, h := buf.Size()
 		stats.TotalCells = w * h
@@ -690,17 +783,28 @@ func (a *App) render() {
 }
 
 func (a *App) taskContext() context.Context {
-	if a != nil && a.taskCtx != nil {
-		return a.taskCtx
+	if a == nil {
+		return context.Background()
+	}
+	a.stateMu.RLock()
+	taskCtx := a.taskCtx
+	a.stateMu.RUnlock()
+	if taskCtx != nil {
+		return taskCtx
 	}
 	return context.Background()
 }
 
 func (a *App) cancelTasks() {
-	if a == nil || a.taskCancel == nil {
+	if a == nil {
 		return
 	}
-	a.taskCancel()
+	a.stateMu.RLock()
+	cancel := a.taskCancel
+	a.stateMu.RUnlock()
+	if cancel != nil {
+		cancel()
+	}
 }
 
 func (a *App) runEffect(effect Effect) {

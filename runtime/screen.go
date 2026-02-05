@@ -243,6 +243,14 @@ func (s *Screen) LayerCount() int {
 	return len(s.layers)
 }
 
+// OverlayCount returns the number of overlay layers (total layers minus the base layer).
+func (s *Screen) OverlayCount() int {
+	if len(s.layers) <= 1 {
+		return 0
+	}
+	return len(s.layers) - 1
+}
+
 // Layer returns the layer at index i (0 = base layer).
 // Returns nil if index is out of bounds.
 func (s *Screen) Layer(i int) *Layer {

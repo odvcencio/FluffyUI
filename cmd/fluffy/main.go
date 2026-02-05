@@ -59,6 +59,11 @@ func main() {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
+	case "doctor":
+		if err := runDoctor(os.Args[2:]); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
 	case "record":
 		if err := runRecord(os.Args[2:]); err != nil {
 			fmt.Fprintln(os.Stderr, err)
@@ -85,6 +90,7 @@ usage:
   fluffy add widget|page <Name> [--dir path] [--force]
   fluffy theme init|check|export [--path theme.yaml] [--output theme.css] [--force]
   fluffy test [--visual] [--race] [--pkg ./...]
+  fluffy doctor [--json]
   fluffy record [--output file.cast|file.gif] [--export file] [--title title] [-- <cmd>]
 `)
 }

@@ -52,8 +52,8 @@ type FieldBase struct {
 }
 
 // NewFieldBase constructs a field base.
-func NewFieldBase(name string, initial any, validators ...Validator) FieldBase {
-	return FieldBase{
+func NewFieldBase(name string, initial any, validators ...Validator) *FieldBase {
+	return &FieldBase{
 		name:       strings.TrimSpace(name),
 		initial:    initial,
 		validators: validators,
@@ -298,7 +298,7 @@ func (f *FieldBase) setValidating(on bool) {
 
 // SimpleField is a basic field implementation storing its own value.
 type SimpleField struct {
-	FieldBase
+	*FieldBase
 	value any
 }
 
@@ -321,7 +321,7 @@ func (f *SimpleField) Value() any {
 
 // SetValue updates the value and dirty state.
 func (f *SimpleField) SetValue(value any) {
-	if f == nil {
+	if f == nil || f.FieldBase == nil {
 		return
 	}
 	f.value = value
@@ -334,7 +334,7 @@ func (f *SimpleField) SetValue(value any) {
 
 // Validate runs validation on the current value.
 func (f *SimpleField) Validate() []ValidationError {
-	if f == nil {
+	if f == nil || f.FieldBase == nil {
 		return nil
 	}
 	errs := f.ValidateValue(f.value)
@@ -344,7 +344,7 @@ func (f *SimpleField) Validate() []ValidationError {
 
 // Reset restores the initial value.
 func (f *SimpleField) Reset() {
-	if f == nil {
+	if f == nil || f.FieldBase == nil {
 		return
 	}
 	f.value = f.initial
@@ -354,12 +354,15 @@ func (f *SimpleField) Reset() {
 }
 
 func (f *SimpleField) updateErrors() {
+	if f == nil || f.FieldBase == nil {
+		return
+	}
 	errs := f.ValidateValue(f.value)
 	f.setErrorsFromValidation(errs)
 }
 
 func (f *SimpleField) setErrorsFromValidation(errs []ValidationError) {
-	if f == nil {
+	if f == nil || f.FieldBase == nil {
 		return
 	}
 	f.setSyncErrors(errs)
@@ -368,7 +371,7 @@ func (f *SimpleField) setErrorsFromValidation(errs []ValidationError) {
 // ValidateAsync runs async validators and updates errors when complete.
 func (f *SimpleField) ValidateAsync(ctx context.Context) <-chan []ValidationError {
 	out := make(chan []ValidationError, 1)
-	if f == nil {
+	if f == nil || f.FieldBase == nil {
 		out <- nil
 		return out
 	}

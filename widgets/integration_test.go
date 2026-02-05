@@ -52,7 +52,7 @@ func (s *integrationSync) waitForRender(timeout time.Duration) bool {
 func (s *integrationSync) waitForCondition(fn func() bool, timeout time.Duration) bool {
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
-		if fn() {
+		if s.checkOnAppLoop(fn) {
 			return true
 		}
 		remaining := time.Until(deadline)
@@ -68,7 +68,39 @@ func (s *integrationSync) waitForCondition(fn func() bool, timeout time.Duration
 		case <-time.After(waitTime):
 		}
 	}
-	return fn()
+	return s.checkOnAppLoop(fn)
+}
+
+func (s *integrationSync) checkOnAppLoop(fn func() bool) bool {
+	if s == nil || fn == nil {
+		return false
+	}
+	if s.app == nil {
+		return fn()
+	}
+	var out bool
+	err := s.app.Call(context.Background(), func(*runtime.App) error {
+		out = fn()
+		return nil
+	})
+	if err != nil {
+		return false
+	}
+	return out
+}
+
+func (s *integrationSync) layerCount() int {
+	if s == nil || s.app == nil {
+		return 0
+	}
+	count := 0
+	_ = s.app.Call(context.Background(), func(*runtime.App) error {
+		if screen := s.app.Screen(); screen != nil {
+			count = screen.LayerCount()
+		}
+		return nil
+	})
+	return count
 }
 
 func (s *integrationSync) injectKeyAndWait(be *sim.Backend, key terminal.Key, r rune, timeout time.Duration) bool {
@@ -162,8 +194,10 @@ func TestIntegration_SelectDropdownOverlay(t *testing.T) {
 
 	app, sync := startTestAppWithSync(t, be, selectWidget)
 
-	if app.Screen().LayerCount() != 1 {
-		t.Fatalf("expected 1 layer on start, got %d", app.Screen().LayerCount())
+	if !sync.waitForCondition(func() bool {
+		return app.Screen() != nil && app.Screen().LayerCount() == 1
+	}, 100*time.Millisecond) {
+		t.Fatalf("expected 1 layer on start, got %d", sync.layerCount())
 	}
 
 	// Open dropdown
@@ -171,7 +205,7 @@ func TestIntegration_SelectDropdownOverlay(t *testing.T) {
 	if !sync.waitForCondition(func() bool {
 		return app.Screen().LayerCount() >= 2
 	}, 100*time.Millisecond) {
-		t.Fatalf("expected dropdown overlay layer, got %d", app.Screen().LayerCount())
+		t.Fatalf("expected dropdown overlay layer, got %d", sync.layerCount())
 	}
 
 	// Close dropdown
@@ -179,6 +213,6 @@ func TestIntegration_SelectDropdownOverlay(t *testing.T) {
 	if !sync.waitForCondition(func() bool {
 		return app.Screen().LayerCount() == 1
 	}, 100*time.Millisecond) {
-		t.Fatalf("expected overlay to close, got %d layers", app.Screen().LayerCount())
+		t.Fatalf("expected overlay to close, got %d layers", sync.layerCount())
 	}
 }

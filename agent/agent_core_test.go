@@ -17,6 +17,7 @@ import (
 )
 
 type testCheckbox struct {
+	mu       sync.RWMutex
 	bounds   runtime.Rect
 	focused  bool
 	label    string
@@ -28,20 +29,30 @@ func (t *testCheckbox) Measure(constraints runtime.Constraints) runtime.Size {
 	return constraints.Constrain(runtime.Size{Width: len(t.label) + 4, Height: 1})
 }
 
-func (t *testCheckbox) Layout(bounds runtime.Rect) { t.bounds = bounds }
+func (t *testCheckbox) Layout(bounds runtime.Rect) {
+	t.mu.Lock()
+	t.bounds = bounds
+	t.mu.Unlock()
+}
 
 func (t *testCheckbox) Render(ctx runtime.RenderContext) {
 	if ctx.Buffer == nil {
 		return
 	}
+	t.mu.RLock()
 	mark := " "
 	if t.checked {
 		mark = "x"
 	}
-	ctx.Buffer.SetString(t.bounds.X, t.bounds.Y, "["+mark+"] "+t.label, backend.DefaultStyle())
+	bounds := t.bounds
+	label := t.label
+	t.mu.RUnlock()
+	ctx.Buffer.SetString(bounds.X, bounds.Y, "["+mark+"] "+label, backend.DefaultStyle())
 }
 
 func (t *testCheckbox) HandleMessage(msg runtime.Message) runtime.HandleResult {
+	t.mu.Lock()
+	defer t.mu.Unlock()
 	if t.disabled || !t.focused {
 		return runtime.Unhandled()
 	}
@@ -56,22 +67,47 @@ func (t *testCheckbox) HandleMessage(msg runtime.Message) runtime.HandleResult {
 	return runtime.Unhandled()
 }
 
-func (t *testCheckbox) Bounds() runtime.Rect { return t.bounds }
+func (t *testCheckbox) Bounds() runtime.Rect {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return t.bounds
+}
 
-func (t *testCheckbox) CanFocus() bool  { return !t.disabled }
-func (t *testCheckbox) Focus()          { t.focused = true }
-func (t *testCheckbox) Blur()           { t.focused = false }
-func (t *testCheckbox) IsFocused() bool { return t.focused }
+func (t *testCheckbox) CanFocus() bool {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return !t.disabled
+}
+func (t *testCheckbox) Focus() {
+	t.mu.Lock()
+	t.focused = true
+	t.mu.Unlock()
+}
+func (t *testCheckbox) Blur() {
+	t.mu.Lock()
+	t.focused = false
+	t.mu.Unlock()
+}
+func (t *testCheckbox) IsFocused() bool {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return t.focused
+}
 
 func (t *testCheckbox) AccessibleRole() accessibility.Role { return accessibility.RoleCheckbox }
 func (t *testCheckbox) AccessibleLabel() string            { return t.label }
 func (t *testCheckbox) AccessibleDescription() string      { return "" }
 func (t *testCheckbox) AccessibleState() accessibility.StateSet {
-	return accessibility.StateSet{Disabled: t.disabled, Checked: &t.checked}
+	t.mu.RLock()
+	disabled := t.disabled
+	checked := t.checked
+	t.mu.RUnlock()
+	return accessibility.StateSet{Disabled: disabled, Checked: &checked}
 }
 func (t *testCheckbox) AccessibleValue() *accessibility.ValueInfo { return nil }
 
 type testList struct {
+	mu       sync.RWMutex
 	bounds   runtime.Rect
 	focused  bool
 	label    string
@@ -84,17 +120,26 @@ func (t *testList) Measure(constraints runtime.Constraints) runtime.Size {
 	return constraints.Constrain(runtime.Size{Width: 12, Height: 1})
 }
 
-func (t *testList) Layout(bounds runtime.Rect) { t.bounds = bounds }
+func (t *testList) Layout(bounds runtime.Rect) {
+	t.mu.Lock()
+	t.bounds = bounds
+	t.mu.Unlock()
+}
 
 func (t *testList) Render(ctx runtime.RenderContext) {
 	if ctx.Buffer == nil {
 		return
 	}
-	text := t.label + ": " + t.current()
-	ctx.Buffer.SetString(t.bounds.X, t.bounds.Y, text, backend.DefaultStyle())
+	t.mu.RLock()
+	text := t.label + ": " + t.currentLocked()
+	bounds := t.bounds
+	t.mu.RUnlock()
+	ctx.Buffer.SetString(bounds.X, bounds.Y, text, backend.DefaultStyle())
 }
 
 func (t *testList) HandleMessage(msg runtime.Message) runtime.HandleResult {
+	t.mu.Lock()
+	defer t.mu.Unlock()
 	if t.disabled || !t.focused {
 		return runtime.Unhandled()
 	}
@@ -104,16 +149,16 @@ func (t *testList) HandleMessage(msg runtime.Message) runtime.HandleResult {
 	}
 	switch key.Key {
 	case terminal.KeyDown:
-		t.advance(1)
+		t.advanceLocked(1)
 		return runtime.Handled()
 	case terminal.KeyUp:
-		t.advance(-1)
+		t.advanceLocked(-1)
 		return runtime.Handled()
 	}
 	return runtime.Unhandled()
 }
 
-func (t *testList) advance(delta int) {
+func (t *testList) advanceLocked(delta int) {
 	if len(t.options) == 0 {
 		return
 	}
@@ -123,25 +168,54 @@ func (t *testList) advance(delta int) {
 	}
 }
 
-func (t *testList) current() string {
+func (t *testList) currentLocked() string {
 	if len(t.options) == 0 || t.index < 0 || t.index >= len(t.options) {
 		return ""
 	}
 	return t.options[t.index]
 }
 
-func (t *testList) Bounds() runtime.Rect { return t.bounds }
+func (t *testList) current() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return t.currentLocked()
+}
 
-func (t *testList) CanFocus() bool  { return !t.disabled }
-func (t *testList) Focus()          { t.focused = true }
-func (t *testList) Blur()           { t.focused = false }
-func (t *testList) IsFocused() bool { return t.focused }
+func (t *testList) Bounds() runtime.Rect {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return t.bounds
+}
+
+func (t *testList) CanFocus() bool {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return !t.disabled
+}
+func (t *testList) Focus() {
+	t.mu.Lock()
+	t.focused = true
+	t.mu.Unlock()
+}
+func (t *testList) Blur() {
+	t.mu.Lock()
+	t.focused = false
+	t.mu.Unlock()
+}
+func (t *testList) IsFocused() bool {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return t.focused
+}
 
 func (t *testList) AccessibleRole() accessibility.Role { return accessibility.RoleList }
 func (t *testList) AccessibleLabel() string            { return t.label }
 func (t *testList) AccessibleDescription() string      { return "" }
 func (t *testList) AccessibleState() accessibility.StateSet {
-	return accessibility.StateSet{Disabled: t.disabled}
+	t.mu.RLock()
+	disabled := t.disabled
+	t.mu.RUnlock()
+	return accessibility.StateSet{Disabled: disabled}
 }
 func (t *testList) AccessibleValue() *accessibility.ValueInfo {
 	return &accessibility.ValueInfo{Text: t.current()}
@@ -338,8 +412,8 @@ func TestAgentActionsAndWaits(t *testing.T) {
 	if err := agt.TypeInto("Name", "Ada"); err != nil {
 		t.Fatalf("type into: %v", err)
 	}
-	if input.value != "Ada" {
-		t.Fatalf("value = %q", input.value)
+	if input.Text() != "Ada" {
+		t.Fatalf("value = %q", input.Text())
 	}
 	if err := agt.WaitForValue("Name", "Ada", time.Second); err != nil {
 		t.Fatalf("wait for value: %v", err)
@@ -348,7 +422,7 @@ func TestAgentActionsAndWaits(t *testing.T) {
 	if err := agt.ActivateWidget("Submit"); err != nil {
 		t.Fatalf("activate widget: %v", err)
 	}
-	if !button.clicked {
+	if !button.Clicked() {
 		t.Fatal("expected submit to be clicked")
 	}
 

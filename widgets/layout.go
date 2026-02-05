@@ -59,11 +59,15 @@ func (b *Base) measureWithStyle(
 	constraints runtime.Constraints,
 	measureContent func(runtime.Constraints) runtime.Size,
 ) runtime.Size {
+	runtime.WarnInvalidConstraints("widgets.Base.measureWithStyle", constraints)
+
 	if b == nil {
 		if measureContent == nil {
 			return constraints.MinSize()
 		}
-		return constraints.Constrain(measureContent(constraints))
+		measured := constraints.Constrain(measureContent(constraints))
+		runtime.WarnZeroMeasure("widgets.Base.measureWithStyle(nil)", constraints, measured)
+		return measured
 	}
 
 	metrics := b.layoutMetrics
@@ -76,6 +80,7 @@ func (b *Base) measureWithStyle(
 	contentSize := runtime.Size{}
 	if measureContent != nil {
 		contentSize = contentConstraints.Constrain(measureContent(contentConstraints))
+		runtime.WarnZeroMeasure("widgets.Base.measureWithStyle.content", contentConstraints, contentSize)
 	}
 
 	borderSize := runtime.Size{
@@ -89,7 +94,9 @@ func (b *Base) measureWithStyle(
 		Width:  borderSize.Width + marginLeft + marginRight,
 		Height: borderSize.Height + marginTop + marginBottom,
 	}
-	return constraints.Constrain(outer)
+	measured := constraints.Constrain(outer)
+	runtime.WarnZeroMeasure("widgets.Base.measureWithStyle.outer", constraints, measured)
+	return measured
 }
 
 func shrinkConstraints(c runtime.Constraints, top, right, bottom, left int) runtime.Constraints {

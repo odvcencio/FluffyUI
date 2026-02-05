@@ -105,12 +105,14 @@ func (f *Flex) Measure(constraints Constraints) Size {
 				MaxHeight: constraints.MaxHeight,
 			}
 		}
+		WarnInvalidConstraints("runtime.Flex.Measure.child", childConstraints)
 
 		if child.Basis >= 0 {
 			childSizes[i] = f.sizeWithBasis(child.Basis)
 		} else {
 			childSizes[i] = child.Widget.Measure(childConstraints)
 		}
+		WarnZeroMeasure("runtime.Flex.Measure.child", childConstraints, childSizes[i])
 
 		if f.Direction == Column {
 			totalMain += childSizes[i].Height
@@ -159,12 +161,14 @@ func (f *Flex) Layout(bounds Rect) {
 		} else {
 			childConstraints = Loose(maxInt, bounds.Height)
 		}
+		WarnInvalidConstraints("runtime.Flex.Layout.child", childConstraints)
 
 		if child.Basis >= 0 {
 			childSizes[i] = f.sizeWithBasis(child.Basis)
 		} else {
 			childSizes[i] = child.Widget.Measure(childConstraints)
 		}
+		WarnZeroMeasure("runtime.Flex.Layout.child", childConstraints, childSizes[i])
 
 		mainSize := f.mainSize(childSizes[i])
 		baseSizes[i] = mainSize

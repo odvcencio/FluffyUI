@@ -4,6 +4,7 @@
 package testing
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -127,7 +128,7 @@ func (s *TestSync) WaitForFocus(widget runtime.Widget, timeout time.Duration) er
 
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
-		if focusable.IsFocused() {
+		if s.checkOnAppLoop(func() bool { return focusable.IsFocused() }) {
 			return nil
 		}
 		// Wait for a render which might update focus
@@ -144,7 +145,7 @@ func (s *TestSync) WaitForFocus(widget runtime.Widget, timeout time.Duration) er
 		case <-time.After(waitTime):
 		}
 	}
-	if focusable.IsFocused() {
+	if s.checkOnAppLoop(func() bool { return focusable.IsFocused() }) {
 		return nil
 	}
 	return ErrTimeout
@@ -158,10 +159,11 @@ func (s *TestSync) WaitForText(widget runtime.Widget, text string, timeout time.
 	}
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
-		if textProvider, ok := widget.(interface{ Text() string }); ok {
-			if textProvider.Text() == text {
-				return nil
-			}
+		if s.checkOnAppLoop(func() bool {
+			textProvider, ok := widget.(interface{ Text() string })
+			return ok && textProvider.Text() == text
+		}) {
+			return nil
 		}
 		// Wait for a render which might update text
 		remaining := time.Until(deadline)
@@ -177,10 +179,11 @@ func (s *TestSync) WaitForText(widget runtime.Widget, text string, timeout time.
 		case <-time.After(waitTime):
 		}
 	}
-	if textProvider, ok := widget.(interface{ Text() string }); ok {
-		if textProvider.Text() == text {
-			return nil
-		}
+	if s.checkOnAppLoop(func() bool {
+		textProvider, ok := widget.(interface{ Text() string })
+		return ok && textProvider.Text() == text
+	}) {
+		return nil
 	}
 	return ErrTimeout
 }
@@ -195,7 +198,7 @@ func (s *TestSync) WaitForCondition(fn func() bool, timeout time.Duration) error
 	}
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
-		if fn() {
+		if s.checkOnAppLoop(fn) {
 			return nil
 		}
 		// Wait for a render which might change state
@@ -212,10 +215,28 @@ func (s *TestSync) WaitForCondition(fn func() bool, timeout time.Duration) error
 		case <-time.After(waitTime):
 		}
 	}
-	if fn() {
+	if s.checkOnAppLoop(fn) {
 		return nil
 	}
 	return ErrTimeout
+}
+
+func (s *TestSync) checkOnAppLoop(fn func() bool) bool {
+	if s == nil || fn == nil {
+		return false
+	}
+	if s.app == nil {
+		return fn()
+	}
+	var out bool
+	err := s.app.Call(context.Background(), func(*runtime.App) error {
+		out = fn()
+		return nil
+	})
+	if err != nil {
+		return false
+	}
+	return out
 }
 
 // SendKeyAndWait injects a key event and waits for the resulting render.

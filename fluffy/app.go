@@ -1,6 +1,7 @@
 package fluffy
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strconv"
@@ -20,24 +21,28 @@ import (
 	"github.com/odvcencio/fluffyui/runtime"
 	"github.com/odvcencio/fluffyui/style"
 	"github.com/odvcencio/fluffyui/theme"
+	"github.com/odvcencio/fluffyui/toast"
+	"github.com/odvcencio/fluffyui/widgets"
 )
 
 // Bundle exposes default wiring plus keybinding helpers.
 type Bundle struct {
-	App      *runtime.App
-	Registry *keybind.CommandRegistry
-	Keymaps  *keybind.KeymapStack
-	Router   *keybind.KeyRouter
+	App        *runtime.App
+	Registry   *keybind.CommandRegistry
+	Keymaps    *keybind.KeymapStack
+	Router     *keybind.KeyRouter
+	ToastStack *widgets.ToastStack
 }
 
 // AppOption customizes the default app wiring.
 type AppOption func(*appBuilder)
 
 type appBuilder struct {
-	cfg      runtime.AppConfig
-	registry *keybind.CommandRegistry
-	keymaps  *keybind.KeymapStack
-	router   *keybind.KeyRouter
+	cfg          runtime.AppConfig
+	registry     *keybind.CommandRegistry
+	keymaps      *keybind.KeymapStack
+	router       *keybind.KeyRouter
+	toastManager *toast.ToastManager
 }
 
 // NewApp creates a default app with sensible defaults.
@@ -55,6 +60,43 @@ func NewAppWithError(opts ...AppOption) (*runtime.App, error) {
 	return bundle.App, nil
 }
 
+// Run builds and runs an app with the provided root widget.
+// It uses context.Background(); prefer RunContext for cancellation.
+func Run(root runtime.Widget, opts ...AppOption) error {
+	return RunContext(context.Background(), root, opts...)
+}
+
+// RunContext builds and runs an app with the provided root widget and context.
+func RunContext(ctx context.Context, root runtime.Widget, opts ...AppOption) error {
+	merged := make([]AppOption, 0, len(opts)+1)
+	merged = append(merged, opts...)
+	merged = append(merged, WithRoot(root))
+
+	app, err := NewApp(merged...)
+	if err != nil {
+		return err
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	return app.Run(ctx)
+}
+
+// RunInline builds and runs an app in inline mode with a bounded viewport.
+// The app stays in the primary terminal screen (no alternate-screen takeover).
+// It uses context.Background(); prefer RunInlineContext for cancellation.
+func RunInline(root runtime.Widget, lines int, opts ...AppOption) error {
+	return RunInlineContext(context.Background(), root, lines, opts...)
+}
+
+// RunInlineContext builds and runs an app in inline mode with context support.
+func RunInlineContext(ctx context.Context, root runtime.Widget, lines int, opts ...AppOption) error {
+	merged := make([]AppOption, 0, len(opts)+2)
+	merged = append(merged, opts...)
+	merged = append(merged, WithInlineMode(true), WithInlineHeight(lines))
+	return RunContext(ctx, root, merged...)
+}
+
 // NewBundle builds an app plus keybinding helpers.
 func NewBundle(opts ...AppOption) (*Bundle, error) {
 	builder, err := newBuilder()
@@ -66,12 +108,33 @@ func NewBundle(opts ...AppOption) (*Bundle, error) {
 			opt(builder)
 		}
 	}
+
+	var toastStack *widgets.ToastStack
+	if builder.toastManager != nil {
+		toastStack = widgets.NewToastStack()
+		manager := builder.toastManager
+		originalOnReady := builder.cfg.OnReady
+		builder.cfg.OnReady = func(a *runtime.App) {
+			if screen := a.Screen(); screen != nil {
+				screen.PushLayer(toastStack, false)
+			}
+			manager.SetOnChange(func(toasts []*toast.Toast) {
+				toastStack.SetToasts(toasts)
+				a.Invalidate()
+			})
+			if originalOnReady != nil {
+				originalOnReady(a)
+			}
+		}
+	}
+
 	app := runtime.NewApp(builder.cfg)
 	return &Bundle{
-		App:      app,
-		Registry: builder.registry,
-		Keymaps:  builder.keymaps,
-		Router:   builder.router,
+		App:        app,
+		Registry:   builder.registry,
+		Keymaps:    builder.keymaps,
+		Router:     builder.router,
+		ToastStack: toastStack,
 	}, nil
 }
 
@@ -143,6 +206,28 @@ func WithBackend(be backend.Backend) AppOption {
 			return
 		}
 		b.cfg.Backend = be
+	}
+}
+
+// WithInlineMode enables or disables inline rendering mode for backends that
+// support it. In inline mode, the app avoids alternate-screen takeover.
+func WithInlineMode(enabled bool) AppOption {
+	return func(b *appBuilder) {
+		if b == nil {
+			return
+		}
+		b.cfg.InlineMode = enabled
+	}
+}
+
+// WithInlineHeight sets the number of terminal rows reserved for inline mode.
+// Values <= 0 use the backend default.
+func WithInlineHeight(lines int) AppOption {
+	return func(b *appBuilder) {
+		if b == nil {
+			return
+		}
+		b.cfg.InlineHeight = lines
 	}
 }
 
@@ -388,6 +473,50 @@ func WithWebConfig(config web.Config) AppOption {
 			return
 		}
 		b.cfg.Backend = web.New(config)
+	}
+}
+
+// WithOnReady registers a callback invoked once during Run, after the Screen
+// is initialized but before the event loop starts.
+func WithOnReady(fn func(app *runtime.App)) AppOption {
+	return func(b *appBuilder) {
+		if b == nil || fn == nil {
+			return
+		}
+		b.cfg.OnReady = fn
+	}
+}
+
+// WithOnResize registers a callback invoked when the app size is known and
+// whenever the terminal is resized.
+func WithOnResize(fn func(app *runtime.App, width, height int)) AppOption {
+	return func(b *appBuilder) {
+		if b == nil || fn == nil {
+			return
+		}
+		b.cfg.OnResize = fn
+	}
+}
+
+// WithOnQuit registers a callback invoked once when the app event loop exits.
+func WithOnQuit(fn func(app *runtime.App)) AppOption {
+	return func(b *appBuilder) {
+		if b == nil || fn == nil {
+			return
+		}
+		b.cfg.OnQuit = fn
+	}
+}
+
+// WithToastLayer configures the bundle to push a ToastStack as a non-modal
+// overlay layer on startup, wired to the given ToastManager. The resulting
+// ToastStack is available via Bundle.ToastStack for styling.
+func WithToastLayer(manager *toast.ToastManager) AppOption {
+	return func(b *appBuilder) {
+		if b == nil || manager == nil {
+			return
+		}
+		b.toastManager = manager
 	}
 }
 

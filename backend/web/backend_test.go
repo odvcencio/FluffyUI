@@ -3,6 +3,7 @@
 package web
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -140,7 +141,8 @@ func TestCursor(t *testing.T) {
 
 func TestPostEvent(t *testing.T) {
 	be := NewWithAddr(":0")
-	be.ctx, be.cancel = be.ctx, func() {} // Don't cancel in test
+	be.ctx, be.cancel = context.WithCancel(context.Background())
+	t.Cleanup(be.cancel)
 
 	// Post a key event
 	ev := terminal.KeyEvent{Key: terminal.KeyEnter}
@@ -156,6 +158,33 @@ func TestPostEvent(t *testing.T) {
 		}
 	case <-time.After(100 * time.Millisecond):
 		t.Error("timeout waiting for event")
+	}
+}
+
+func TestRenderFullANSI_TracksBackgroundTransitions(t *testing.T) {
+	be := NewWithAddr(":0")
+	be.width = 2
+	be.height = 1
+	be.cells = make([]backend.Cell, 2)
+
+	style1 := backend.DefaultStyle().
+		Foreground(backend.ColorWhite).
+		Background(backend.ColorBlue)
+	style2 := backend.DefaultStyle().
+		Foreground(backend.ColorWhite).
+		Background(backend.ColorGreen)
+
+	be.SetContent(0, 0, 'A', nil, style1)
+	be.SetContent(1, 0, 'B', nil, style2)
+
+	ansi := string(be.renderFullANSI())
+	if !contains([]byte(ansi), []byte("48;5;")) {
+		t.Fatalf("expected ANSI output to contain background color codes: %q", ansi)
+	}
+	// Each cell has a distinct background, so output should contain at least two
+	// background selectors.
+	if count := countSubstr(ansi, "48;5;"); count < 2 {
+		t.Fatalf("expected at least 2 background transitions, got %d in %q", count, ansi)
 	}
 }
 
@@ -275,4 +304,24 @@ func containsSubslice(haystack, needle []byte) bool {
 		}
 	}
 	return false
+}
+
+func countSubstr(s, needle string) int {
+	count := 0
+	for {
+		idx := -1
+		if len(s) >= len(needle) {
+			for i := 0; i <= len(s)-len(needle); i++ {
+				if s[i:i+len(needle)] == needle {
+					idx = i
+					break
+				}
+			}
+		}
+		if idx < 0 {
+			return count
+		}
+		count++
+		s = s[idx+len(needle):]
+	}
 }

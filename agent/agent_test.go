@@ -2,6 +2,7 @@ package agent
 
 import (
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 )
 
 type testInput struct {
+	mu       sync.RWMutex
 	bounds   runtime.Rect
 	focused  bool
 	label    string
@@ -25,21 +27,28 @@ func (t *testInput) Measure(constraints runtime.Constraints) runtime.Size {
 }
 
 func (t *testInput) Layout(bounds runtime.Rect) {
+	t.mu.Lock()
 	t.bounds = bounds
+	t.mu.Unlock()
 }
 
 func (t *testInput) Render(ctx runtime.RenderContext) {
 	if ctx.Buffer == nil {
 		return
 	}
+	t.mu.RLock()
 	text := t.value
+	bounds := t.bounds
+	t.mu.RUnlock()
 	if text == "" {
 		text = " "
 	}
-	ctx.Buffer.SetString(t.bounds.X, t.bounds.Y, text, backend.DefaultStyle())
+	ctx.Buffer.SetString(bounds.X, bounds.Y, text, backend.DefaultStyle())
 }
 
 func (t *testInput) HandleMessage(msg runtime.Message) runtime.HandleResult {
+	t.mu.Lock()
+	defer t.mu.Unlock()
 	if t.disabled || !t.focused {
 		return runtime.Unhandled()
 	}
@@ -62,12 +71,30 @@ func (t *testInput) HandleMessage(msg runtime.Message) runtime.HandleResult {
 	return runtime.Unhandled()
 }
 
-func (t *testInput) Bounds() runtime.Rect { return t.bounds }
+func (t *testInput) Bounds() runtime.Rect {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return t.bounds
+}
 
-func (t *testInput) CanFocus() bool { return !t.disabled }
-func (t *testInput) Focus()         { t.focused = true }
-func (t *testInput) Blur()          { t.focused = false }
+func (t *testInput) CanFocus() bool {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return !t.disabled
+}
+func (t *testInput) Focus() {
+	t.mu.Lock()
+	t.focused = true
+	t.mu.Unlock()
+}
+func (t *testInput) Blur() {
+	t.mu.Lock()
+	t.focused = false
+	t.mu.Unlock()
+}
 func (t *testInput) IsFocused() bool {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	return t.focused
 }
 
@@ -75,14 +102,23 @@ func (t *testInput) AccessibleRole() accessibility.Role { return accessibility.R
 func (t *testInput) AccessibleLabel() string            { return t.label }
 func (t *testInput) AccessibleDescription() string      { return "" }
 func (t *testInput) AccessibleState() accessibility.StateSet {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	return accessibility.StateSet{Disabled: t.disabled}
 }
 func (t *testInput) AccessibleValue() *accessibility.ValueInfo {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	return &accessibility.ValueInfo{Text: t.value}
 }
-func (t *testInput) Text() string { return t.value }
+func (t *testInput) Text() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return t.value
+}
 
 type testButton struct {
+	mu       sync.RWMutex
 	bounds   runtime.Rect
 	focused  bool
 	label    string
@@ -95,17 +131,25 @@ func (t *testButton) Measure(constraints runtime.Constraints) runtime.Size {
 }
 
 func (t *testButton) Layout(bounds runtime.Rect) {
+	t.mu.Lock()
 	t.bounds = bounds
+	t.mu.Unlock()
 }
 
 func (t *testButton) Render(ctx runtime.RenderContext) {
 	if ctx.Buffer == nil {
 		return
 	}
-	ctx.Buffer.SetString(t.bounds.X, t.bounds.Y, "["+t.label+"]", backend.DefaultStyle())
+	t.mu.RLock()
+	bounds := t.bounds
+	label := t.label
+	t.mu.RUnlock()
+	ctx.Buffer.SetString(bounds.X, bounds.Y, "["+label+"]", backend.DefaultStyle())
 }
 
 func (t *testButton) HandleMessage(msg runtime.Message) runtime.HandleResult {
+	t.mu.Lock()
+	defer t.mu.Unlock()
 	if t.disabled || !t.focused {
 		return runtime.Unhandled()
 	}
@@ -120,12 +164,30 @@ func (t *testButton) HandleMessage(msg runtime.Message) runtime.HandleResult {
 	return runtime.Unhandled()
 }
 
-func (t *testButton) Bounds() runtime.Rect { return t.bounds }
+func (t *testButton) Bounds() runtime.Rect {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return t.bounds
+}
 
-func (t *testButton) CanFocus() bool { return !t.disabled }
-func (t *testButton) Focus()         { t.focused = true }
-func (t *testButton) Blur()          { t.focused = false }
+func (t *testButton) CanFocus() bool {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return !t.disabled
+}
+func (t *testButton) Focus() {
+	t.mu.Lock()
+	t.focused = true
+	t.mu.Unlock()
+}
+func (t *testButton) Blur() {
+	t.mu.Lock()
+	t.focused = false
+	t.mu.Unlock()
+}
 func (t *testButton) IsFocused() bool {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	return t.focused
 }
 
@@ -133,9 +195,17 @@ func (t *testButton) AccessibleRole() accessibility.Role { return accessibility.
 func (t *testButton) AccessibleLabel() string            { return t.label }
 func (t *testButton) AccessibleDescription() string      { return "" }
 func (t *testButton) AccessibleState() accessibility.StateSet {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	return accessibility.StateSet{Disabled: t.disabled}
 }
 func (t *testButton) AccessibleValue() *accessibility.ValueInfo { return nil }
+
+func (t *testButton) Clicked() bool {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return t.clicked
+}
 
 func TestAgentSnapshotAndActions(t *testing.T) {
 	input := &testInput{label: "Name"}
@@ -178,7 +248,7 @@ func TestAgentSnapshotAndActions(t *testing.T) {
 	if err := agt.Activate("Submit"); err != nil {
 		t.Fatalf("activate submit: %v", err)
 	}
-	if !button.clicked {
+	if !button.Clicked() {
 		t.Fatal("expected submit to be activated")
 	}
 

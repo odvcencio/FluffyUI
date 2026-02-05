@@ -33,6 +33,7 @@ type Backend struct {
 	sessionCount atomic.Int32
 
 	// Terminal state
+	termMu   sync.RWMutex
 	width    int
 	height   int
 	cells    []backend.Cell
@@ -45,8 +46,8 @@ type Backend struct {
 	rendered chan []byte // ANSI data to send
 
 	// Lifecycle
-	ctx    context.Context
-	cancel context.CancelFunc
+	ctx      context.Context
+	cancel   context.CancelFunc
 	initOnce sync.Once
 	finiOnce sync.Once
 }
@@ -169,11 +170,15 @@ func (b *Backend) Fini() {
 
 // Size returns the terminal dimensions.
 func (b *Backend) Size() (width, height int) {
+	b.termMu.RLock()
+	defer b.termMu.RUnlock()
 	return b.width, b.height
 }
 
 // SetContent sets a cell at position (x, y).
 func (b *Backend) SetContent(x, y int, mainc rune, comb []rune, style backend.Style) {
+	b.termMu.Lock()
+	defer b.termMu.Unlock()
 	if x < 0 || x >= b.width || y < 0 || y >= b.height {
 		return
 	}
@@ -186,6 +191,8 @@ func (b *Backend) SetContent(x, y int, mainc rune, comb []rune, style backend.St
 
 // SetRow updates an entire row of cells.
 func (b *Backend) SetRow(y int, startX int, cells []backend.Cell) {
+	b.termMu.Lock()
+	defer b.termMu.Unlock()
 	if y < 0 || y >= b.height || startX < 0 || startX >= b.width {
 		return
 	}
@@ -199,6 +206,8 @@ func (b *Backend) SetRow(y int, startX int, cells []backend.Cell) {
 
 // SetRect updates a rectangular region.
 func (b *Backend) SetRect(x, y, width, height int, cells []backend.Cell) {
+	b.termMu.Lock()
+	defer b.termMu.Unlock()
 	if width <= 0 || height <= 0 {
 		return
 	}
@@ -233,6 +242,8 @@ func (b *Backend) Show() {
 
 // Clear clears the screen.
 func (b *Backend) Clear() {
+	b.termMu.Lock()
+	defer b.termMu.Unlock()
 	for i := range b.cells {
 		b.cells[i] = backend.Cell{Rune: ' ', Style: backend.DefaultStyle()}
 	}
@@ -240,7 +251,9 @@ func (b *Backend) Clear() {
 
 // HideCursor hides the cursor.
 func (b *Backend) HideCursor() {
+	b.termMu.Lock()
 	b.cursorOn = false
+	b.termMu.Unlock()
 	if b.config.Renderer == RendererANSI {
 		b.broadcast([]byte("\x1b[?25l")) // DECTCEM - hide cursor
 	}
@@ -248,7 +261,9 @@ func (b *Backend) HideCursor() {
 
 // ShowCursor shows the cursor.
 func (b *Backend) ShowCursor() {
+	b.termMu.Lock()
 	b.cursorOn = true
+	b.termMu.Unlock()
 	if b.config.Renderer == RendererANSI {
 		b.broadcast([]byte("\x1b[?25h")) // DECTCEM - show cursor
 	}
@@ -256,8 +271,10 @@ func (b *Backend) ShowCursor() {
 
 // SetCursorPos sets the cursor position.
 func (b *Backend) SetCursorPos(x, y int) {
+	b.termMu.Lock()
 	b.cursorX = x
 	b.cursorY = y
+	b.termMu.Unlock()
 	if b.config.Renderer == RendererANSI {
 		// ANSI cursor positioning: ESC [ row ; col H
 		// ANSI is 1-indexed, our coords are 0-indexed
@@ -392,6 +409,12 @@ func (b *Backend) renderANSI() []byte {
 
 // renderFullANSI generates a full ANSI representation of the screen.
 func (b *Backend) renderFullANSI() []byte {
+	b.termMu.RLock()
+	defer b.termMu.RUnlock()
+	return b.renderFullANSILocked()
+}
+
+func (b *Backend) renderFullANSILocked() []byte {
 	var buf []byte
 
 	// Clear screen and home cursor
@@ -409,7 +432,7 @@ func (b *Backend) renderFullANSI() []byte {
 			if fg != lastFg || bg != lastBg || attrs != lastAttrs {
 				buf = append(buf, b.styleToANSI(fg, bg, attrs)...)
 				lastFg = fg
-				lastBg = lastBg
+				lastBg = bg
 				lastAttrs = attrs
 			}
 
@@ -500,6 +523,8 @@ func (b *Backend) styleToANSI(fg, bg backend.Color, attrs backend.AttrMask) []by
 
 // resize updates the terminal dimensions.
 func (b *Backend) resize(width, height int) {
+	b.termMu.Lock()
+	defer b.termMu.Unlock()
 	if width == b.width && height == b.height {
 		return
 	}

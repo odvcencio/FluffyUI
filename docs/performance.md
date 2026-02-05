@@ -57,6 +57,36 @@ go test ./widgets -run ^$ -bench Render -benchmem -cpuprofile cpu.out -memprofil
 go tool pprof cpu.out
 ```
 
+## Render pipeline benchmarks
+
+FluffyUI includes a render-pipeline benchmark suite that exercises:
+
+- `Measure/Layout` (`screen.relayout`)
+- `Render` (`screen.Render`)
+- `Diff iteration` (`Buffer.ForEachDirtyCell`)
+
+Run it with:
+
+```bash
+go test ./runtime -run '^$' -bench RenderPipelineDepth -benchmem
+```
+
+This emits benchmark cases at tree sizes 10, 100, and 1000 widgets and reports
+custom metrics:
+
+- `relayout_ns/op`
+- `render_ns/op`
+- `diff_ns/op`
+- `dirty_cells/op`
+
+Sample run (2026-02-05, Linux amd64, Intel Core Ultra 9 285):
+
+| Case | ns/op | relayout_ns/op | render_ns/op | diff_ns/op | dirty_cells/op |
+|------|-------|----------------|--------------|------------|----------------|
+| Depth 10 | 785.3 | 308.4 | 339.5 | 40.73 | 10.00 |
+| Depth 100 | 6473 | 2659 | 3357 | 346.0 | 100.0 |
+| Depth 1000 | 61674 | 24811 | 33934 | 2798 | 1000 |
+
 ## Animation frame budget
 
 You can throttle animation updates when frames exceed a budget:

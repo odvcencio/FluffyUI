@@ -252,7 +252,7 @@ func (s *Session) parseCSI(data []byte) (terminal.Event, int) {
 
 	// Handle mouse sequences: ESC [ < Cb ; Cx ; Cy M/m
 	if len(seq) > 1 && seq[0] == '<' && (final == 'M' || final == 'm') {
-		return s.parseMouseCSI(params, final == 'M')
+		return s.parseMouseCSI(params, final == 'M', end)
 	}
 
 	// Handle regular CSI sequences
@@ -313,14 +313,14 @@ func (s *Session) parseSS3(data []byte) (terminal.Event, int) {
 
 // parseMouseCSI parses a mouse CSI sequence (SGR 1006 mode).
 // Returns a MouseEvent as terminal.Event and the number of consumed bytes.
-func (s *Session) parseMouseCSI(params []int, pressed bool) (terminal.Event, int) {
-	if len(params) < 4 {
-		return nil, len(params) + 2
+func (s *Session) parseMouseCSI(params []int, pressed bool, consumed int) (terminal.Event, int) {
+	if len(params) < 3 {
+		return nil, consumed
 	}
 
-	cb := params[1]
-	x := params[2] - 1 // Convert to 0-indexed
-	y := params[3] - 1 // Convert to 0-indexed
+	cb := params[0]
+	x := params[1] - 1 // Convert to 0-indexed
+	y := params[2] - 1 // Convert to 0-indexed
 
 	// cb encoding: button (0-2), shift (4), meta/alt (8), ctrl (16), motion (32), button 4-11
 	btn := cb & 3
@@ -363,7 +363,7 @@ func (s *Session) parseMouseCSI(params []int, pressed bool) (terminal.Event, int
 		Shift:  shift,
 		Alt:    alt,
 		Ctrl:   ctrl,
-	}, len(params) + 2
+	}, consumed
 }
 
 // handleControlMessage processes JSON control messages.
