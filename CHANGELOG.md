@@ -1,5 +1,35 @@
 # Changelog
 
+## v0.3.4 - 2026-02-05
+
+### Highlights
+- Inline mode (experimental): bounded viewport rendering without alternate-screen takeover via `fluffy.RunInline`, `fluffy.WithInlineMode`, and `fluffy.WithInlineHeight`.
+- New `fluffy doctor` command (`--json` supported) for terminal capability diagnostics (TERM, true color, mouse, Unicode width, Kitty/Sixel, accessibility).
+- Candy Wars now includes Event Log and Showcase tabs, with a kitchen-sink sampler of 20+ interactive widgets.
+
+### Runtime & Backend
+- Runtime app lifecycle hooks added (`OnReady`, `OnResize`, `OnQuit`) with thread-safe state access improvements in app/snapshot paths.
+- tcell backend: inline viewport sizing + event remapping and alternate-screen escape suppression for inline mode.
+- Web backend: fixed ANSI background style tracking bug, tightened terminal-state concurrency, and corrected SGR mouse CSI parameter parsing.
+- Buffer: `SetString` now accounts for rune display width to avoid overlap/clipping with wide characters.
+- Layout diagnostics: added `FLUFFYUI_LAYOUT_DEBUG` and `runtime.SetLayoutDebug(true)` warnings for unsatisfiable constraints and zero-size measurements.
+
+### Widgets, Forms & API
+- ScrollView: added `ContentSize()` accessor.
+- Forms: `NewFieldBase` now returns `*FieldBase`; `SimpleField` received stronger nil-safety guards.
+- Fluffy convenience API: added `Label(...)` and `Text(...)` helpers plus optional toast overlay wiring via `fluffy.WithToastLayer`.
+
+### Examples & Docs
+- Added `examples/inline` for bounded inline rendering.
+- Candy Wars: custom meta path support via `FLUFFYUI_META_PATH`, focus/mount handling improvements for new-game flow, and expanded showcase coverage.
+- Documentation expanded across README, getting started, debugging, performance, testing, architecture, migration, and new `docs/inline-mode.md`.
+
+### Testing & Tooling
+- Added PTY integration coverage for inline mode escape handling.
+- Added render-pipeline benchmarks in `runtime` plus `scripts/bench-render-pipeline.sh`.
+- Expanded golden-test coverage guard for core widget catalog with new fixtures.
+- Added doctor command tests, web handler parsing tests, and broader candy-wars simulation/showcase tests.
+
 ## v0.3.3 - 2026-02-04
 
 ### Fixes
