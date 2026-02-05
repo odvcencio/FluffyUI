@@ -44,19 +44,51 @@ type FormView struct {
 }
 
 func NewFormView() *FormView {
-	nameField := forms.NewField("name", "", forms.Required("Name is required"), forms.MinLength(2, "Name is too short"))
-	emailField := forms.NewField("email", "", forms.Required("Email is required"), forms.Email("Email looks invalid"))
-	newsField := forms.NewField("newsletter", false)
+	builder := forms.NewBuilder().
+		Field(forms.FieldSpec{
+			Name:        "name",
+			Label:       "Name",
+			Type:        forms.FieldText,
+			Placeholder: "Ada Lovelace",
+			Initial:     "",
+			Validators: []forms.Validator{
+				forms.Required("Name is required"),
+				forms.MinLength(2, "Name is too short"),
+			},
+		}).
+		Field(forms.FieldSpec{
+			Name:        "email",
+			Label:       "Email",
+			Type:        forms.FieldEmail,
+			Placeholder: "ada@example.com",
+			Initial:     "",
+			Validators: []forms.Validator{
+				forms.Required("Email is required"),
+				forms.Email("Email looks invalid"),
+			},
+		}).
+		Field(forms.FieldSpec{
+			Name:    "newsletter",
+			Label:   "Subscribe to updates",
+			Type:    forms.FieldCheckbox,
+			Initial: false,
+		})
 
-	form := forms.NewForm(nameField, emailField, newsField)
+	form, specs := builder.Build()
+	specByName := make(map[string]forms.FieldSpec, len(specs))
+	for _, spec := range specs {
+		specByName[spec.Name] = spec
+	}
 	view := &FormView{form: form}
 
 	view.title = widgets.NewLabel("Settings Form", widgets.WithLabelStyle(backend.DefaultStyle().Bold(true)))
-	view.nameLabel = widgets.NewLabel("Name")
-	view.emailLabel = widgets.NewLabel("Email")
+	view.nameLabel = widgets.NewLabel(specByName["name"].Label)
+	view.emailLabel = widgets.NewLabel(specByName["email"].Label)
 	view.nameInput = widgets.NewInput()
+	view.nameInput.SetPlaceholder(specByName["name"].Placeholder)
 	view.emailInput = widgets.NewInput()
-	view.newsletter = widgets.NewCheckbox("Subscribe to updates")
+	view.emailInput.SetPlaceholder(specByName["email"].Placeholder)
+	view.newsletter = widgets.NewCheckbox(specByName["newsletter"].Label)
 	view.status = widgets.NewLabel("Ready")
 	view.errors = widgets.NewText("")
 	view.errors.SetStyle(backend.DefaultStyle().Foreground(backend.ColorRed))

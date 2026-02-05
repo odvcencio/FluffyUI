@@ -4,10 +4,13 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
-const metaSavePath = "examples/candy-wars/candy-wars-meta.json"
+const metaPathEnv = "FLUFFYUI_META_PATH"
+
+var metaSavePath = "examples/candy-wars/candy-wars-meta.json"
 
 type MetaUnlocks struct {
 	Bank          bool `json:"bank"`
@@ -72,7 +75,8 @@ func defaultMeta() *MetaProgress {
 }
 
 func LoadMeta() *MetaProgress {
-	data, err := os.ReadFile(metaSavePath)
+	path := metaPath()
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return defaultMeta()
 	}
@@ -100,11 +104,20 @@ func SaveMeta(meta *MetaProgress) {
 	if err != nil {
 		return
 	}
-	dir := filepath.Dir(metaSavePath)
+	path := metaPath()
+	dir := filepath.Dir(path)
 	if dir != "." {
 		_ = os.MkdirAll(dir, 0o755)
 	}
-	_ = os.WriteFile(metaSavePath, data, 0o644)
+	_ = os.WriteFile(path, data, 0o644)
+}
+
+func metaPath() string {
+	override := strings.TrimSpace(os.Getenv(metaPathEnv))
+	if override != "" {
+		return override
+	}
+	return metaSavePath
 }
 
 func (g *Game) applyMeta() {

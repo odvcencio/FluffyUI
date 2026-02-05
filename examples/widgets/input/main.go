@@ -31,6 +31,7 @@ type InputView struct {
 	header    *widgets.Label
 	input     *widgets.Input
 	textarea  *widgets.TextArea
+	masked    *widgets.MaskedInput
 	autoComp  *widgets.AutoComplete
 	multiSel  *widgets.MultiSelect
 	dateRange *widgets.DateRangePicker
@@ -51,6 +52,7 @@ func NewInputView() *InputView {
 	view.textarea = widgets.NewTextArea()
 	view.textarea.SetLabel("Notes")
 	view.textarea.SetText("Multi-line input\nwith scrolling")
+	view.masked = widgets.NewMaskedInput("####-##", widgets.WithMaskedLabel("Promo code"))
 	view.autoComp = widgets.NewAutoComplete()
 	view.autoComp.SetOptions([]string{"Alpha", "Beta", "Gamma", "Delta"})
 	view.multiSel = widgets.NewMultiSelect(
@@ -85,6 +87,15 @@ func NewInputView() *InputView {
 
 	view.input.SetOnSubmit(func(text string) {
 		view.status.SetText("Submitted: " + truncateText(text, 20))
+		view.Invalidate()
+	})
+
+	view.masked.SetOnChange(func(value string) {
+		if value == "" {
+			view.status.SetText("Masked input cleared")
+		} else {
+			view.status.SetText("Masked: " + value)
+		}
 		view.Invalidate()
 	})
 
@@ -164,6 +175,7 @@ func (i *InputView) Layout(bounds runtime.Rect) {
 	line(i.header, 1)
 	line(i.input, 1)
 	line(i.textarea, 4)
+	line(i.masked, 1)
 	line(i.autoComp, measure(i.autoComp))
 	line(i.multiSel, measure(i.multiSel))
 	line(i.timePick, measure(i.timePick))
@@ -209,6 +221,9 @@ func (i *InputView) ChildWidgets() []runtime.Widget {
 	}
 	if i.textarea != nil {
 		children = append(children, i.textarea)
+	}
+	if i.masked != nil {
+		children = append(children, i.masked)
 	}
 	if i.autoComp != nil {
 		children = append(children, i.autoComp)

@@ -26,6 +26,8 @@ See `docs/widgets/data.md` and `examples/widgets/data`.
 - Table
 - DataGrid
 - Tree
+- DirectoryTree
+- Log
 - RichText
 - SearchWidget
 
@@ -40,7 +42,11 @@ See `docs/widgets/input.md` and `examples/widgets/input`.
 - AutoComplete
 - MultiSelect
 - Input
+- MaskedInput
 - TextArea
+- Slider
+- RangeSlider
+- DatePicker
 - DateRangePicker
 - TimePicker
 
@@ -53,6 +59,8 @@ See `docs/widgets/navigation.md` and `examples/widgets/navigation`.
 - Breadcrumb
 - Stepper
 - PaletteWidget and EnhancedPalette
+- Accordion
+- Section
 
 ## Feedback
 
@@ -63,7 +71,7 @@ See `docs/widgets/feedback.md` and `examples/widgets/feedback`.
 - Progress
 - Alert
 - ToastStack
-- Charts (Sparkline, BarChart)
+- Charts (Sparkline, BarChart, LineChart)
 
 ## Developer helpers
 

@@ -33,8 +33,8 @@ func NewAppView() *AppView {
 	}
 
 	app.newGameView = NewNewGameDialog(func(diff Difficulty) {
-		app.showNewGame = false
 		app.gameStarted = true
+		app.setShowNewGame(false)
 		app.game.StartNewRunWithDifficulty(diff)
 		app.gameView.lastPrices = nil
 		app.gameView.lastHour = 0
@@ -44,16 +44,45 @@ func NewAppView() *AppView {
 		app.gameView.refresh()
 	}, func() {
 		if app.gameStarted {
-			app.showNewGame = false
+			app.setShowNewGame(false)
 		}
 	})
 
 	app.gameView.onRequestNewGame = func() {
-		app.showNewGame = true
-		app.Invalidate()
+		app.setShowNewGame(true)
 	}
 
 	return app
+}
+
+func (a *AppView) setShowNewGame(show bool) {
+	if a == nil || a.showNewGame == show {
+		return
+	}
+	a.showNewGame = show
+	if a.Services.Scheduler() == nil {
+		return
+	}
+	if show {
+		if a.gameView != nil {
+			runtime.UnmountTree(a.gameView)
+			runtime.UnbindTree(a.gameView)
+		}
+		if a.newGameView != nil {
+			runtime.BindTree(a.newGameView, a.Services)
+			runtime.MountTree(a.newGameView)
+		}
+	} else {
+		if a.newGameView != nil {
+			runtime.UnmountTree(a.newGameView)
+			runtime.UnbindTree(a.newGameView)
+		}
+		if a.gameView != nil {
+			runtime.BindTree(a.gameView, a.Services)
+			runtime.MountTree(a.gameView)
+		}
+	}
+	a.Invalidate()
 }
 
 func (a *AppView) Measure(c runtime.Constraints) runtime.Size {

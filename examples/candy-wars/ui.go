@@ -22,6 +22,9 @@ type GameView struct {
 	inventoryTab *InventoryTabContent
 	statsTabView *StatsTabContent
 	mapTab       *MapTabContent
+	eventLog     *widgets.Log
+	logPanel     *widgets.Panel
+	showcaseTab  *ShowcaseTabContent
 	messageLabel *widgets.Label
 	statsLabel   *widgets.Label
 	inventoryLbl *widgets.Label
@@ -97,11 +100,16 @@ type GameView struct {
 	dangerStyle  backend.Style
 	warningStyle backend.Style
 
-	lastPrices MarketPrices
-	lastHour   int
-	lastHeat   int
-	lastDay    int
-	lastLoc    int
+	lastPrices       MarketPrices
+	lastHour         int
+	lastHeat         int
+	lastDay          int
+	lastLoc          int
+	lastMessage      string
+	lastEventTitle   string
+	lastEventMessage string
+	lastGameOver     bool
+	lastCombatLen    int
 
 	onRequestNewGame func()
 }
@@ -131,11 +139,18 @@ func NewGameView(game *Game) *GameView {
 	v.inventoryTab = NewInventoryTabContent(game, v)
 	v.statsTabView = NewStatsTabContent(game, v)
 	v.mapTab = NewMapTabContent(game, v)
+	v.eventLog = widgets.NewLog(widgets.WithShowTime(false), widgets.WithMaxLines(400))
+	v.eventLog.SetLabel("Event Log")
+	v.logPanel = widgets.NewPanel(v.eventLog, widgets.WithPanelBorder(backend.DefaultStyle()))
+	v.logPanel.SetTitle("Event Log")
+	v.showcaseTab = NewShowcaseTabContent()
 	v.tabs = widgets.NewTabs(
 		widgets.Tab{Title: "Trade", Content: v.tradeTab},
 		widgets.Tab{Title: "Inventory", Content: v.inventoryTab},
 		widgets.Tab{Title: "Stats", Content: v.statsTabView},
 		widgets.Tab{Title: "Map", Content: v.mapTab},
+		widgets.Tab{Title: "Log", Content: v.logPanel},
+		widgets.Tab{Title: "Showcase", Content: v.showcaseTab},
 	)
 
 	v.messageLabel = widgets.NewLabel("")
@@ -234,13 +249,17 @@ func (v *GameView) Mount() {
 	v.Observe(v.game.Day, v.refresh)
 	v.Observe(v.game.Hour, v.refresh)
 	v.Observe(v.game.Prices, v.refresh)
+	v.Observe(v.game.PriceHistory, v.refresh)
 	v.Observe(v.game.Inventory, v.refresh)
 	v.Observe(v.game.Message, v.refresh)
 	v.Observe(v.game.Heat, v.refresh)
 	v.Observe(v.game.HP, v.refresh)
 	v.Observe(v.game.Location, v.refresh)
 	v.Observe(v.game.ShowEvent, v.refresh)
+	v.Observe(v.game.EventTitle, v.refresh)
+	v.Observe(v.game.EventMessage, v.refresh)
 	v.Observe(v.game.GameOver, v.refresh)
+	v.Observe(v.game.GameOverMsg, v.refresh)
 	v.refresh()
 }
 
@@ -335,6 +354,7 @@ func (v *GameView) refresh() {
 
 	v.syncToasts()
 	v.syncEventModal()
+	v.syncEventLog()
 
 	v.Invalidate()
 }
@@ -1077,6 +1097,15 @@ func (v *GameView) handleActiveTabInput(msg runtime.Message) runtime.HandleResul
 		if v.mapTab != nil {
 			return v.mapTab.HandleMessage(msg)
 		}
+	case 4:
+		if v.eventLog != nil {
+			v.eventLog.Focus()
+			return v.eventLog.HandleMessage(msg)
+		}
+	case 5:
+		if v.showcaseTab != nil {
+			return v.showcaseTab.HandleMessage(msg)
+		}
 	}
 	return runtime.Unhandled()
 }
@@ -1233,6 +1262,73 @@ func (v *GameView) syncEventModal() {
 		return
 	}
 	v.eventModal = nil
+}
+
+func (v *GameView) syncEventLog() {
+	if v.eventLog == nil || v.game == nil {
+		return
+	}
+
+	message := strings.TrimSpace(v.game.Message.Get())
+	if message == "" {
+		v.lastMessage = ""
+	} else if message != v.lastMessage {
+		v.eventLog.Info(message)
+		v.lastMessage = message
+	}
+
+	if v.game.ShowEvent.Get() {
+		title := strings.TrimSpace(v.game.EventTitle.Get())
+		rawBody := strings.TrimSpace(v.game.EventMessage.Get())
+		if title != "" || rawBody != "" {
+			if title != v.lastEventTitle || rawBody != v.lastEventMessage {
+				line := title
+				if rawBody != "" {
+					body := strings.ReplaceAll(rawBody, "\n", " ")
+					if line != "" {
+						line += ": "
+					}
+					line += body
+				}
+				v.eventLog.Warn(line)
+				v.lastEventTitle = title
+				v.lastEventMessage = rawBody
+			}
+		}
+	} else {
+		v.lastEventTitle = ""
+		v.lastEventMessage = ""
+	}
+
+	if v.game.GameOver.Get() {
+		if !v.lastGameOver {
+			msg := strings.TrimSpace(v.game.GameOverMsg.Get())
+			if msg == "" {
+				msg = "Game over."
+			}
+			v.eventLog.Error(msg)
+			v.lastGameOver = true
+		}
+	} else {
+		v.lastGameOver = false
+	}
+
+	if v.game.Combat != nil {
+		logs := v.game.Combat.Log
+		if len(logs) < v.lastCombatLen {
+			v.lastCombatLen = 0
+		}
+		for _, line := range logs[v.lastCombatLen:] {
+			line = strings.TrimSpace(line)
+			if line == "" {
+				continue
+			}
+			v.eventLog.Info(line)
+		}
+		v.lastCombatLen = len(logs)
+	} else {
+		v.lastCombatLen = 0
+	}
 }
 
 func (v *GameView) buildEventModal() *EventModal {
@@ -1501,6 +1597,14 @@ func (v *GameView) restartGame() {
 	v.blackMarketInput.Blur()
 	v.blackMarketInput.Clear()
 	v.game.StartNewRun()
+	if v.eventLog != nil {
+		v.eventLog.Clear()
+	}
+	v.lastMessage = ""
+	v.lastEventTitle = ""
+	v.lastEventMessage = ""
+	v.lastGameOver = false
+	v.lastCombatLen = 0
 	v.lastPrices = nil
 	v.lastHour = 0
 	v.lastHeat = 0

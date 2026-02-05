@@ -1,4 +1,5 @@
 docs/demos/candy-wars.cast
+examples/candy-wars/examples/candy-wars/candy-wars-meta.json
 
 # Pre-built native libraries (too large for git)
 backend/ghostty/libs/**/*.so

@@ -5,7 +5,7 @@
 //
 // This game demonstrates FluffyUI's capabilities:
 // - Reactive state management with Signals
-// - Complex widget composition (Tables, Dialogs, Charts, Panels)
+// - Complex widget composition (Tables, Dialogs, Charts, Panels, Log)
 // - Keybinding system
 // - Dynamic UI updates
 // - Game loop with tick-based events

@@ -98,6 +98,14 @@ func (s *ScrollView) SetLabel(label string) {
 	s.syncA11y()
 }
 
+// ContentSize returns the current scrollable content size.
+func (s *ScrollView) ContentSize() runtime.Size {
+	if s == nil || s.viewport == nil {
+		return runtime.Size{}
+	}
+	return s.viewport.ContentSize()
+}
+
 // Bind attaches app services.
 func (s *ScrollView) Bind(services runtime.Services) {
 	s.services = services

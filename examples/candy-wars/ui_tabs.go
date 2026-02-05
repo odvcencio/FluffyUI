@@ -20,6 +20,9 @@ type TradeTabContent struct {
 	priceChart    *widgets.BarChart
 	priceChartSig *state.Signal[[]widgets.BarData]
 	sparkline     *widgets.Sparkline
+	netWorthChart *widgets.LineChart
+	lastWorthLen  int
+	lastWorthVal  float64
 	selectedIdx   int
 
 	// Price trend tracking
@@ -63,6 +66,7 @@ func NewTradeTabContent(game *Game, view *GameView) *TradeTabContent {
 
 	t.priceChart = widgets.NewBarChart(chartData)
 	t.sparkline = widgets.NewSparkline(game.PriceHistory)
+	t.netWorthChart = widgets.NewLineChart()
 
 	return t
 }
@@ -145,6 +149,31 @@ func (t *TradeTabContent) UpdatePriceChart() {
 	t.priceChartSig.Set(bars)
 }
 
+func (t *TradeTabContent) UpdateNetWorthChart() {
+	if t.netWorthChart == nil {
+		return
+	}
+	history := t.game.PriceHistory.Get()
+	if len(history) == 0 {
+		return
+	}
+	last := history[len(history)-1]
+	if len(history) == t.lastWorthLen && last == t.lastWorthVal {
+		return
+	}
+	t.lastWorthLen = len(history)
+	t.lastWorthVal = last
+	data := append([]float64(nil), history...)
+	t.netWorthChart.SetSeries([]widgets.ChartSeries{
+		{
+			Data:   data,
+			Color:  backend.ColorBrightCyan,
+			Smooth: true,
+			Fill:   true,
+		},
+	})
+}
+
 func (t *TradeTabContent) Measure(c runtime.Constraints) runtime.Size {
 	return c.MaxSize()
 }
@@ -161,11 +190,20 @@ func (t *TradeTabContent) Layout(bounds runtime.Rect) {
 
 	sparkY := bounds.Y + tableHeight + 1
 	t.sparkline.Layout(runtime.Rect{X: bounds.X, Y: sparkY, Width: bounds.Width, Height: 1})
+	if t.netWorthChart != nil {
+		chartY := sparkY + 1
+		chartHeight := bounds.Height - (chartY - bounds.Y)
+		if chartHeight < 1 {
+			chartHeight = 1
+		}
+		t.netWorthChart.Layout(runtime.Rect{X: bounds.X, Y: chartY, Width: bounds.Width, Height: chartHeight})
+	}
 }
 
 func (t *TradeTabContent) Render(ctx runtime.RenderContext) {
 	t.UpdateMarketTable()
 	t.UpdatePriceChart()
+	t.UpdateNetWorthChart()
 
 	t.marketTable.Render(ctx)
 	t.priceChart.Render(ctx)
@@ -173,6 +211,9 @@ func (t *TradeTabContent) Render(ctx runtime.RenderContext) {
 	sparkBounds := t.sparkline.Bounds()
 	ctx.Buffer.SetString(sparkBounds.X, sparkBounds.Y, "Net Worth: ", t.style)
 	t.sparkline.Render(ctx)
+	if t.netWorthChart != nil {
+		t.netWorthChart.Render(ctx)
+	}
 }
 
 func (t *TradeTabContent) HandleMessage(msg runtime.Message) runtime.HandleResult {
@@ -192,6 +233,9 @@ func (t *TradeTabContent) ChildWidgets() []runtime.Widget {
 	}
 	if t.sparkline != nil {
 		children = append(children, t.sparkline)
+	}
+	if t.netWorthChart != nil {
+		children = append(children, t.netWorthChart)
 	}
 	return children
 }

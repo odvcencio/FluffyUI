@@ -1,6 +1,7 @@
 package main
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -32,6 +33,8 @@ func renderViewToString(view *GameView, width, height int) string {
 }
 
 func TestTradeDialogRendersQuantityInput(t *testing.T) {
+	t.Setenv(metaPathEnv, filepath.Join(t.TempDir(), "candy-wars-meta.json"))
+
 	game := NewGame()
 	game.StartNewRun()
 	view := NewGameView(game)

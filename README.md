@@ -27,6 +27,29 @@ go get github.com/odvcencio/fluffyui@latest
 - **i18n Support** - Simple localization bundle and runtime wiring
 - **Comprehensive Documentation** - Guides, examples, and GoDoc for every component
 
+## Quick Links
+
+- [Getting Started](docs/getting-started.md)
+- [Widget Catalog](docs/widgets/overview.md)
+- [Examples](#examples)
+- [Candy Wars Showcase](#candy-wars---showcase-game)
+- [Testing Guide](docs/testing.md)
+- [Recording](docs/recording.md)
+- [Agent Integration](#agent-interaction-out-of-process)
+
+## Modern Conveniences
+
+- **Dev Loop** - Hot-reload your app with `go run ./cmd/fluffy dev -- <command>`
+- **Deterministic Testing** - Simulation backend and test helpers for pixel-perfect assertions
+- **Recording Toolchain** - Asciicast capture and video export helpers
+- **Debug Overlays** - Visualize layout bounds and widget trees during development
+- **Theme + Stylesheet** - Centralized styling with runtime overrides
+- **i18n Ready** - Localizer hook and message bundles
+- **Command Palettes & Keymaps** - Registry-driven command system
+- **Clipboard + Mouse + Drag/Drop** - Rich input support across backends
+- **Markdown & Syntax Highlighting** - Render docs and code in-terminal
+- **Accessibility First** - Focus management, roles, screen reader announcements
+
 ## Installation
 
 ```bash
@@ -164,6 +187,7 @@ go run ./scripts/agent-runner \
 | Widget | Description |
 |--------|-------------|
 | `Grid` | Flexible grid layout with row/column spans |
+| `Flex` | VBox/HBox flex layout |
 | `Stack` | Vertical or horizontal stacking |
 | `Splitter` | Resizable split panes |
 | `ScrollView` | Scrollable content container |
@@ -180,10 +204,18 @@ go run ./scripts/agent-runner \
 |--------|-------------|
 | `Button` | Clickable button with variants (primary, secondary, danger) |
 | `Input` | Single-line text input with validation |
+| `MaskedInput` | Masked text input (e.g., codes, PINs) |
 | `TextArea` | Multi-line text editor |
 | `Checkbox` | Toggle checkbox with label |
 | `Radio` | Radio button groups |
 | `Select` | Dropdown selection |
+| `AutoComplete` | Inline suggestion input |
+| `MultiSelect` | Multi-value selector |
+| `Slider` | Continuous or stepped slider |
+| `RangeSlider` | Dual-handle slider |
+| `DatePicker` | Calendar date picker |
+| `DateRangePicker` | Date range picker |
+| `TimePicker` | Time picker (optional seconds) |
 
 ### Data Widgets
 
@@ -196,7 +228,11 @@ go run ./scripts/agent-runner \
 |--------|-------------|
 | `List` | Scrollable list with selection |
 | `Table` | Sortable data table with columns |
+| `DataGrid` | Editable grid data table |
 | `Tree` | Hierarchical tree view |
+| `DirectoryTree` | File system tree |
+| `Log` | Structured log viewer |
+| `RichText` | Markdown-like rich text |
 | `SearchWidget` | Filterable search interface |
 
 ### Navigation Widgets
@@ -213,6 +249,8 @@ go run ./scripts/agent-runner \
 | `Stepper` | Step-by-step wizard |
 | `PaletteWidget` | Command palette (fuzzy finder) |
 | `EnhancedPalette` | Extended command palette with categories |
+| `Accordion` | Collapsible sections |
+| `Section` | Step/status list presentation |
 
 ### Feedback Widgets
 
@@ -230,6 +268,7 @@ go run ./scripts/agent-runner \
 | `Progress` | Progress bars |
 | `Sparkline` | Inline sparkline charts |
 | `BarChart` | Simple bar charts |
+| `LineChart` | Line charts with optional fill |
 
 ## Architecture
 
@@ -456,6 +495,7 @@ Run any example with `go run`:
 | `examples/quickstart` | Basic app setup and message handling |
 | `examples/counter` | State management with signals |
 | `examples/todo-app` | Full CRUD application |
+| `examples/showcase` | Lightweight multi-tab widget sampler |
 | `examples/candy-wars` | **Showcase game** - Trading game demonstrating all features |
 | `examples/fireworks-demo` | **3D particle effects** - Fireworks with perspective projection |
 | `examples/command-palette` | Keybind registry and command palette |
@@ -463,7 +503,13 @@ Run any example with `go run`:
 | `examples/dashboard` | Data visualization with charts |
 | `examples/settings-form` | Form validation and submission |
 | `examples/accessibility-demo` | Screen reader and focus features |
+| `examples/perf-dashboard` | Render and dirty-cell metrics |
 | `examples/recording` | Session recording and export |
+| `examples/graphics-demo` | Sub-cell canvas, curves, and effects |
+| `examples/animation-demo` | Tweens, springs, and motion helpers |
+| `examples/virtual-scrolling` | Large datasets with smooth scrolling |
+| `examples/video-player` | Video playback and frame rendering |
+| `examples/ai-agent-demo` | Agent integration walkthrough |
 | `examples/generate-demos` | Automated demo recording tool |
 | `examples/widgets/gallery` | Complete widget showcase |
 | `examples/widgets/layout` | Layout widget demos |
@@ -489,10 +535,17 @@ A complete trading game set in a middle school, demonstrating FluffyUI's capabil
 - Buy and sell candy with dynamic pricing
 - Avoid teachers and hall monitors (random events)
 - Pay off your debt before time runs out
-- Features: Tables, dialogs, sparklines, reactive state, keybindings
+- Features: Tables, dialogs, sparklines, net-worth line chart, event log, reactive state, keybindings
+- Includes a **Kitchen Sink** tab with a full widget sampler (inputs, data, navigation, feedback)
 
 ```bash
 go run ./examples/candy-wars
+```
+
+Use a custom progress file (handy for shared demos or clean runs):
+
+```bash
+FLUFFYUI_META_PATH=/tmp/candy-wars-meta.json go run ./examples/candy-wars
 ```
 
 Recorded demo:
@@ -567,6 +620,7 @@ Comprehensive documentation is available in the `docs/` directory:
 | [Theming](docs/theming.md) | Theme management |
 | [Performance](docs/performance.md) | Optimization best practices |
 | [Recording](docs/recording.md) | Asciicast and video export |
+| [Showcase](docs/showcase.md) | Widget sampler and gallery demos |
 
 ### Widget Guides
 
