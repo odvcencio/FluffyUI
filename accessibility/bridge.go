@@ -833,10 +833,11 @@ func (b *Base) HasExtendedARIA() bool {
 	if b == nil {
 		return false
 	}
-	return b.ActiveDescendant != "" || b.Autocomplete != "" ||
-		b.Current != "" || b.Details != "" || b.ErrorMessage != "" ||
-		b.HasPopup != "" || b.KeyShortcuts != "" || b.Placeholder != "" ||
-		b.RoleDescription != "" || b.Sort != ""
+	return b.Level != 0 || b.Orientation != "" ||
+		b.ActiveDescendant != "" || b.PosInSet != 0 || b.SetSize != 0 ||
+		b.HasPopup != "" || b.ErrorMessage != "" || b.Current != "" ||
+		b.Autocomplete != "" || b.Placeholder != "" || b.Sort != "" ||
+		b.KeyShortcuts != "" || b.Details != "" || b.RoleDescription != ""
 }
 
 // BoolPtr returns a pointer to a bool.

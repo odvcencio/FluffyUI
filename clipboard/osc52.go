@@ -63,7 +63,7 @@ func (c *OSC52Clipboard) Write(text string) error {
 // Returns true if terminal capabilities indicate OSC-52 support, or if
 // capabilities could not be determined (optimistic default for modern terminals).
 func (c *OSC52Clipboard) Available() bool {
-	if c == nil {
+	if c == nil || c.w == nil {
 		return false
 	}
 	if c.caps != nil {

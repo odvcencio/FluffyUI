@@ -666,6 +666,38 @@ func TestBaseHasExtendedARIA(t *testing.T) {
 			want: true,
 		},
 		{
+			name: "with Level",
+			base: &Base{
+				Role:  RoleHeading,
+				Level: 2,
+			},
+			want: true,
+		},
+		{
+			name: "with Orientation",
+			base: &Base{
+				Role:        RoleSlider,
+				Orientation: "horizontal",
+			},
+			want: true,
+		},
+		{
+			name: "with PosInSet",
+			base: &Base{
+				Role:     RoleOption,
+				PosInSet: 3,
+			},
+			want: true,
+		},
+		{
+			name: "with SetSize",
+			base: &Base{
+				Role:    RoleOption,
+				SetSize: 10,
+			},
+			want: true,
+		},
+		{
 			name: "multiple extended properties",
 			base: &Base{
 				Role:         RoleTextbox,

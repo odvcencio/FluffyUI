@@ -17,26 +17,54 @@ func EqualComparable[T comparable](a, b T) bool {
 // deepEqual uses reflect.DeepEqual for complex types.
 // Optimizes common comparable types to avoid reflection overhead.
 func deepEqual[T any](a, b T) bool {
-	// Fast path: try direct comparison via interface for common types
+	// Fast path: try direct comparison via interface for common types.
+	// Use comma-ok form to handle Signal[any] where a and b may differ in concrete type.
 	switch av := any(a).(type) {
 	case int:
-		return av == any(b).(int)
+		if bv, ok := any(b).(int); ok {
+			return av == bv
+		}
+		return false
 	case string:
-		return av == any(b).(string)
+		if bv, ok := any(b).(string); ok {
+			return av == bv
+		}
+		return false
 	case bool:
-		return av == any(b).(bool)
+		if bv, ok := any(b).(bool); ok {
+			return av == bv
+		}
+		return false
 	case float64:
-		return av == any(b).(float64)
+		if bv, ok := any(b).(float64); ok {
+			return av == bv
+		}
+		return false
 	case int64:
-		return av == any(b).(int64)
+		if bv, ok := any(b).(int64); ok {
+			return av == bv
+		}
+		return false
 	case int32:
-		return av == any(b).(int32)
+		if bv, ok := any(b).(int32); ok {
+			return av == bv
+		}
+		return false
 	case uint:
-		return av == any(b).(uint)
+		if bv, ok := any(b).(uint); ok {
+			return av == bv
+		}
+		return false
 	case uint64:
-		return av == any(b).(uint64)
+		if bv, ok := any(b).(uint64); ok {
+			return av == bv
+		}
+		return false
 	case uint32:
-		return av == any(b).(uint32)
+		if bv, ok := any(b).(uint32); ok {
+			return av == bv
+		}
+		return false
 	}
 	// Fall back to reflect.DeepEqual for complex types
 	return reflect.DeepEqual(a, b)
