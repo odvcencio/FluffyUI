@@ -69,6 +69,15 @@ func widgetInfoFromAgent(info agent.WidgetInfo, parentID string) WidgetInfo {
 		Actions:     info.Actions,
 		ChildrenIDs: childrenIDs,
 		ParentID:    parentID,
+		Live:        info.Live,
+		Relevant:    info.Relevant,
+		Atomic:      info.Atomic,
+		Landmark:    info.Landmark,
+		LabelledBy:  info.LabelledBy,
+		DescribedBy: info.DescribedBy,
+		Controls:    info.Controls,
+		Owns:        info.Owns,
+		FlowTo:      info.FlowTo,
 	}
 }
 
@@ -87,6 +96,15 @@ func widgetNodeFromAgent(info agent.WidgetInfo) WidgetNode {
 		State:       stateFromAgent(info),
 		Actions:     info.Actions,
 		Children:    children,
+		Live:        info.Live,
+		Relevant:    info.Relevant,
+		Atomic:      info.Atomic,
+		Landmark:    info.Landmark,
+		LabelledBy:  info.LabelledBy,
+		DescribedBy: info.DescribedBy,
+		Controls:    info.Controls,
+		Owns:        info.Owns,
+		FlowTo:      info.FlowTo,
 	}
 }
 
@@ -106,10 +124,14 @@ func stateFromAgent(info agent.WidgetInfo) StateSet {
 		Disabled: state.Disabled,
 		Checked:  state.Checked,
 		Expanded: state.Expanded,
+		Pressed:  state.Pressed,
 		Selected: state.Selected,
 		ReadOnly: state.ReadOnly,
 		Required: state.Required,
 		Invalid:  state.Invalid,
+		Hidden:   state.Hidden,
+		Busy:     state.Busy,
+		Modal:    state.Modal,
 	}
 }
 
@@ -151,6 +173,52 @@ func roleToMCP(role accessibility.Role) string {
 		return "text"
 	case accessibility.RoleGroup:
 		return "container"
+	case accessibility.RoleChart:
+		return "chart"
+	case accessibility.RoleSlider:
+		return "slider"
+	case accessibility.RoleTable:
+		return "table"
+	case accessibility.RoleRow:
+		return "row"
+	case accessibility.RoleCell:
+		return "cell"
+	case accessibility.RoleTabList:
+		return "tablist"
+	case accessibility.RoleWindow:
+		return "window"
+	case accessibility.RoleApplication:
+		return "application"
+	case accessibility.RoleCombobox:
+		return "combobox"
+	case accessibility.RoleSwitch:
+		return "switch"
+	case accessibility.RoleSpinButton:
+		return "spinbutton"
+	case accessibility.RoleHeading:
+		return "heading"
+	case accessibility.RoleLink:
+		return "link"
+	case accessibility.RoleSeparator:
+		return "separator"
+	case accessibility.RoleLog:
+		return "log"
+	case accessibility.RoleTimer:
+		return "timer"
+	case accessibility.RoleFeed:
+		return "feed"
+	case accessibility.RoleToolbar:
+		return "toolbar"
+	case accessibility.RoleSearchbox:
+		return "searchbox"
+	case accessibility.RoleNone:
+		return "none"
+	case accessibility.RoleImg:
+		return "img"
+	case accessibility.RoleNote:
+		return "note"
+	case accessibility.RoleScrollbar:
+		return "scrollbar"
 	default:
 		return "unknown"
 	}

@@ -36,6 +36,7 @@ type Menu struct {
 	flatDirty     bool
 	itemsLen      int
 	itemsFirst    *MenuItem
+	services      runtime.Services
 }
 
 // NewMenu creates a new menu.
@@ -51,8 +52,25 @@ func NewMenu(items ...*MenuItem) *Menu {
 		itemsFirst:    firstItem(items),
 	}
 	menu.Base.Role = accessibility.RoleMenu
+	menu.Base.Landmark = accessibility.LandmarkNavigation
 	menu.syncA11y()
 	return menu
+}
+
+// Bind attaches app services.
+func (m *Menu) Bind(services runtime.Services) {
+	if m == nil {
+		return
+	}
+	m.services = services
+}
+
+// Unbind releases app services.
+func (m *Menu) Unbind() {
+	if m == nil {
+		return
+	}
+	m.services = runtime.Services{}
 }
 
 // SetStyle updates the menu base style.
@@ -198,6 +216,12 @@ func (m *Menu) HandleMessage(msg runtime.Message) runtime.HandleResult {
 			m.flatDirty = true
 		}
 		return runtime.Handled()
+	case terminal.KeyHome:
+		m.setSelected(0, len(rows))
+		return runtime.Handled()
+	case terminal.KeyEnd:
+		m.setSelected(len(rows)-1, len(rows))
+		return runtime.Handled()
 	case terminal.KeyEnter:
 		if row := m.selectedRow(rows); row != nil && !row.item.Disabled {
 			if len(row.item.Children) > 0 {
@@ -258,8 +282,14 @@ func (m *Menu) setSelected(index int, count int) {
 	if index >= count {
 		index = count - 1
 	}
+	prev := m.selectedIndex
 	m.selectedIndex = index
 	m.syncA11y()
+	if prev != index {
+		if announcer := m.services.Announcer(); announcer != nil {
+			announcer.AnnounceChange(m)
+		}
+	}
 }
 
 func (m *Menu) selectedRow(rows []menuRow) *menuRow {
@@ -374,3 +404,5 @@ var _ scroll.Controller = (*Menu)(nil)
 
 var _ runtime.Widget = (*Menu)(nil)
 var _ runtime.Focusable = (*Menu)(nil)
+var _ runtime.Bindable = (*Menu)(nil)
+var _ runtime.Unbindable = (*Menu)(nil)

@@ -38,6 +38,7 @@ func NewTabs(tabs ...Tab) *Tabs {
 		selectedStyle: backend.DefaultStyle().Reverse(true),
 	}
 	w.Base.Role = accessibility.RoleTabList
+	w.Base.Landmark = accessibility.LandmarkNavigation
 	w.syncA11y()
 	return w
 }
@@ -178,6 +179,12 @@ func (t *Tabs) HandleMessage(msg runtime.Message) runtime.HandleResult {
 	case terminal.KeyRight:
 		t.setSelected(t.selected + 1)
 		return runtime.Handled()
+	case terminal.KeyHome:
+		t.setSelected(0)
+		return runtime.Handled()
+	case terminal.KeyEnd:
+		t.setSelected(len(t.Tabs) - 1)
+		return runtime.Handled()
 	}
 	return runtime.Unhandled()
 }
@@ -272,6 +279,9 @@ func (t *Tabs) setSelected(index int) {
 	t.selected = index
 	t.layoutSelected()
 	t.syncA11y()
+	if announcer := t.services.Announcer(); announcer != nil {
+		announcer.AnnounceChange(t)
+	}
 	var nextContent runtime.Widget
 	if next := t.selectedTab(); next != nil {
 		nextContent = next.Content
@@ -337,7 +347,12 @@ func (t *Tabs) syncA11y() {
 	}
 	t.Base.Label = label
 	if tab := t.selectedTab(); tab != nil {
-		t.Base.Value = &accessibility.ValueInfo{Text: tab.Title}
+		t.Base.Value = &accessibility.ValueInfo{
+			Text:    tab.Title,
+			Current: float64(t.selected + 1),
+			Min:     1,
+			Max:     float64(len(t.Tabs)),
+		}
 	} else {
 		t.Base.Value = nil
 	}
@@ -348,7 +363,8 @@ func (t *Tabs) syncA11y() {
 				titles = append(titles, tab.Title)
 			}
 		}
-		t.Base.Description = strings.Join(titles, ", ")
+		t.Base.Description = fmt.Sprintf("%d of %d, %s, use left right to switch",
+			t.selected+1, len(t.Tabs), strings.Join(titles, ", "))
 	} else {
 		t.Base.Description = ""
 	}

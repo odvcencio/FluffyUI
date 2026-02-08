@@ -56,6 +56,8 @@ type AppConfig struct {
 	FrameBudget       time.Duration
 	Localizer         i18n.Localizer
 	ErrorReporter     *ErrorReporter
+	Speaker           accessibility.Speaker
+	MCPOptions        *MCPOptions
 	OnReady           func(app *App)
 	OnResize          func(app *App, width, height int)
 	OnQuit            func(app *App)
@@ -101,6 +103,8 @@ type App struct {
 	taskCancel        context.CancelFunc
 	pendingMu         sync.Mutex
 	pendingEffects    []Effect
+	speaker           accessibility.Speaker
+	mcpOptions        *MCPOptions
 	mcpCloser         io.Closer
 
 	running     atomic.Bool
@@ -155,6 +159,8 @@ func NewApp(cfg AppConfig) *App {
 		frameBudget:       cfg.FrameBudget,
 		localizer:         cfg.Localizer,
 		errorReporter:     cfg.ErrorReporter,
+		speaker:           cfg.Speaker,
+		mcpOptions:        cfg.MCPOptions,
 		onReady:           cfg.OnReady,
 		onResize:          cfg.OnResize,
 		onQuit:            cfg.OnQuit,
@@ -386,7 +392,11 @@ func (a *App) Run(ctx context.Context) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	if err := a.enableMCPFromEnv(); err != nil {
+	if a.mcpOptions != nil {
+		if _, err := a.EnableMCP(*a.mcpOptions); err != nil {
+			return err
+		}
+	} else if err := a.enableMCPFromEnv(); err != nil {
 		return err
 	}
 	if inlineSetter, ok := a.backend.(backend.InlineModeSetter); ok {
@@ -446,6 +456,12 @@ func (a *App) Run(ctx context.Context) error {
 
 	if a.update == nil {
 		a.update = DefaultUpdate
+	}
+
+	if a.speaker != nil {
+		if sa, ok := a.announcer.(*accessibility.SimpleAnnouncer); ok {
+			sa.SetSpeaker(a.speaker)
+		}
 	}
 
 	a.running.Store(true)
@@ -520,6 +536,14 @@ func (a *App) Run(ctx context.Context) error {
 		if a.dirty {
 			a.render()
 			a.dirty = false
+		}
+	}
+
+	if a.speaker != nil {
+		if sa, ok := a.announcer.(*accessibility.SimpleAnnouncer); ok {
+			sa.CloseSpeaker()
+		} else {
+			_ = a.speaker.Close()
 		}
 	}
 

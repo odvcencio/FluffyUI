@@ -37,11 +37,12 @@ type StateSet struct {
 	Checked  *bool `json:"checked,omitempty"`
 	Selected bool  `json:"selected,omitempty"`
 	Expanded *bool `json:"expanded,omitempty"`
-	Pressed  bool  `json:"pressed,omitempty"`
+	Pressed  *bool `json:"pressed,omitempty"`
 	ReadOnly bool  `json:"readonly,omitempty"`
 	Required bool  `json:"required,omitempty"`
 	Invalid  bool  `json:"invalid,omitempty"`
 	Busy     bool  `json:"busy,omitempty"`
+	Modal    bool  `json:"modal,omitempty"`
 }
 
 type WidgetInfo struct {
@@ -55,6 +56,17 @@ type WidgetInfo struct {
 	Actions     []string `json:"actions,omitempty"`
 	ChildrenIDs []string `json:"children_ids,omitempty"`
 	ParentID    string   `json:"parent_id,omitempty"`
+
+	// ARIA-like fields
+	Live        string `json:"live,omitempty"`
+	Relevant    string `json:"relevant,omitempty"`
+	Atomic      bool   `json:"atomic,omitempty"`
+	Landmark    string `json:"landmark,omitempty"`
+	LabelledBy  string `json:"labelled_by,omitempty"`
+	DescribedBy string `json:"described_by,omitempty"`
+	Controls    string `json:"controls,omitempty"`
+	Owns        string `json:"owns,omitempty"`
+	FlowTo      string `json:"flow_to,omitempty"`
 }
 
 type WidgetNode struct {
@@ -67,6 +79,17 @@ type WidgetNode struct {
 	State       StateSet     `json:"state,omitempty"`
 	Actions     []string     `json:"actions,omitempty"`
 	Children    []WidgetNode `json:"children,omitempty"`
+
+	// ARIA-like fields
+	Live        string `json:"live,omitempty"`
+	Relevant    string `json:"relevant,omitempty"`
+	Atomic      bool   `json:"atomic,omitempty"`
+	Landmark    string `json:"landmark,omitempty"`
+	LabelledBy  string `json:"labelled_by,omitempty"`
+	DescribedBy string `json:"described_by,omitempty"`
+	Controls    string `json:"controls,omitempty"`
+	Owns        string `json:"owns,omitempty"`
+	FlowTo      string `json:"flow_to,omitempty"`
 }
 
 type Snapshot struct {

@@ -29,6 +29,15 @@ func (t *testWidget) AccessibleState() accessibility.StateSet {
 	return accessibility.StateSet{}
 }
 func (t *testWidget) AccessibleValue() *accessibility.ValueInfo { return nil }
+func (t *testWidget) AccessibleLive() accessibility.Live           { return "" }
+func (t *testWidget) AccessibleRelevant() accessibility.Relevant   { return "" }
+func (t *testWidget) AccessibleAtomic() bool                       { return false }
+func (t *testWidget) AccessibleLandmark() accessibility.Landmark   { return "" }
+func (t *testWidget) AccessibleLabelledBy() string                 { return "" }
+func (t *testWidget) AccessibleDescribedBy() string                { return "" }
+func (t *testWidget) AccessibleControls() string                   { return "" }
+func (t *testWidget) AccessibleOwns() string                      { return "" }
+func (t *testWidget) AccessibleFlowTo() string                    { return "" }
 
 type clipboardWidget struct {
 	testWidget

@@ -2,8 +2,10 @@
 package accessibility
 
 import (
+	"context"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/odvcencio/fluffyui/backend"
 )
@@ -39,26 +41,107 @@ const (
 	RoleChart       Role = "chart"
 	RoleWindow      Role = "window"
 	RoleApplication Role = "application"
+
+	// WAI-ARIA 1.2 additional roles
+	RoleCombobox   Role = "combobox"
+	RoleSwitch     Role = "switch"
+	RoleSpinButton Role = "spinbutton"
+	RoleHeading    Role = "heading"
+	RoleLink       Role = "link"
+	RoleSeparator  Role = "separator"
+	RoleLog        Role = "log"
+	RoleTimer      Role = "timer"
+	RoleFeed       Role = "feed"
+	RoleToolbar    Role = "toolbar"
+	RoleSearchbox  Role = "searchbox"
+	RoleNone       Role = "none"
+	RoleImg        Role = "img"
+	RoleNote       Role = "note"
+	RoleScrollbar  Role = "scrollbar"
+)
+
+// Live describes how content changes are announced to assistive technology.
+// Mirrors aria-live: off (default), polite (wait for idle), assertive (interrupt).
+type Live string
+
+const (
+	// LiveOff suppresses automatic announcements (default).
+	LiveOff Live = ""
+	// LivePolite announces changes when the user is idle.
+	LivePolite Live = "polite"
+	// LiveAssertive interrupts current speech to announce changes.
+	LiveAssertive Live = "assertive"
+)
+
+// Relevant describes which mutations in a live region trigger announcements.
+// Mirrors aria-relevant: additions, removals, text, all.
+type Relevant string
+
+const (
+	// RelevantAdditions announces new children added to the region.
+	RelevantAdditions Relevant = "additions"
+	// RelevantRemovals announces children removed from the region.
+	RelevantRemovals Relevant = "removals"
+	// RelevantText announces text content changes.
+	RelevantText Relevant = "text"
+	// RelevantAll announces all mutations.
+	RelevantAll Relevant = "all"
+)
+
+// Landmark describes the structural significance of a widget for navigation.
+// Mirrors ARIA landmark roles: navigation, main, search, form, banner, etc.
+type Landmark string
+
+const (
+	LandmarkNone          Landmark = ""
+	LandmarkNavigation    Landmark = "navigation"
+	LandmarkMain          Landmark = "main"
+	LandmarkSearch        Landmark = "search"
+	LandmarkForm          Landmark = "form"
+	LandmarkBanner        Landmark = "banner"
+	LandmarkContentInfo   Landmark = "contentinfo"
+	LandmarkRegion        Landmark = "region"
+	LandmarkComplementary Landmark = "complementary"
 )
 
 // Accessible is implemented by widgets that expose accessibility metadata.
 type Accessible interface {
+	// Identity
 	AccessibleRole() Role
 	AccessibleLabel() string
 	AccessibleDescription() string
 	AccessibleState() StateSet
 	AccessibleValue() *ValueInfo
+
+	// Live regions — mirrors aria-live, aria-relevant, aria-atomic
+	AccessibleLive() Live
+	AccessibleRelevant() Relevant
+	AccessibleAtomic() bool
+
+	// Landmarks — mirrors ARIA landmark roles
+	AccessibleLandmark() Landmark
+
+	// Relationships — mirrors aria-labelledby, aria-describedby, aria-controls, aria-owns, aria-flowto
+	AccessibleLabelledBy() string
+	AccessibleDescribedBy() string
+	AccessibleControls() string
+	AccessibleOwns() string
+	AccessibleFlowTo() string
 }
 
 // StateSet describes the state of a widget.
 type StateSet struct {
 	Checked  *bool // nil = not applicable
 	Expanded *bool
+	Pressed  *bool // nil = not applicable (tri-state, for toggle buttons)
 	Selected bool
 	Disabled bool
 	ReadOnly bool
 	Required bool
 	Invalid  bool
+	Hidden   bool
+	Busy     bool
+	Modal    bool
 }
 
 // Strings returns human-friendly descriptions of the state.
@@ -92,6 +175,22 @@ func (s StateSet) Strings() []string {
 	}
 	if s.Invalid {
 		out = append(out, "invalid")
+	}
+	if s.Pressed != nil {
+		if *s.Pressed {
+			out = append(out, "pressed")
+		} else {
+			out = append(out, "not pressed")
+		}
+	}
+	if s.Hidden {
+		out = append(out, "hidden")
+	}
+	if s.Busy {
+		out = append(out, "busy")
+	}
+	if s.Modal {
+		out = append(out, "modal")
 	}
 	return out
 }
@@ -194,6 +293,21 @@ type Base struct {
 	Description string
 	State       StateSet
 	Value       *ValueInfo
+
+	// Live region behavior (aria-live, aria-relevant, aria-atomic)
+	Live     Live
+	Relevant Relevant
+	Atomic   bool
+
+	// Relationships (aria-labelledby, aria-describedby, aria-controls, aria-owns, aria-flowto)
+	LabelledBy  string
+	DescribedBy string
+	Controls    string
+	Owns        string
+	FlowTo      string
+
+	// Landmark (aria landmark roles)
+	Landmark Landmark
 }
 
 // AccessibleRole returns the current role.
@@ -276,6 +390,150 @@ func (b *Base) SetValue(value *ValueInfo) {
 	b.Value = value
 }
 
+// AccessibleLive returns the live region behavior.
+func (b *Base) AccessibleLive() Live {
+	if b == nil {
+		return LiveOff
+	}
+	return b.Live
+}
+
+// AccessibleRelevant returns which mutations trigger announcements.
+func (b *Base) AccessibleRelevant() Relevant {
+	if b == nil {
+		return ""
+	}
+	return b.Relevant
+}
+
+// AccessibleAtomic returns whether the entire region is announced on change.
+func (b *Base) AccessibleAtomic() bool {
+	if b == nil {
+		return false
+	}
+	return b.Atomic
+}
+
+// AccessibleLandmark returns the landmark designation.
+func (b *Base) AccessibleLandmark() Landmark {
+	if b == nil {
+		return LandmarkNone
+	}
+	return b.Landmark
+}
+
+// AccessibleLabelledBy returns the ID of the widget that labels this one.
+func (b *Base) AccessibleLabelledBy() string {
+	if b == nil {
+		return ""
+	}
+	return b.LabelledBy
+}
+
+// AccessibleDescribedBy returns the ID of the widget that describes this one.
+func (b *Base) AccessibleDescribedBy() string {
+	if b == nil {
+		return ""
+	}
+	return b.DescribedBy
+}
+
+// AccessibleControls returns the ID of the widget this one controls.
+func (b *Base) AccessibleControls() string {
+	if b == nil {
+		return ""
+	}
+	return b.Controls
+}
+
+// AccessibleOwns returns the ID of the widget this one owns.
+func (b *Base) AccessibleOwns() string {
+	if b == nil {
+		return ""
+	}
+	return b.Owns
+}
+
+// AccessibleFlowTo returns the ID of the next widget in reading order.
+func (b *Base) AccessibleFlowTo() string {
+	if b == nil {
+		return ""
+	}
+	return b.FlowTo
+}
+
+// SetLive updates the live region behavior.
+func (b *Base) SetLive(live Live) {
+	if b == nil {
+		return
+	}
+	b.Live = live
+}
+
+// SetRelevant updates which mutations trigger announcements.
+func (b *Base) SetRelevant(relevant Relevant) {
+	if b == nil {
+		return
+	}
+	b.Relevant = relevant
+}
+
+// SetAtomic updates whether the entire region is announced on change.
+func (b *Base) SetAtomic(atomic bool) {
+	if b == nil {
+		return
+	}
+	b.Atomic = atomic
+}
+
+// SetLandmark updates the landmark designation.
+func (b *Base) SetLandmark(landmark Landmark) {
+	if b == nil {
+		return
+	}
+	b.Landmark = landmark
+}
+
+// SetLabelledBy updates the ID of the widget that labels this one.
+func (b *Base) SetLabelledBy(id string) {
+	if b == nil {
+		return
+	}
+	b.LabelledBy = id
+}
+
+// SetDescribedBy updates the ID of the widget that describes this one.
+func (b *Base) SetDescribedBy(id string) {
+	if b == nil {
+		return
+	}
+	b.DescribedBy = id
+}
+
+// SetControls updates the ID of the widget this one controls.
+func (b *Base) SetControls(id string) {
+	if b == nil {
+		return
+	}
+	b.Controls = id
+}
+
+// SetOwns updates the ID of the widget this one owns.
+func (b *Base) SetOwns(id string) {
+	if b == nil {
+		return
+	}
+	b.Owns = id
+}
+
+// SetFlowTo updates the ID of the next widget in reading order.
+func (b *Base) SetFlowTo(id string) {
+	if b == nil {
+		return
+	}
+	b.FlowTo = id
+}
+
 // BoolPtr returns a pointer to a bool.
 func BoolPtr(value bool) *bool {
 	return &value
@@ -292,6 +550,23 @@ type SimpleAnnouncer struct {
 	mu        sync.Mutex
 	history   []Announcement
 	onMessage func(Announcement)
+	speaker   Speaker
+
+	// speech state
+	debounceTimer    *time.Timer
+	speechCancel     context.CancelFunc
+	speechAssertive  bool // true if current speech is assertive priority
+}
+
+// SetSpeaker attaches a TTS speaker to the announcer.
+// When set, announcements are automatically spoken.
+func (a *SimpleAnnouncer) SetSpeaker(s Speaker) {
+	if a == nil {
+		return
+	}
+	a.mu.Lock()
+	a.speaker = s
+	a.mu.Unlock()
 }
 
 // SetOnMessage sets a callback for new announcements.
@@ -319,6 +594,27 @@ func (a *SimpleAnnouncer) History() []Announcement {
 	return out
 }
 
+// CloseSpeaker stops any pending speech and closes the speaker.
+func (a *SimpleAnnouncer) CloseSpeaker() {
+	if a == nil {
+		return
+	}
+	a.mu.Lock()
+	if a.debounceTimer != nil {
+		a.debounceTimer.Stop()
+		a.debounceTimer = nil
+	}
+	if a.speechCancel != nil {
+		a.speechCancel()
+	}
+	s := a.speaker
+	a.speaker = nil
+	a.mu.Unlock()
+	if s != nil {
+		_ = s.Close()
+	}
+}
+
 // Announce publishes a message.
 func (a *SimpleAnnouncer) Announce(message string, priority Priority) {
 	if a == nil {
@@ -332,10 +628,62 @@ func (a *SimpleAnnouncer) Announce(message string, priority Priority) {
 	a.mu.Lock()
 	a.history = append(a.history, announcement)
 	cb := a.onMessage
+	speaker := a.speaker
 	a.mu.Unlock()
 	if cb != nil {
 		cb(announcement)
 	}
+	if speaker != nil {
+		a.dispatchSpeech(msg, priority, speaker)
+	}
+}
+
+func (a *SimpleAnnouncer) dispatchSpeech(text string, priority Priority, speaker Speaker) {
+	assertive := priority == PriorityAssertive || priority == PriorityUrgent || priority == PriorityHigh
+
+	if assertive {
+		// Interrupt any current speech and speak immediately.
+		a.mu.Lock()
+		if a.debounceTimer != nil {
+			a.debounceTimer.Stop()
+			a.debounceTimer = nil
+		}
+		if a.speechCancel != nil {
+			a.speechCancel()
+		}
+		ctx, cancel := context.WithCancel(context.Background())
+		a.speechCancel = cancel
+		a.speechAssertive = true
+		a.mu.Unlock()
+		_ = speaker.Stop()
+		go func() {
+			_ = speaker.Speak(ctx, text)
+			a.mu.Lock()
+			a.speechAssertive = false
+			a.mu.Unlock()
+		}()
+		return
+	}
+
+	// Polite: debounce 50ms, speak the latest message.
+	// Never interrupts in-progress assertive speech — waits for it to finish.
+	a.mu.Lock()
+	if a.debounceTimer != nil {
+		a.debounceTimer.Stop()
+	}
+	a.debounceTimer = time.AfterFunc(50*time.Millisecond, func() {
+		a.mu.Lock()
+		// Only cancel previous speech if it's not assertive.
+		if !a.speechAssertive && a.speechCancel != nil {
+			a.speechCancel()
+		}
+		ctx, cancel := context.WithCancel(context.Background())
+		a.speechCancel = cancel
+		a.mu.Unlock()
+		// speaker.Speak blocks until any in-progress speech finishes (speaker mutex).
+		_ = speaker.Speak(ctx, text)
+	})
+	a.mu.Unlock()
 }
 
 // AnnounceChange announces the widget state.

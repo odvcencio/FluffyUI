@@ -111,6 +111,15 @@ func (t *testInput) AccessibleValue() *accessibility.ValueInfo {
 	defer t.mu.RUnlock()
 	return &accessibility.ValueInfo{Text: t.value}
 }
+func (t *testInput) AccessibleLive() accessibility.Live           { return "" }
+func (t *testInput) AccessibleRelevant() accessibility.Relevant   { return "" }
+func (t *testInput) AccessibleAtomic() bool                       { return false }
+func (t *testInput) AccessibleLandmark() accessibility.Landmark   { return "" }
+func (t *testInput) AccessibleLabelledBy() string                 { return "" }
+func (t *testInput) AccessibleDescribedBy() string                { return "" }
+func (t *testInput) AccessibleControls() string                   { return "" }
+func (t *testInput) AccessibleOwns() string                      { return "" }
+func (t *testInput) AccessibleFlowTo() string                    { return "" }
 func (t *testInput) Text() string {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
@@ -200,6 +209,15 @@ func (t *testButton) AccessibleState() accessibility.StateSet {
 	return accessibility.StateSet{Disabled: t.disabled}
 }
 func (t *testButton) AccessibleValue() *accessibility.ValueInfo { return nil }
+func (t *testButton) AccessibleLive() accessibility.Live           { return "" }
+func (t *testButton) AccessibleRelevant() accessibility.Relevant   { return "" }
+func (t *testButton) AccessibleAtomic() bool                       { return false }
+func (t *testButton) AccessibleLandmark() accessibility.Landmark   { return "" }
+func (t *testButton) AccessibleLabelledBy() string                 { return "" }
+func (t *testButton) AccessibleDescribedBy() string                { return "" }
+func (t *testButton) AccessibleControls() string                   { return "" }
+func (t *testButton) AccessibleOwns() string                      { return "" }
+func (t *testButton) AccessibleFlowTo() string                    { return "" }
 
 func (t *testButton) Clicked() bool {
 	t.mu.RLock()

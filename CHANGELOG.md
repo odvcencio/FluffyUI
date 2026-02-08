@@ -1,5 +1,38 @@
 # Changelog
 
+## v0.3.5 - 2026-02-07
+
+### Highlights
+- Full WAI-ARIA 1.2 compliance: added missing states (`Pressed`, `Hidden`, `Busy`, `Modal`), relationship attributes (`Owns`, `FlowTo`), and 15 new roles.
+- TTS system: cross-platform speech backends (espeak/ssip on Linux, say on macOS, SAPI on Windows/WSL2) with `FLUFFYUI_TTS=1` one-liner.
+- Widget announcement wiring: Alert, Dialog, Tabs, Menu, ToastStack, Log, Search, Section, Progress, ScrollView, Sparkline, and BarChart now announce state changes to screen readers.
+
+### Accessibility
+- `StateSet`: added `Pressed *bool` (tri-state for toggle buttons), `Hidden bool`, `Busy bool`, `Modal bool` with `Strings()` output.
+- `Accessible` interface: added `AccessibleOwns()` and `AccessibleFlowTo()` relationship methods with setters on `Base`.
+- New ARIA roles: `combobox`, `switch`, `spinbutton`, `heading`, `link`, `separator`, `log`, `timer`, `feed`, `toolbar`, `searchbox`, `none`, `img`, `note`, `scrollbar`.
+- `Speaker` interface and `accessibility/tts` package with espeak, ssip (Linux), say (macOS), and SAPI (Windows/WSL2) backends.
+- `SimpleAnnouncer`: speech dispatch with assertive interrupt and polite debounce (50ms), assertive-priority protection.
+- `FormatChange`: builds screen-reader descriptions from widget metadata.
+
+### Widgets
+- Dialog: sets `State.Modal = true` by default.
+- Sparkline and BarChart: added `Bind`/`Unbind` for service wiring and change-based announcements.
+- Alert, Tabs, Menu, ToastStack, Log, Search, Section, Progress, ScrollView: wired `Bind`/`Unbind` with live region announcements on state changes.
+
+### Agent & MCP
+- `WidgetInfo`: added `Owns` and `FlowTo` fields, extracted in `extractWidgetInfo`.
+- MCP `StateSet`: changed `Pressed` from `bool` to `*bool`, added `Modal`.
+- MCP `WidgetInfo`/`WidgetNode`: added `Owns` and `FlowTo` fields.
+- `stateFromAgent`: maps `Pressed`, `Hidden`, `Busy`, `Modal`.
+- `roleToMCP`: handles all 15 new roles plus `chart`, `slider`, `table`, `row`, `cell`, `tablist`, `window`, `application`.
+- Diff detection: `widgetChanges` tracks `Owns`/`FlowTo`; `stateDiff` tracks `Hidden`/`Pressed`/`Modal`.
+
+### Tools & Examples
+- `cmd/fluffy-speak`: external screen reader CLI with snapshot polling, ARIA-driven announcements, and hidden widget filtering.
+- `examples/aria-demo`: expanded with relationship, form validation, toggle button, and busy state demos.
+- `fluffy.NewApp()`: auto-wires TTS when `FLUFFYUI_TTS=1` is set.
+
 ## v0.3.4 - 2026-02-05
 
 ### Highlights

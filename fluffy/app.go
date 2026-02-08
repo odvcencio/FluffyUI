@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/odvcencio/fluffyui/accessibility"
+	"github.com/odvcencio/fluffyui/accessibility/tts"
 	"github.com/odvcencio/fluffyui/audio"
 	"github.com/odvcencio/fluffyui/backend"
 	"github.com/odvcencio/fluffyui/backend/sim"
@@ -176,6 +177,8 @@ func newBuilder() (*appBuilder, error) {
 		return nil, err
 	}
 
+	speaker := buildSpeakerFromEnv()
+
 	cfg := runtime.AppConfig{
 		Backend:           be,
 		TickRate:          tick,
@@ -184,6 +187,7 @@ func newBuilder() (*appBuilder, error) {
 		Clipboard:         clip,
 		Stylesheet:        sheet,
 		Recorder:          recorder,
+		Speaker:           speaker,
 		FocusRegistration: runtime.FocusRegistrationAuto,
 		FocusStyle: &accessibility.FocusStyle{
 			Indicator: indicator,
@@ -508,6 +512,63 @@ func WithOnQuit(fn func(app *runtime.App)) AppOption {
 	}
 }
 
+// WithMCP enables the MCP agent server on the given unix socket path,
+// allowing tools like fluffy-speak to connect and read ARIA semantics.
+// An empty addr defaults to /tmp/fluffyui.sock.
+func WithMCP(addr string) AppOption {
+	return func(b *appBuilder) {
+		if b == nil {
+			return
+		}
+		if addr == "" {
+			addr = "/tmp/fluffyui.sock"
+		}
+		b.cfg.MCPOptions = &runtime.MCPOptions{
+			Transport: "unix",
+			Addr:      addr,
+		}
+	}
+}
+
+// WithTTS enables text-to-speech using the best available platform engine.
+// If no TTS engine is found, the app runs silently with no error.
+func WithTTS() AppOption {
+	return func(b *appBuilder) {
+		if b == nil {
+			return
+		}
+		speaker, _ := tts.Auto()
+		if speaker != nil {
+			b.cfg.Speaker = speaker
+		}
+	}
+}
+
+// WithTTSBackend forces a specific TTS backend by name.
+// Valid names: "espeak", "ssip", "say", "sapi", "mock".
+func WithTTSBackend(name string) AppOption {
+	return func(b *appBuilder) {
+		if b == nil {
+			return
+		}
+		speaker, err := tts.Auto(tts.WithBackend(name))
+		if err != nil {
+			return
+		}
+		b.cfg.Speaker = speaker
+	}
+}
+
+// WithSpeaker sets a custom Speaker implementation for TTS.
+func WithSpeaker(s accessibility.Speaker) AppOption {
+	return func(b *appBuilder) {
+		if b == nil || s == nil {
+			return
+		}
+		b.cfg.Speaker = s
+	}
+}
+
 // WithToastLayer configures the bundle to push a ToastStack as a non-modal
 // overlay layer on startup, wired to the given ToastManager. The resulting
 // ToastStack is available via Bundle.ToastStack for styling.
@@ -599,6 +660,25 @@ func buildRecorderFromEnv() (runtime.Recorder, error) {
 		return nil, fmt.Errorf("FLUFFYUI_RECORD is required when FLUFFYUI_RECORD_EXPORT is unset")
 	}
 	return recording.NewAsciicastRecorder(recordPath, opts)
+}
+
+// buildSpeakerFromEnv checks FLUFFYUI_TTS for TTS configuration.
+// Values: "1"/"true" = auto-detect, or a backend name like "sapi", "espeak", "ssip", "say".
+// Returns nil if unset or no engine is available (app runs silently).
+func buildSpeakerFromEnv() accessibility.Speaker {
+	val := strings.TrimSpace(os.Getenv("FLUFFYUI_TTS"))
+	if val == "" {
+		return nil
+	}
+	var opts []tts.Option
+	switch strings.ToLower(val) {
+	case "1", "true", "yes", "on", "auto":
+		// auto-detect
+	default:
+		opts = append(opts, tts.WithBackend(val))
+	}
+	speaker, _ := tts.Auto(opts...)
+	return speaker
 }
 
 func envInt(key string, fallback int) int {

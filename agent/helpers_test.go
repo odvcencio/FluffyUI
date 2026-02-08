@@ -26,6 +26,15 @@ func (s simpleAccessible) AccessibleState() accessibility.StateSet {
 	return accessibility.StateSet{}
 }
 func (s simpleAccessible) AccessibleValue() *accessibility.ValueInfo { return s.value }
+func (s simpleAccessible) AccessibleLive() accessibility.Live           { return "" }
+func (s simpleAccessible) AccessibleRelevant() accessibility.Relevant   { return "" }
+func (s simpleAccessible) AccessibleAtomic() bool                       { return false }
+func (s simpleAccessible) AccessibleLandmark() accessibility.Landmark   { return "" }
+func (s simpleAccessible) AccessibleLabelledBy() string                 { return "" }
+func (s simpleAccessible) AccessibleDescribedBy() string                { return "" }
+func (s simpleAccessible) AccessibleControls() string                   { return "" }
+func (s simpleAccessible) AccessibleOwns() string                      { return "" }
+func (s simpleAccessible) AccessibleFlowTo() string                    { return "" }
 
 func TestAccessibleChoice(t *testing.T) {
 	if accessibleChoice(nil) != "" {

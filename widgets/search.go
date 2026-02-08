@@ -19,6 +19,7 @@ type SearchWidget struct {
 	matchCount   int
 	currentMatch int
 	label        string
+	services     runtime.Services
 
 	// Callbacks
 	onSearch func(query string)
@@ -43,8 +44,25 @@ func NewSearchWidget() *SearchWidget {
 		matchStyle:  backend.DefaultStyle().Foreground(backend.ColorYellow),
 	}
 	w.Base.Role = accessibility.RoleTextbox
+	w.Base.Landmark = accessibility.LandmarkSearch
 	w.syncA11y()
 	return w
+}
+
+// Bind attaches app services.
+func (s *SearchWidget) Bind(services runtime.Services) {
+	if s == nil {
+		return
+	}
+	s.services = services
+}
+
+// Unbind releases app services.
+func (s *SearchWidget) Unbind() {
+	if s == nil {
+		return
+	}
+	s.services = runtime.Services{}
 }
 
 // StyleType returns the selector type name.
@@ -81,6 +99,13 @@ func (s *SearchWidget) SetMatchInfo(current, total int) {
 	s.currentMatch = current
 	s.matchCount = total
 	s.syncA11y()
+	if announcer := s.services.Announcer(); announcer != nil {
+		if total > 0 {
+			announcer.Announce(fmt.Sprintf("%d of %d matches", current+1, total), accessibility.PriorityPolite)
+		} else if s.query != "" {
+			announcer.Announce("no matches", accessibility.PriorityPolite)
+		}
+	}
 }
 
 // SetLabel updates the accessibility label.
@@ -269,4 +294,6 @@ func (s *SearchWidget) syncA11y() {
 
 var _ runtime.Widget = (*SearchWidget)(nil)
 var _ runtime.Focusable = (*SearchWidget)(nil)
+var _ runtime.Bindable = (*SearchWidget)(nil)
+var _ runtime.Unbindable = (*SearchWidget)(nil)
 var _ Searchable = (*SearchWidget)(nil)

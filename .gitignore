@@ -1,3 +1,8 @@
+# Compiled binaries
+/aria-demo
+/fluffy-speak
+examples/aria-demo/aria-demo
+
 docs/demos/candy-wars.cast
 examples/candy-wars/examples/candy-wars/candy-wars-meta.json
 

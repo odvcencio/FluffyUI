@@ -2214,7 +2214,12 @@ func stateMatches(widget StateSet, filter StateSet) bool {
 	if filter.Hidden && !widget.Hidden {
 		return false
 	}
-	if filter.Pressed && !widget.Pressed {
+	if filter.Pressed != nil {
+		if widget.Pressed == nil || *widget.Pressed != *filter.Pressed {
+			return false
+		}
+	}
+	if filter.Modal && !widget.Modal {
 		return false
 	}
 	if filter.Selected && !widget.Selected {
@@ -3162,6 +3167,33 @@ func widgetChanges(before WidgetInfo, after WidgetInfo) map[string]ValueChange {
 	if before.ParentID != after.ParentID {
 		changes["parent_id"] = ValueChange{Old: before.ParentID, New: after.ParentID}
 	}
+	if before.Live != after.Live {
+		changes["live"] = ValueChange{Old: before.Live, New: after.Live}
+	}
+	if before.Relevant != after.Relevant {
+		changes["relevant"] = ValueChange{Old: before.Relevant, New: after.Relevant}
+	}
+	if before.Atomic != after.Atomic {
+		changes["atomic"] = ValueChange{Old: before.Atomic, New: after.Atomic}
+	}
+	if before.Landmark != after.Landmark {
+		changes["landmark"] = ValueChange{Old: before.Landmark, New: after.Landmark}
+	}
+	if before.LabelledBy != after.LabelledBy {
+		changes["labelled_by"] = ValueChange{Old: before.LabelledBy, New: after.LabelledBy}
+	}
+	if before.DescribedBy != after.DescribedBy {
+		changes["described_by"] = ValueChange{Old: before.DescribedBy, New: after.DescribedBy}
+	}
+	if before.Controls != after.Controls {
+		changes["controls"] = ValueChange{Old: before.Controls, New: after.Controls}
+	}
+	if before.Owns != after.Owns {
+		changes["owns"] = ValueChange{Old: before.Owns, New: after.Owns}
+	}
+	if before.FlowTo != after.FlowTo {
+		changes["flow_to"] = ValueChange{Old: before.FlowTo, New: after.FlowTo}
+	}
 	stateChanges := stateDiff(before.State, after.State)
 	for key, change := range stateChanges {
 		changes["state."+key] = change
@@ -3194,6 +3226,18 @@ func stateDiff(before StateSet, after StateSet) map[string]ValueChange {
 	}
 	if !boolPtrEqual(before.Expanded, after.Expanded) {
 		changes["expanded"] = ValueChange{Old: before.Expanded, New: after.Expanded}
+	}
+	if before.Busy != after.Busy {
+		changes["busy"] = ValueChange{Old: before.Busy, New: after.Busy}
+	}
+	if before.Hidden != after.Hidden {
+		changes["hidden"] = ValueChange{Old: before.Hidden, New: after.Hidden}
+	}
+	if !boolPtrEqual(before.Pressed, after.Pressed) {
+		changes["pressed"] = ValueChange{Old: before.Pressed, New: after.Pressed}
+	}
+	if before.Modal != after.Modal {
+		changes["modal"] = ValueChange{Old: before.Modal, New: after.Modal}
 	}
 	return changes
 }

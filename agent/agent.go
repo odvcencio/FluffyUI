@@ -298,6 +298,15 @@ func (a *Agent) extractWidgetInfo(w runtime.Widget, id string) WidgetInfo {
 			info.Value = val.Text
 			info.ValueInfo = val
 		}
+		info.Live = string(acc.AccessibleLive())
+		info.Relevant = string(acc.AccessibleRelevant())
+		info.Atomic = acc.AccessibleAtomic()
+		info.Landmark = string(acc.AccessibleLandmark())
+		info.LabelledBy = acc.AccessibleLabelledBy()
+		info.DescribedBy = acc.AccessibleDescribedBy()
+		info.Controls = acc.AccessibleControls()
+		info.Owns = acc.AccessibleOwns()
+		info.FlowTo = acc.AccessibleFlowTo()
 	}
 
 	// Infer textbox role/value from focusable text widgets when accessibility is missing.

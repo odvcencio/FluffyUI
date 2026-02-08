@@ -22,10 +22,13 @@ const (
 // Alert renders an inline message.
 type Alert struct {
 	Base
-	Variant AlertVariant
-	Text    string
-	style   backend.Style
+	Variant  AlertVariant
+	Text     string
+	style    backend.Style
 	styleSet bool
+	services    runtime.Services
+	prevText    string       // tracks text changes for announcements
+	prevVariant AlertVariant // tracks variant changes for announcements
 }
 
 // NewAlert creates an alert.
@@ -37,7 +40,26 @@ func NewAlert(text string, variant AlertVariant) *Alert {
 	}
 	alert.Base.Role = accessibility.RoleAlert
 	alert.Base.Label = text
+	alert.Base.Live = accessibility.LiveAssertive
+	alert.Base.Relevant = accessibility.RelevantAll
+	alert.Base.Atomic = true
 	return alert
+}
+
+// Bind attaches app services.
+func (a *Alert) Bind(services runtime.Services) {
+	if a == nil {
+		return
+	}
+	a.services = services
+}
+
+// Unbind releases app services.
+func (a *Alert) Unbind() {
+	if a == nil {
+		return
+	}
+	a.services = runtime.Services{}
 }
 
 // SetStyle updates the alert style.
@@ -140,6 +162,21 @@ func (a *Alert) syncA11y() {
 	if a.Variant != "" {
 		a.Base.Description = string(a.Variant)
 	}
+	// Announce text or variant changes assertively (alerts are live regions).
+	changed := (label != a.prevText || a.Variant != a.prevVariant) && a.prevText != ""
+	if changed {
+		if announcer := a.services.Announcer(); announcer != nil {
+			msg := label
+			if a.Variant != "" {
+				msg = string(a.Variant) + ": " + label
+			}
+			announcer.Announce(msg, accessibility.PriorityAssertive)
+		}
+	}
+	a.prevText = label
+	a.prevVariant = a.Variant
 }
 
 var _ runtime.Widget = (*Alert)(nil)
+var _ runtime.Bindable = (*Alert)(nil)
+var _ runtime.Unbindable = (*Alert)(nil)

@@ -1,0 +1,68 @@
+# ARIA Accessibility Demo — agent-driver script
+# Walks through each ARIA-annotated widget at a human-readable pace.
+# Usage:
+#   go run ./scripts/agent-driver \
+#     --script scripts/agent-driver/scripts/aria-demo.jsonl \
+#     -- go run ./examples/aria-demo
+
+# Wait for startup
+{"type":"sleep","ms":1500}
+
+# Focus lands on first focusable widget (Tabs).
+# Pause so fluffy-speak announces it.
+{"type":"sleep","ms":800}
+
+# Switch tab: Dashboard → Settings
+{"type":"key","key":"right","delay_ms":800}
+
+# Switch back: Settings → Dashboard
+{"type":"key","key":"left","delay_ms":800}
+
+# Tab to Alert
+{"type":"key","key":"tab","delay_ms":800}
+
+# Tab to Progress bar
+{"type":"key","key":"tab","delay_ms":800}
+
+# Tab to Search widget (landmark: search)
+{"type":"key","key":"tab","delay_ms":600}
+
+# Type a search query
+{"type":"text","text":"deploy","delay_ms":800}
+
+# Tab to Toggle Alert button
+{"type":"key","key":"tab","delay_ms":600}
+
+# Press Enter to toggle alert (success → error)
+{"type":"key","key":"enter","delay_ms":1000}
+
+# Tab to Show Toast button
+{"type":"key","key":"tab","delay_ms":600}
+
+# Press Enter to fire a toast
+{"type":"key","key":"enter","delay_ms":1200}
+
+# Press T to fire another toast via shortcut
+{"type":"key","key":"t","delay_ms":1200}
+
+# Tab to Log widget
+{"type":"key","key":"tab","delay_ms":800}
+
+# Open dialog with D
+{"type":"key","key":"d","delay_ms":1200}
+
+# Dismiss dialog with Enter
+{"type":"key","key":"enter","delay_ms":1000}
+
+# Toggle alert back (error → success)
+# Shift-tab back to Toggle Alert
+{"type":"key","key":"tab","shift":true,"delay_ms":600}
+{"type":"key","key":"tab","shift":true,"delay_ms":600}
+{"type":"key","key":"tab","shift":true,"delay_ms":600}
+{"type":"key","key":"enter","delay_ms":1000}
+
+# Let progress bar animate for a few seconds
+{"type":"sleep","ms":3000}
+
+# Exit
+{"type":"key","key":"q","delay_ms":500}

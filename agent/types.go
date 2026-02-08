@@ -40,4 +40,15 @@ type WidgetInfo struct {
 	Actions     []string                 `json:"actions,omitempty"`
 	Focusable   bool                     `json:"focusable,omitempty"`
 	Focused     bool                     `json:"focused,omitempty"`
+
+	// ARIA-like live region, landmark, and relationship fields
+	Live        string `json:"live,omitempty"`
+	Relevant    string `json:"relevant,omitempty"`
+	Atomic      bool   `json:"atomic,omitempty"`
+	Landmark    string `json:"landmark,omitempty"`
+	LabelledBy  string `json:"labelled_by,omitempty"`
+	DescribedBy string `json:"described_by,omitempty"`
+	Controls    string `json:"controls,omitempty"`
+	Owns        string `json:"owns,omitempty"`
+	FlowTo      string `json:"flow_to,omitempty"`
 }

@@ -184,6 +184,8 @@ func NewLog(opts ...LogOption) *Log {
 	}
 	l.entries = make([]LogEntry, l.maxLines)
 	l.Base.Role = accessibility.RoleList
+	l.Base.Live = accessibility.LivePolite
+	l.Base.Relevant = accessibility.RelevantAdditions
 	l.syncA11y()
 	return l
 }
@@ -286,7 +288,20 @@ func (l *Log) AddEntry(entry LogEntry) {
 		l.offset = 0
 	}
 
+	// Announce new entries with priority based on level.
+	msg := strings.TrimSpace(entry.Message)
+	announcer := l.services.Announcer()
+	level := entry.Level
+
 	l.Invalidate()
+
+	if msg != "" && announcer != nil {
+		priority := accessibility.PriorityPolite
+		if level >= LogError {
+			priority = accessibility.PriorityAssertive
+		}
+		announcer.Announce(msg, priority)
+	}
 }
 
 // Clear removes all entries from the log.

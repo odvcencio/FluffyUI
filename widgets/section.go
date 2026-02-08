@@ -27,6 +27,7 @@ type Section struct {
 	expanded bool
 	maxItems int // Max items to show when expanded (0 = all)
 	label    string
+	services runtime.Services
 
 	// Styles
 	headerStyle   backend.Style
@@ -54,8 +55,28 @@ func NewSection(title string) *Section {
 		activeIcon:    backend.DefaultStyle().Foreground(backend.ColorYellow),
 	}
 	section.Base.Role = accessibility.RoleGroup
+	section.Base.Live = accessibility.LivePolite
+	section.Base.Relevant = accessibility.RelevantText
+	section.Base.Atomic = true
+	section.Base.Landmark = accessibility.LandmarkContentInfo
 	section.syncA11y()
 	return section
+}
+
+// Bind attaches app services.
+func (s *Section) Bind(services runtime.Services) {
+	if s == nil {
+		return
+	}
+	s.services = services
+}
+
+// Unbind releases app services.
+func (s *Section) Unbind() {
+	if s == nil {
+		return
+	}
+	s.services = runtime.Services{}
 }
 
 // StyleType returns the selector type name.
@@ -90,6 +111,7 @@ func (s *Section) IsExpanded() bool {
 func (s *Section) Toggle() {
 	s.expanded = !s.expanded
 	s.syncA11y()
+	s.announceState()
 }
 
 // SetMaxItems sets the maximum items to show when expanded.
@@ -236,6 +258,7 @@ func (s *Section) HandleMessage(msg runtime.Message) runtime.HandleResult {
 	if key.Key == terminal.KeyEnter || (key.Key == terminal.KeyRune && key.Rune == ' ') {
 		s.expanded = !s.expanded
 		s.syncA11y()
+		s.announceState()
 		return runtime.Handled()
 	}
 
@@ -294,5 +317,17 @@ func (s *Section) activeItemLabel() string {
 	return ""
 }
 
+func (s *Section) announceState() {
+	if announcer := s.services.Announcer(); announcer != nil {
+		state := "collapsed"
+		if s.expanded {
+			state = "expanded"
+		}
+		announcer.Announce(s.title+" "+state, accessibility.PriorityPolite)
+	}
+}
+
 var _ runtime.Widget = (*Section)(nil)
 var _ runtime.Focusable = (*Section)(nil)
+var _ runtime.Bindable = (*Section)(nil)
+var _ runtime.Unbindable = (*Section)(nil)

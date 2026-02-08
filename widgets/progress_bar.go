@@ -12,11 +12,13 @@ import (
 // Progress displays a determinate progress bar.
 type Progress struct {
 	Base
-	Value       float64
-	Max         float64
-	Label       string
-	ShowPercent bool
-	Style       GaugeStyle
+	Value         float64
+	Max           float64
+	Label         string
+	ShowPercent   bool
+	Style         GaugeStyle
+	services      runtime.Services
+	lastMilestone int // last announced milestone percentage (0, 25, 50, 75, 100)
 }
 
 // NewProgress creates a progress widget.
@@ -27,8 +29,26 @@ func NewProgress() *Progress {
 		Style:       GaugeStyle{EmptyStyle: backend.DefaultStyle()},
 	}
 	p.Base.Role = accessibility.RoleProgressBar
+	p.Base.Relevant = accessibility.RelevantText
+	p.Base.Atomic = true
 	p.syncA11y()
 	return p
+}
+
+// Bind attaches app services.
+func (p *Progress) Bind(services runtime.Services) {
+	if p == nil {
+		return
+	}
+	p.services = services
+}
+
+// Unbind releases app services.
+func (p *Progress) Unbind() {
+	if p == nil {
+		return
+	}
+	p.services = runtime.Services{}
 }
 
 // StyleType returns the selector type name.
@@ -108,6 +128,17 @@ func (p *Progress) syncA11y() {
 		Current: value,
 		Text:    fmt.Sprintf("%3.0f%%", ratio*100),
 	}
+	// Announce at milestones: 25%, 50%, 75%, 100%.
+	pct := int(ratio * 100)
+	milestone := (pct / 25) * 25
+	if milestone > p.lastMilestone && milestone > 0 {
+		p.lastMilestone = milestone
+		if announcer := p.services.Announcer(); announcer != nil {
+			announcer.Announce(fmt.Sprintf("%s %d%%", label, milestone), accessibility.PriorityPolite)
+		}
+	} else if pct == 0 && p.lastMilestone > 0 {
+		p.lastMilestone = 0 // reset on loop
+	}
 }
 
 func mergeGaugeStyle(base backend.Style, style GaugeStyle) GaugeStyle {
@@ -127,3 +158,5 @@ func mergeGaugeStyle(base backend.Style, style GaugeStyle) GaugeStyle {
 }
 
 var _ runtime.Widget = (*Progress)(nil)
+var _ runtime.Bindable = (*Progress)(nil)
+var _ runtime.Unbindable = (*Progress)(nil)

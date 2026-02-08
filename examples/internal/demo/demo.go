@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/odvcencio/fluffyui/accessibility"
+	_ "github.com/odvcencio/fluffyui/agent/mcp" // register MCP enabler for FLUFFY_MCP env
 	"github.com/odvcencio/fluffyui/backend"
 	"github.com/odvcencio/fluffyui/clipboard"
 	"github.com/odvcencio/fluffyui/fluffy"
@@ -19,6 +20,11 @@ type Options struct {
 	Announcer      accessibility.Announcer
 	Clipboard      clipboard.Clipboard
 	CommandHandler runtime.CommandHandler
+	// MCP enables the MCP agent server on the given unix socket path,
+	// allowing fluffy-speak and other tools to connect. Empty string disables.
+	MCP string
+	// TTS enables text-to-speech using the best available platform engine.
+	TTS bool
 }
 
 // Bundle exposes shared demo wiring.
@@ -51,6 +57,12 @@ func NewApp(root runtime.Widget, opts Options) (*Bundle, error) {
 	}
 	if opts.Clipboard != nil {
 		options = append(options, fluffy.WithClipboard(opts.Clipboard))
+	}
+	if opts.MCP != "" {
+		options = append(options, fluffy.WithMCP(opts.MCP))
+	}
+	if opts.TTS {
+		options = append(options, fluffy.WithTTS())
 	}
 
 	bundle, err := fluffy.NewBundle(options...)

@@ -36,8 +36,10 @@ type Dialog struct {
 	startTime   time.Time
 	paused      bool
 
-	style    backend.Style
-	styleSet bool
+	style     backend.Style
+	styleSet  bool
+	services  runtime.Services
+	announced bool // prevents re-announcing on every render
 }
 
 // DialogOption configures a Dialog widget.
@@ -117,6 +119,10 @@ func NewDialog(title, body string, buttons ...DialogButton) *Dialog {
 	dialog.Base.Role = accessibility.RoleDialog
 	dialog.Base.Label = title
 	dialog.Base.Description = body
+	dialog.Base.Live = accessibility.LiveAssertive
+	dialog.Base.Relevant = accessibility.RelevantAll
+	dialog.Base.Atomic = true
+	dialog.Base.State.Modal = true
 	return dialog
 }
 
@@ -132,6 +138,22 @@ func (d *Dialog) Apply(opts ...DialogOption) *Dialog {
 		opt(d)
 	}
 	return d
+}
+
+// Bind attaches app services and announces dialog content.
+func (d *Dialog) Bind(services runtime.Services) {
+	if d == nil {
+		return
+	}
+	d.services = services
+}
+
+// Unbind releases app services.
+func (d *Dialog) Unbind() {
+	if d == nil {
+		return
+	}
+	d.services = runtime.Services{}
 }
 
 // StyleType returns the selector type name.
@@ -517,7 +539,15 @@ func (d *Dialog) setSelected(index int) {
 	if index >= len(d.Buttons) {
 		index = len(d.Buttons) - 1
 	}
+	prev := d.selected
 	d.selected = index
+	if prev != index {
+		if announcer := d.services.Announcer(); announcer != nil {
+			if index >= 0 && index < len(d.Buttons) {
+				announcer.Announce(d.Buttons[index].Label, accessibility.PriorityAssertive)
+			}
+		}
+	}
 }
 
 func (d *Dialog) syncA11y() {
@@ -536,7 +566,40 @@ func (d *Dialog) syncA11y() {
 	} else {
 		d.Base.Value = nil
 	}
+	// Announce full dialog content on first render.
+	if !d.announced {
+		if announcer := d.services.Announcer(); announcer != nil {
+			d.announced = true
+			announcer.Announce(d.formatAnnouncement(), accessibility.PriorityAssertive)
+		}
+	}
+}
+
+// formatAnnouncement builds a screen-reader-style description of the dialog.
+func (d *Dialog) formatAnnouncement() string {
+	var parts []string
+	if t := strings.TrimSpace(d.Title); t != "" {
+		parts = append(parts, t)
+	}
+	parts = append(parts, "dialog")
+	if b := strings.TrimSpace(d.Body); b != "" {
+		parts = append(parts, b)
+	}
+	if len(d.Buttons) > 0 {
+		labels := make([]string, 0, len(d.Buttons))
+		for _, btn := range d.Buttons {
+			if l := strings.TrimSpace(btn.Label); l != "" {
+				labels = append(labels, l)
+			}
+		}
+		if len(labels) > 0 {
+			parts = append(parts, "Buttons: "+strings.Join(labels, ", "))
+		}
+	}
+	return strings.Join(parts, ". ")
 }
 
 var _ runtime.Widget = (*Dialog)(nil)
 var _ runtime.Focusable = (*Dialog)(nil)
+var _ runtime.Bindable = (*Dialog)(nil)
+var _ runtime.Unbindable = (*Dialog)(nil)

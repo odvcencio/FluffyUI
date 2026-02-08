@@ -38,6 +38,8 @@ type ToastStack struct {
 	now        time.Time
 	animate    bool
 	label      string
+	services   runtime.Services
+	prevCount  int // tracks toast count for new-toast announcements
 
 	bgStyle      backend.Style
 	textStyle    backend.Style
@@ -60,8 +62,26 @@ func NewToastStack() *ToastStack {
 		animate:      true,
 	}
 	stack.Base.Role = accessibility.RoleStatus
+	stack.Base.Live = accessibility.LiveAssertive
+	stack.Base.Relevant = accessibility.RelevantAdditions
 	stack.syncA11y()
 	return stack
+}
+
+// Bind attaches app services.
+func (t *ToastStack) Bind(services runtime.Services) {
+	if t == nil {
+		return
+	}
+	t.services = services
+}
+
+// Unbind releases app services.
+func (t *ToastStack) Unbind() {
+	if t == nil {
+		return
+	}
+	t.services = runtime.Services{}
 }
 
 // StyleType returns the selector type name.
@@ -71,8 +91,26 @@ func (t *ToastStack) StyleType() string {
 
 // SetToasts updates the toast list.
 func (t *ToastStack) SetToasts(toasts []*toast.Toast) {
+	prevCount := t.prevCount
 	t.toasts = toasts
 	t.syncA11y()
+	t.prevCount = len(toasts)
+	// Announce new toasts with priority based on level.
+	if len(toasts) > prevCount && prevCount >= 0 {
+		latest := toasts[len(toasts)-1]
+		if latest != nil {
+			text := strings.TrimSpace(latest.Title + " " + latest.Message)
+			if text != "" {
+				if announcer := t.services.Announcer(); announcer != nil {
+					priority := accessibility.PriorityPolite
+					if latest.Level == toast.ToastError {
+						priority = accessibility.PriorityAssertive
+					}
+					announcer.Announce(text, priority)
+				}
+			}
+		}
+	}
 }
 
 // SetLabel updates the accessibility label.
@@ -387,3 +425,5 @@ func maxLineLen(lines []string) int {
 }
 
 var _ runtime.Widget = (*ToastStack)(nil)
+var _ runtime.Bindable = (*ToastStack)(nil)
+var _ runtime.Unbindable = (*ToastStack)(nil)

@@ -105,6 +105,15 @@ func (t *testCheckbox) AccessibleState() accessibility.StateSet {
 	return accessibility.StateSet{Disabled: disabled, Checked: &checked}
 }
 func (t *testCheckbox) AccessibleValue() *accessibility.ValueInfo { return nil }
+func (t *testCheckbox) AccessibleLive() accessibility.Live           { return "" }
+func (t *testCheckbox) AccessibleRelevant() accessibility.Relevant   { return "" }
+func (t *testCheckbox) AccessibleAtomic() bool                       { return false }
+func (t *testCheckbox) AccessibleLandmark() accessibility.Landmark   { return "" }
+func (t *testCheckbox) AccessibleLabelledBy() string                 { return "" }
+func (t *testCheckbox) AccessibleDescribedBy() string                { return "" }
+func (t *testCheckbox) AccessibleControls() string                   { return "" }
+func (t *testCheckbox) AccessibleOwns() string                      { return "" }
+func (t *testCheckbox) AccessibleFlowTo() string                    { return "" }
 
 type testList struct {
 	mu       sync.RWMutex
@@ -220,6 +229,15 @@ func (t *testList) AccessibleState() accessibility.StateSet {
 func (t *testList) AccessibleValue() *accessibility.ValueInfo {
 	return &accessibility.ValueInfo{Text: t.current()}
 }
+func (t *testList) AccessibleLive() accessibility.Live           { return "" }
+func (t *testList) AccessibleRelevant() accessibility.Relevant   { return "" }
+func (t *testList) AccessibleAtomic() bool                       { return false }
+func (t *testList) AccessibleLandmark() accessibility.Landmark   { return "" }
+func (t *testList) AccessibleLabelledBy() string                 { return "" }
+func (t *testList) AccessibleDescribedBy() string                { return "" }
+func (t *testList) AccessibleControls() string                   { return "" }
+func (t *testList) AccessibleOwns() string                      { return "" }
+func (t *testList) AccessibleFlowTo() string                    { return "" }
 
 type recordWidget struct {
 	mu        sync.Mutex

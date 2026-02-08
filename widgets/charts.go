@@ -14,10 +14,12 @@ import (
 // Sparkline renders a compact single-line chart.
 type Sparkline struct {
 	Base
-	Data  *state.Signal[[]float64]
-	Width int
-	Style backend.Style
-	label string
+	Data     *state.Signal[[]float64]
+	Width    int
+	Style    backend.Style
+	label    string
+	services runtime.Services
+	lastDesc string // track changes for announcements
 }
 
 // NewSparkline creates a sparkline.
@@ -28,6 +30,9 @@ func NewSparkline(data *state.Signal[[]float64]) *Sparkline {
 		label: "Sparkline",
 	}
 	s.Base.Role = accessibility.RoleChart
+	s.Base.Live = accessibility.LivePolite
+	s.Base.Relevant = accessibility.RelevantText
+	s.Base.Atomic = true
 	s.syncA11y()
 	return s
 }
@@ -101,6 +106,22 @@ func (s *Sparkline) HandleMessage(msg runtime.Message) runtime.HandleResult {
 	return runtime.Unhandled()
 }
 
+// Bind attaches app services.
+func (s *Sparkline) Bind(services runtime.Services) {
+	if s == nil {
+		return
+	}
+	s.services = services
+}
+
+// Unbind releases app services.
+func (s *Sparkline) Unbind() {
+	if s == nil {
+		return
+	}
+	s.services = runtime.Services{}
+}
+
 func (s *Sparkline) syncA11y() {
 	if s == nil {
 		return
@@ -132,9 +153,16 @@ func (s *Sparkline) syncA11y() {
 		}
 	}
 	last := values[len(values)-1]
-	s.Base.Description = fmt.Sprintf("%d points", len(values))
+	desc := fmt.Sprintf("%d points", len(values))
+	s.Base.Description = desc
 	s.Base.Value = &accessibility.ValueInfo{
 		Text: fmt.Sprintf("min %s, max %s, last %s", formatFloat(minVal), formatFloat(maxVal), formatFloat(last)),
+	}
+	if desc != s.lastDesc {
+		s.lastDesc = desc
+		if announcer := s.services.Announcer(); announcer != nil {
+			announcer.AnnounceChange(s)
+		}
 	}
 }
 
@@ -152,6 +180,8 @@ type BarChart struct {
 	ShowLabels bool
 	Style      backend.Style
 	label      string
+	services   runtime.Services
+	lastDesc   string // track changes for announcements
 }
 
 // NewBarChart creates a bar chart.
@@ -164,6 +194,9 @@ func NewBarChart(data *state.Signal[[]BarData]) *BarChart {
 		label:      "Bar Chart",
 	}
 	b.Base.Role = accessibility.RoleChart
+	b.Base.Live = accessibility.LivePolite
+	b.Base.Relevant = accessibility.RelevantText
+	b.Base.Atomic = true
 	b.syncA11y()
 	return b
 }
@@ -252,6 +285,22 @@ func (b *BarChart) HandleMessage(msg runtime.Message) runtime.HandleResult {
 	return runtime.Unhandled()
 }
 
+// Bind attaches app services.
+func (b *BarChart) Bind(services runtime.Services) {
+	if b == nil {
+		return
+	}
+	b.services = services
+}
+
+// Unbind releases app services.
+func (b *BarChart) Unbind() {
+	if b == nil {
+		return
+	}
+	b.services = runtime.Services{}
+}
+
 func (b *BarChart) syncA11y() {
 	if b == nil {
 		return
@@ -279,11 +328,18 @@ func (b *BarChart) syncA11y() {
 			maxEntry = entry
 		}
 	}
-	b.Base.Description = fmt.Sprintf("%d bars", len(entries))
+	desc := fmt.Sprintf("%d bars", len(entries))
+	b.Base.Description = desc
 	if strings.TrimSpace(maxEntry.Label) != "" {
 		b.Base.Value = &accessibility.ValueInfo{Text: fmt.Sprintf("%s: %s", maxEntry.Label, formatFloat(maxEntry.Value))}
 	} else {
 		b.Base.Value = &accessibility.ValueInfo{Text: formatFloat(maxEntry.Value)}
+	}
+	if desc != b.lastDesc {
+		b.lastDesc = desc
+		if announcer := b.services.Announcer(); announcer != nil {
+			announcer.AnnounceChange(b)
+		}
 	}
 }
 
@@ -292,4 +348,8 @@ func formatFloat(value float64) string {
 }
 
 var _ runtime.Widget = (*Sparkline)(nil)
+var _ runtime.Bindable = (*Sparkline)(nil)
+var _ runtime.Unbindable = (*Sparkline)(nil)
 var _ runtime.Widget = (*BarChart)(nil)
+var _ runtime.Bindable = (*BarChart)(nil)
+var _ runtime.Unbindable = (*BarChart)(nil)
