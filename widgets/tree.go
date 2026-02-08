@@ -32,6 +32,13 @@ type Tree struct {
 	flatDirty     bool
 	rootRef       *TreeNode
 	services      runtime.Services
+
+	// Virtual scrolling fields
+	virtualScroll bool
+	virtualList   *scroll.VirtualList
+	virtualOvrscn int
+	lastVisStart  int
+	lastVisEnd    int
 }
 
 // NewTree creates a tree widget.
@@ -48,6 +55,73 @@ func NewTree(root *TreeNode) *Tree {
 	tree.Base.Role = accessibility.RoleTree
 	tree.syncA11y()
 	return tree
+}
+
+// SetVirtualScroll enables or disables virtual scrolling for large trees.
+// When enabled, only visible rows (plus overscan) are rendered each frame,
+// which dramatically improves performance for trees with thousands of nodes.
+func (t *Tree) SetVirtualScroll(enabled bool) {
+	if t == nil {
+		return
+	}
+	t.virtualScroll = enabled
+	if enabled {
+		t.ensureVirtualList()
+	}
+}
+
+// VirtualScroll reports whether virtual scrolling is enabled.
+func (t *Tree) VirtualScroll() bool {
+	if t == nil {
+		return false
+	}
+	return t.virtualScroll
+}
+
+// SetVirtualOverscan sets the number of extra rows to render above and below
+// the visible area when virtual scrolling is enabled. Default is 2.
+func (t *Tree) SetVirtualOverscan(count int) {
+	if t == nil {
+		return
+	}
+	if count < 0 {
+		count = 0
+	}
+	t.virtualOvrscn = count
+	if t.virtualList != nil {
+		t.virtualList.SetOverscan(count)
+	}
+}
+
+// VisibleRange returns the [start, end) flattened node indices currently rendered.
+func (t *Tree) VisibleRange() (start, end int) {
+	if t == nil {
+		return 0, 0
+	}
+	return t.lastVisStart, t.lastVisEnd
+}
+
+func (t *Tree) ensureVirtualList() {
+	if t.virtualList != nil {
+		return
+	}
+	rows := t.flatten()
+	t.virtualList = scroll.NewVirtualList(len(rows), 1, nil)
+	overscan := t.virtualOvrscn
+	if overscan <= 0 {
+		overscan = 2
+	}
+	t.virtualList.SetOverscan(overscan)
+}
+
+func (t *Tree) syncVirtualList(rows []treeRow, viewportHeight int) {
+	if t.virtualList == nil {
+		return
+	}
+	t.virtualList.SetItemCount(len(rows))
+	t.virtualList.SetViewportHeight(viewportHeight)
+	t.virtualList.SetSelected(t.selectedIndex)
+	t.virtualList.EnsureVisible(t.selectedIndex)
 }
 
 // SetStyle updates the base tree style.
@@ -129,11 +203,22 @@ func (t *Tree) Render(ctx runtime.RenderContext) {
 	if t.selectedIndex >= len(rows) {
 		t.selectedIndex = len(rows) - 1
 	}
+
+	if t.virtualScroll {
+		t.renderVirtualRows(ctx, content, rows, baseStyle)
+		return
+	}
+
 	if t.selectedIndex < t.offset {
 		t.offset = t.selectedIndex
 	}
 	if t.selectedIndex >= t.offset+content.Height {
 		t.offset = t.selectedIndex - content.Height + 1
+	}
+	t.lastVisStart = t.offset
+	t.lastVisEnd = t.offset + content.Height
+	if t.lastVisEnd > len(rows) {
+		t.lastVisEnd = len(rows)
 	}
 	for i := 0; i < content.Height; i++ {
 		rowIndex := t.offset + i
@@ -159,6 +244,45 @@ func (t *Tree) Render(ctx runtime.RenderContext) {
 		line := indent + prefix + row.node.Label
 		line = truncateString(line, content.Width)
 		writePadded(ctx.Buffer, content.X, content.Y+i, content.Width, line, style)
+	}
+}
+
+func (t *Tree) renderVirtualRows(ctx runtime.RenderContext, content runtime.Rect, rows []treeRow, baseStyle backend.Style) {
+	t.ensureVirtualList()
+	t.syncVirtualList(rows, content.Height)
+
+	start, end := t.virtualList.GetVisibleRange()
+	t.offset = t.virtualList.Offset()
+	t.lastVisStart = start
+	t.lastVisEnd = end
+
+	for i := start; i < end; i++ {
+		if i < 0 || i >= len(rows) {
+			continue
+		}
+		screenRow := i - t.offset
+		if screenRow < 0 || screenRow >= content.Height {
+			continue
+		}
+		row := rows[i]
+		style := baseStyle
+		if i == t.selectedIndex {
+			style = mergeBackendStyles(baseStyle, t.selectedStyle)
+		}
+		prefix := ""
+		if len(row.node.Children) > 0 {
+			if row.node.Expanded {
+				prefix = "- "
+			} else {
+				prefix = "+ "
+			}
+		} else {
+			prefix = "  "
+		}
+		indent := t.indent(row.depth)
+		line := indent + prefix + row.node.Label
+		line = truncateString(line, content.Width)
+		writePadded(ctx.Buffer, content.X, content.Y+screenRow, content.Width, line, style)
 	}
 }
 

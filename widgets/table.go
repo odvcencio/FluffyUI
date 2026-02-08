@@ -55,6 +55,13 @@ type Table struct {
 	sortState     TableSortState
 	filterFn      func(row []string) bool
 	sortedIndices []int
+
+	// Virtual scrolling fields
+	virtualScroll  bool
+	virtualList    *scroll.VirtualList
+	virtualOvrscn  int
+	lastVisStart   int
+	lastVisEnd     int
 }
 
 // NewTable creates a table with columns.
@@ -69,6 +76,74 @@ func NewTable(columns ...TableColumn) *Table {
 	table.Base.Role = accessibility.RoleTable
 	table.syncA11y()
 	return table
+}
+
+// SetVirtualScroll enables or disables virtual scrolling for large datasets.
+// When enabled, only visible rows (plus overscan) are rendered each frame,
+// which dramatically improves performance for tables with thousands of rows.
+func (t *Table) SetVirtualScroll(enabled bool) {
+	if t == nil {
+		return
+	}
+	t.virtualScroll = enabled
+	if enabled {
+		t.ensureVirtualList()
+	}
+}
+
+// VirtualScroll reports whether virtual scrolling is enabled.
+func (t *Table) VirtualScroll() bool {
+	if t == nil {
+		return false
+	}
+	return t.virtualScroll
+}
+
+// SetVirtualOverscan sets the number of extra rows to render above and below
+// the visible area when virtual scrolling is enabled. Default is 2.
+func (t *Table) SetVirtualOverscan(count int) {
+	if t == nil {
+		return
+	}
+	if count < 0 {
+		count = 0
+	}
+	t.virtualOvrscn = count
+	if t.virtualList != nil {
+		t.virtualList.SetOverscan(count)
+	}
+}
+
+// VisibleRange returns the [start, end) row indices currently rendered.
+// When virtual scrolling is disabled, start is the scroll offset and end
+// is offset+viewportRows. When enabled, it returns the virtualized range.
+func (t *Table) VisibleRange() (start, end int) {
+	if t == nil {
+		return 0, 0
+	}
+	return t.lastVisStart, t.lastVisEnd
+}
+
+func (t *Table) ensureVirtualList() {
+	if t.virtualList != nil {
+		return
+	}
+	t.virtualList = scroll.NewVirtualList(t.rowCount(), 1, nil)
+	overscan := t.virtualOvrscn
+	if overscan <= 0 {
+		overscan = 2
+	}
+	t.virtualList.SetOverscan(overscan)
+}
+
+func (t *Table) syncVirtualList(rowArea int) {
+	if t.virtualList == nil {
+		return
+	}
+	t.virtualList.SetItemCount(t.rowCount())
+	t.virtualList.SetViewportHeight(rowArea)
+	t.virtualList.SetSelected(t.selected)
+	t.virtualList.EnsureVisible(t.selected)
 }
 
 // SetStyle updates the base table style.
@@ -385,11 +460,22 @@ func (t *Table) Render(ctx runtime.RenderContext) {
 	if t.selected >= rowCount {
 		t.selected = rowCount - 1
 	}
+
+	if t.virtualScroll {
+		t.renderVirtualRows(ctx, content, widths, baseStyle, rowArea, rowCount)
+		return
+	}
+
 	if t.selected < t.offset {
 		t.offset = t.selected
 	}
 	if t.selected >= t.offset+rowArea {
 		t.offset = t.selected - rowArea + 1
+	}
+	t.lastVisStart = t.offset
+	t.lastVisEnd = t.offset + rowArea
+	if t.lastVisEnd > rowCount {
+		t.lastVisEnd = rowCount
 	}
 	for row := 0; row < rowArea; row++ {
 		rowIndex := t.offset + row
@@ -413,6 +499,40 @@ func (t *Table) Render(ctx runtime.RenderContext) {
 	}
 }
 
+func (t *Table) renderVirtualRows(ctx runtime.RenderContext, content runtime.Rect, widths []int, baseStyle backend.Style, rowArea, rowCount int) {
+	t.ensureVirtualList()
+	t.syncVirtualList(rowArea)
+
+	start, end := t.virtualList.GetVisibleRange()
+	t.offset = t.virtualList.Offset()
+	t.lastVisStart = start
+	t.lastVisEnd = end
+
+	for i := start; i < end; i++ {
+		if i < 0 || i >= rowCount {
+			continue
+		}
+		screenRow := i - t.offset
+		if screenRow < 0 || screenRow >= rowArea {
+			continue
+		}
+		style := baseStyle
+		if i == t.selected {
+			style = mergeBackendStyles(baseStyle, t.selectedStyle)
+		}
+		x := content.X
+		for colIndex, width := range widths {
+			if x >= content.X+content.Width {
+				break
+			}
+			cell := t.GetCell(i, colIndex)
+			cell = truncateString(cell, width)
+			writePadded(ctx.Buffer, x, content.Y+1+screenRow, width, cell, style)
+			x += width + 1
+		}
+	}
+}
+
 // HandleMessage handles row navigation.
 func (t *Table) HandleMessage(msg runtime.Message) runtime.HandleResult {
 	if t == nil || !t.focused {
@@ -422,6 +542,13 @@ func (t *Table) HandleMessage(msg runtime.Message) runtime.HandleResult {
 	if !ok {
 		return runtime.Unhandled()
 	}
+	pageSize := t.ContentBounds().Height - 1
+	if pageSize < 1 {
+		pageSize = t.bounds.Height
+	}
+	if pageSize < 1 {
+		pageSize = 1
+	}
 	switch key.Key {
 	case terminal.KeyUp:
 		t.setSelected(t.selected - 1)
@@ -430,10 +557,10 @@ func (t *Table) HandleMessage(msg runtime.Message) runtime.HandleResult {
 		t.setSelected(t.selected + 1)
 		return runtime.Handled()
 	case terminal.KeyPageUp:
-		t.setSelected(t.selected - t.bounds.Height)
+		t.setSelected(t.selected - pageSize)
 		return runtime.Handled()
 	case terminal.KeyPageDown:
-		t.setSelected(t.selected + t.bounds.Height)
+		t.setSelected(t.selected + pageSize)
 		return runtime.Handled()
 	case terminal.KeyHome:
 		t.setSelected(0)

@@ -35,10 +35,11 @@ func NewScreen(width, height int) *Screen {
 // allocBuffer creates a new buffer filled with empty cells.
 func (s *Screen) allocBuffer(w, h int) [][]Cell {
 	buf := make([][]Cell, h)
+	empty := EmptyCell()
 	for y := range buf {
 		buf[y] = make([]Cell, w)
 		for x := range buf[y] {
-			buf[y][x] = EmptyCell()
+			buf[y][x] = empty
 		}
 	}
 	return buf
@@ -75,9 +76,10 @@ func (s *Screen) Clear() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	empty := EmptyCell()
 	for y := range s.current {
 		for x := range s.current[y] {
-			s.current[y][x] = EmptyCell()
+			s.current[y][x] = empty
 		}
 	}
 }
@@ -277,9 +279,10 @@ func (s *Screen) ClearCurrentBuffer() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	empty := EmptyCell()
 	for y := range s.current {
 		for x := range s.current[y] {
-			s.current[y][x] = EmptyCell()
+			s.current[y][x] = empty
 		}
 	}
 }

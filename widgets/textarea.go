@@ -40,6 +40,11 @@ type TextArea struct {
 
 	// History (undo/redo)
 	history *state.History[textAreaState]
+
+	// Line metadata cache
+	lineStarts     []int
+	lineLengths    []int
+	lineMetaDirty  bool
 }
 
 // NewTextArea creates a new text area.
@@ -72,6 +77,7 @@ func (t *TextArea) SetText(text string) {
 	}
 	t.text = []rune(text)
 	t.cursor = len(t.text)
+	t.lineMetaDirty = true
 	t.syncValue()
 	t.pushHistory(false) // non-grouped: explicit set is a distinct operation
 }
@@ -230,6 +236,7 @@ func (t *TextArea) Undo() bool {
 	}
 	t.text = s.text
 	t.cursor = s.cursor
+	t.lineMetaDirty = true
 	t.syncValue()
 	return true
 }
@@ -246,6 +253,7 @@ func (t *TextArea) Redo() bool {
 	}
 	t.text = s.text
 	t.cursor = s.cursor
+	t.lineMetaDirty = true
 	t.syncValue()
 	return true
 }
@@ -488,6 +496,7 @@ func (t *TextArea) HandleMessage(msg runtime.Message) runtime.HandleResult {
 func (t *TextArea) insertRune(r rune) {
 	t.text = append(t.text[:t.cursor], append([]rune{r}, t.text[t.cursor:]...)...)
 	t.cursor++
+	t.lineMetaDirty = true
 	t.syncValue()
 }
 
@@ -498,6 +507,7 @@ func (t *TextArea) insertText(text string) {
 	runes := []rune(text)
 	t.text = append(t.text[:t.cursor], append(runes, t.text[t.cursor:]...)...)
 	t.cursor += len(runes)
+	t.lineMetaDirty = true
 	t.syncValue()
 }
 
@@ -509,6 +519,7 @@ func (t *TextArea) deleteRune(index int) {
 	if t.cursor > index {
 		t.cursor--
 	}
+	t.lineMetaDirty = true
 	t.syncValue()
 }
 
@@ -543,6 +554,9 @@ func (t *TextArea) lineMeta() ([]int, []int) {
 	if t == nil {
 		return []int{0}, []int{0}
 	}
+	if !t.lineMetaDirty && t.lineStarts != nil {
+		return t.lineStarts, t.lineLengths
+	}
 	starts := []int{0}
 	var lengths []int
 	for i, r := range t.text {
@@ -553,7 +567,10 @@ func (t *TextArea) lineMeta() ([]int, []int) {
 	}
 	lastStart := starts[len(starts)-1]
 	lengths = append(lengths, len(t.text)-lastStart)
-	return starts, lengths
+	t.lineStarts = starts
+	t.lineLengths = lengths
+	t.lineMetaDirty = false
+	return t.lineStarts, t.lineLengths
 }
 
 func (t *TextArea) lineText(line int, starts []int, lengths []int) string {
@@ -665,6 +682,7 @@ func (t *TextArea) ClipboardCut() (string, bool) {
 	t.text = nil
 	t.cursor = 0
 	t.scrollY = 0
+	t.lineMetaDirty = true
 	t.syncValue()
 	return text, true
 }

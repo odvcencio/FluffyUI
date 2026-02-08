@@ -40,6 +40,10 @@ type Dialog struct {
 	styleSet  bool
 	services  runtime.Services
 	announced bool // prevents re-announcing on every render
+
+	// Body lines cache
+	bodyLines       []string
+	bodyLinesSource string
 }
 
 // DialogOption configures a Dialog widget.
@@ -272,6 +276,16 @@ func (d *Dialog) TimerProgress(now time.Time) float64 {
 	return progress
 }
 
+// getBodyLines returns cached body lines or splits and caches them.
+func (d *Dialog) getBodyLines() []string {
+	if d.bodyLinesSource == d.Body && d.bodyLines != nil {
+		return d.bodyLines
+	}
+	d.bodyLines = strings.Split(d.Body, "\n")
+	d.bodyLinesSource = d.Body
+	return d.bodyLines
+}
+
 // ShouldDismiss returns true if auto-dismiss time has elapsed.
 func (d *Dialog) ShouldDismiss(now time.Time) bool {
 	if d.autoDismiss <= 0 || d.paused {
@@ -287,7 +301,7 @@ func (d *Dialog) Measure(constraints runtime.Constraints) runtime.Size {
 
 		// Measure body text width
 		if d.Content == nil {
-			for _, line := range strings.Split(d.Body, "\n") {
+			for _, line := range d.getBodyLines() {
 				lineWidth := textWidth(line)
 				if lineWidth > width {
 					width = lineWidth
@@ -308,7 +322,7 @@ func (d *Dialog) Measure(constraints runtime.Constraints) runtime.Size {
 		// Calculate height
 		height := 3 // title + padding
 		if d.Content == nil {
-			height += len(strings.Split(d.Body, "\n"))
+			height += len(d.getBodyLines())
 		} else {
 			contentSize := d.Content.Measure(contentConstraints)
 			height += contentSize.Height
@@ -385,7 +399,7 @@ func (d *Dialog) Render(ctx runtime.RenderContext) {
 	if d.Content != nil {
 		runtime.RenderChild(ctx, d.Content)
 	} else {
-		bodyLines := strings.Split(d.Body, "\n")
+		bodyLines := d.getBodyLines()
 		for i, line := range bodyLines {
 			y := inner.Y + 1 + i
 			if y >= contentEndY {

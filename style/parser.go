@@ -13,6 +13,9 @@ func Parse(data string) (*Stylesheet, error) {
 	parser := fssParser{src: stripComments(data)}
 	sheet := NewStylesheet()
 	errs := parseRules(&parser, sheet, nil)
+	sheet.mu.Lock()
+	sheet.buildIndices()
+	sheet.mu.Unlock()
 	return sheet, errors.Join(errs...)
 }
 
@@ -451,7 +454,45 @@ func parseSelectorChain(text string) (*Selector, error) {
 	if expectSelector {
 		return nil, fmt.Errorf("style: dangling combinator in selector %q", text)
 	}
+	// Cache specificity at parse time
+	cacheSpecificity(current)
 	return current, nil
+}
+
+// cacheSpecificity computes and caches specificity for the entire selector chain.
+func cacheSpecificity(sel *Selector) {
+	if sel == nil {
+		return
+	}
+	// Cache parent first (bottom-up)
+	if sel.Parent != nil {
+		cacheSpecificity(sel.Parent)
+	}
+	// Now compute and cache this selector's specificity
+	spec := specificity{}
+	if sel.ID != "" {
+		spec.ids++
+	}
+	if len(sel.Classes) > 0 {
+		spec.classes += len(sel.Classes)
+	}
+	if len(sel.Pseudo) > 0 {
+		spec.classes += len(sel.Pseudo)
+	}
+	if len(sel.Attributes) > 0 {
+		spec.classes += len(sel.Attributes)
+	}
+	if sel.Type != "" && sel.Type != "*" {
+		spec.types++
+	}
+	if sel.Parent != nil {
+		parentSpec := sel.Parent.spec
+		spec.ids += parentSpec.ids
+		spec.classes += parentSpec.classes
+		spec.types += parentSpec.types
+	}
+	sel.spec = spec
+	sel.specCached = true
 }
 
 func tokenizeSelectorChain(text string) []string {

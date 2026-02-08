@@ -52,6 +52,13 @@ type Flex struct {
 	bounds      Rect
 	childBounds []Rect
 	measured    Size
+
+	// Reusable buffers to reduce allocations
+	childSizesCache   []Size
+	baseSizesCache    []int
+	growWeightsCache  []float64
+	shrinkWeightsCache []float64
+	sizesCache        []int
 }
 
 // VBox creates a vertical flex container.
@@ -83,7 +90,13 @@ func (f *Flex) Measure(constraints Constraints) Size {
 	}
 
 	// Measure all children with loose constraints on the main axis
-	childSizes := make([]Size, len(f.Children))
+	n := len(f.Children)
+	if cap(f.childSizesCache) < n {
+		f.childSizesCache = make([]Size, n)
+	} else {
+		f.childSizesCache = f.childSizesCache[:n]
+	}
+	childSizes := f.childSizesCache
 	totalMain := 0
 	maxCross := 0
 
@@ -140,17 +153,52 @@ func (f *Flex) Measure(constraints Constraints) Size {
 // Layout positions all children within the given bounds.
 func (f *Flex) Layout(bounds Rect) {
 	f.bounds = bounds
-	f.childBounds = make([]Rect, len(f.Children))
+	n := len(f.Children)
+	if cap(f.childBounds) < n {
+		f.childBounds = make([]Rect, n)
+	} else {
+		f.childBounds = f.childBounds[:n]
+	}
 
-	if len(f.Children) == 0 {
+	if n == 0 {
 		return
 	}
 
 	// Measure children to get their preferred sizes
-	childSizes := make([]Size, len(f.Children))
-	baseSizes := make([]int, len(f.Children))
-	growWeights := make([]float64, len(f.Children))
-	shrinkWeights := make([]float64, len(f.Children))
+	if cap(f.childSizesCache) < n {
+		f.childSizesCache = make([]Size, n)
+	} else {
+		f.childSizesCache = f.childSizesCache[:n]
+	}
+	childSizes := f.childSizesCache
+
+	if cap(f.baseSizesCache) < n {
+		f.baseSizesCache = make([]int, n)
+	} else {
+		f.baseSizesCache = f.baseSizesCache[:n]
+	}
+	baseSizes := f.baseSizesCache
+
+	if cap(f.growWeightsCache) < n {
+		f.growWeightsCache = make([]float64, n)
+	} else {
+		f.growWeightsCache = f.growWeightsCache[:n]
+		for i := range f.growWeightsCache {
+			f.growWeightsCache[i] = 0
+		}
+	}
+	growWeights := f.growWeightsCache
+
+	if cap(f.shrinkWeightsCache) < n {
+		f.shrinkWeightsCache = make([]float64, n)
+	} else {
+		f.shrinkWeightsCache = f.shrinkWeightsCache[:n]
+		for i := range f.shrinkWeightsCache {
+			f.shrinkWeightsCache[i] = 0
+		}
+	}
+	shrinkWeights := f.shrinkWeightsCache
+
 	totalBase := 0
 	totalGrow := 0.0
 	totalShrink := 0.0
@@ -192,7 +240,12 @@ func (f *Flex) Layout(bounds Rect) {
 	containerMain := f.mainSize(bounds.Size())
 	available := containerMain - gaps - totalBase
 
-	sizes := make([]int, len(f.Children))
+	if cap(f.sizesCache) < n {
+		f.sizesCache = make([]int, n)
+	} else {
+		f.sizesCache = f.sizesCache[:n]
+	}
+	sizes := f.sizesCache
 	copy(sizes, baseSizes)
 	if available > 0 && totalGrow > 0 {
 		extras := distributeFlexSpace(available, growWeights)

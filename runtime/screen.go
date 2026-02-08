@@ -33,6 +33,7 @@ type Screen struct {
 	styleResolverRoots []Widget
 	styleResolverMedia style.MediaContext
 	styleResolverDirty bool
+	rootsCache         []Widget
 }
 
 // NewScreen creates a new screen with the given dimensions.
@@ -263,13 +264,13 @@ func (s *Screen) Layer(i int) *Layer {
 }
 
 func (s *Screen) currentRoots() []Widget {
-	roots := make([]Widget, 0, len(s.layers))
+	s.rootsCache = s.rootsCache[:0]
 	for _, layer := range s.layers {
 		if layer != nil && layer.Root != nil {
-			roots = append(roots, layer.Root)
+			s.rootsCache = append(s.rootsCache, layer.Root)
 		}
 	}
-	return roots
+	return s.rootsCache
 }
 
 // MeasureCache returns the screen's measurement cache.

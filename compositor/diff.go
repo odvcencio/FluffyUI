@@ -24,7 +24,7 @@ func (r *Renderer) Render() string {
 	r.screen.mu.Lock()
 	defer r.screen.mu.Unlock()
 
-	r.writer = NewANSIWriter()
+	r.writer.Reset()
 	r.writer.Grow(r.screen.width * r.screen.height / 4) // ~25% change estimate
 
 	r.writer.buf.WriteString(ANSISyncStart)
@@ -74,7 +74,7 @@ func (r *Renderer) Render() string {
 	}
 
 	// Reset style
-	r.writer.Reset()
+	r.writer.ResetStyle()
 
 	// Position cursor for input if visible
 	if r.screen.cursorVisible {
@@ -86,9 +86,10 @@ func (r *Renderer) Render() string {
 	r.screen.previous, r.screen.current = r.screen.current, r.screen.previous
 
 	// Clear the new current buffer for next frame
+	empty := EmptyCell()
 	for y := range r.screen.current {
 		for x := range r.screen.current[y] {
-			r.screen.current[y][x] = EmptyCell()
+			r.screen.current[y][x] = empty
 		}
 	}
 
@@ -101,7 +102,7 @@ func (r *Renderer) RenderFull() string {
 	r.screen.mu.Lock()
 	defer r.screen.mu.Unlock()
 
-	r.writer = NewANSIWriter()
+	r.writer.Reset()
 	r.writer.Grow(r.screen.width * r.screen.height * 2)
 
 	r.writer.buf.WriteString(ANSISyncStart)
@@ -144,7 +145,7 @@ func (r *Renderer) RenderFull() string {
 	}
 
 	// Reset style
-	r.writer.Reset()
+	r.writer.ResetStyle()
 
 	// Position cursor
 	if r.screen.cursorVisible {
@@ -166,7 +167,7 @@ func (r *Renderer) RenderRegion(region Region) string {
 	r.screen.mu.Lock()
 	defer r.screen.mu.Unlock()
 
-	r.writer = NewANSIWriter()
+	r.writer.Reset()
 
 	// Clamp region to screen bounds
 	region = region.Intersect(Region{X: 0, Y: 0, Width: r.screen.width, Height: r.screen.height})
@@ -217,7 +218,7 @@ func (r *Renderer) RenderRegion(region Region) string {
 		}
 	}
 
-	r.writer.Reset()
+	r.writer.ResetStyle()
 
 	if r.screen.cursorVisible {
 		r.writer.buf.WriteString(CursorTo(r.screen.cursorX, r.screen.cursorY))

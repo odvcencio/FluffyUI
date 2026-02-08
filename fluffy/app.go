@@ -168,7 +168,7 @@ func newBuilder() (*appBuilder, error) {
 	indicator := "> "
 	focusStyle := backend.DefaultStyle().Bold(true)
 	announcer := accessibility.Announcer(&accessibility.SimpleAnnouncer{})
-	clip := clipboard.Clipboard(&clipboard.MemoryClipboard{})
+	clip := clipboard.Clipboard(clipboard.NewAutoClipboard(os.Stdout))
 	tick := time.Second / 30
 	sheet := theme.DefaultStylesheet()
 

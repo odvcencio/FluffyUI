@@ -20,6 +20,7 @@ type TerminalCaps struct {
 	BracketedPaste  bool   // Bracketed paste mode
 	MouseSGR        bool   // SGR mouse protocol
 	UnicodeWidth    bool   // Full Unicode width support
+	OSC52Clipboard  bool   // OSC-52 clipboard support
 	TermProgram     string // TERM_PROGRAM value
 	Term            string // TERM value
 }
@@ -63,12 +64,14 @@ func DetectCaps() *TerminalCaps {
 		caps.CursorShapes = true
 		caps.OSC8Hyperlinks = true
 		caps.KittyGraphics = true
+		caps.OSC52Clipboard = true
 
 	case termProgramLower == "iterm.app" || termProgramLower == "iterm2":
 		caps.TrueColor = true
 		caps.SynchronizedOut = true
 		caps.CursorShapes = true
 		caps.OSC8Hyperlinks = true
+		caps.OSC52Clipboard = true
 
 	case termProgramLower == "kitty":
 		caps.TrueColor = true
@@ -76,6 +79,7 @@ func DetectCaps() *TerminalCaps {
 		caps.CursorShapes = true
 		caps.OSC8Hyperlinks = true
 		caps.KittyGraphics = true
+		caps.OSC52Clipboard = true
 
 	case termProgramLower == "foot":
 		caps.TrueColor = true
@@ -83,11 +87,13 @@ func DetectCaps() *TerminalCaps {
 		caps.CursorShapes = true
 		caps.OSC8Hyperlinks = true
 		caps.Sixel = true
+		caps.OSC52Clipboard = true
 
 	case termProgramLower == "mintty":
 		caps.TrueColor = true
 		caps.CursorShapes = true
 		caps.OSC8Hyperlinks = true
+		caps.OSC52Clipboard = true
 
 	case termProgramLower == "contour":
 		caps.TrueColor = true
@@ -96,6 +102,7 @@ func DetectCaps() *TerminalCaps {
 		caps.OSC8Hyperlinks = true
 		caps.Sixel = true
 		caps.KittyGraphics = true
+		caps.OSC52Clipboard = true
 
 	case termProgramLower == "rio":
 		caps.TrueColor = true
@@ -107,15 +114,18 @@ func DetectCaps() *TerminalCaps {
 		caps.CursorShapes = true
 		caps.OSC8Hyperlinks = true
 		caps.KittyGraphics = true
+		caps.OSC52Clipboard = true
 
 	case termProgramLower == "alacritty":
 		caps.TrueColor = true
 		caps.CursorShapes = true
+		caps.OSC52Clipboard = true
 
 	case termProgramLower == "vscode" || strings.HasPrefix(termProgramLower, "vscode"):
 		caps.TrueColor = true
 		caps.OSC8Hyperlinks = true
 		caps.CursorShapes = true
+		caps.OSC52Clipboard = true
 	}
 
 	// TERM-based detection (supplements TERM_PROGRAM).
@@ -125,6 +135,7 @@ func DetectCaps() *TerminalCaps {
 		caps.CursorShapes = true
 		caps.OSC8Hyperlinks = true
 		caps.KittyGraphics = true
+		caps.OSC52Clipboard = true
 	}
 
 	if termLower == "foot" || strings.HasPrefix(termLower, "foot-") {
@@ -133,6 +144,17 @@ func DetectCaps() *TerminalCaps {
 		caps.CursorShapes = true
 		caps.OSC8Hyperlinks = true
 		caps.Sixel = true
+		caps.OSC52Clipboard = true
+	}
+
+	// tmux and screen pass OSC-52 through to the outer terminal.
+	if strings.HasPrefix(termLower, "tmux") || strings.HasPrefix(termLower, "screen") {
+		caps.OSC52Clipboard = true
+	}
+
+	// xterm supports OSC-52 natively.
+	if strings.HasPrefix(termLower, "xterm") && !caps.OSC52Clipboard {
+		caps.OSC52Clipboard = true
 	}
 
 	return caps
@@ -142,11 +164,12 @@ func DetectCaps() *TerminalCaps {
 // suitable for diagnostic output.
 func (c *TerminalCaps) String() string {
 	return fmt.Sprintf(
-		"TrueColor=%t SyncOut=%t CursorShapes=%t OSC8=%t Sixel=%t KittyGfx=%t BracketPaste=%t MouseSGR=%t Unicode=%t TERM=%q TERM_PROGRAM=%q",
+		"TrueColor=%t SyncOut=%t CursorShapes=%t OSC8=%t OSC52=%t Sixel=%t KittyGfx=%t BracketPaste=%t MouseSGR=%t Unicode=%t TERM=%q TERM_PROGRAM=%q",
 		c.TrueColor,
 		c.SynchronizedOut,
 		c.CursorShapes,
 		c.OSC8Hyperlinks,
+		c.OSC52Clipboard,
 		c.Sixel,
 		c.KittyGraphics,
 		c.BracketedPaste,

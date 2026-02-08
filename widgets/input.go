@@ -47,6 +47,10 @@ type Input struct {
 	// Callbacks
 	onSubmit func(text string)
 	onChange func(text string)
+
+	// Rune cache
+	runeCache      []rune
+	runeCacheDirty bool
 }
 
 // defaultInputGroupWindow is the default time window for grouping rapid edits.
@@ -252,6 +256,7 @@ func (i *Input) restoreState(s inputState) {
 	i.text.WriteString(s.Text)
 	i.cursorPos = s.CursorPos
 	i.selection = Selection{Start: s.SelectionStart, End: s.SelectionEnd}
+	i.runeCacheDirty = true
 	i.syncA11y()
 	i.services.Invalidate()
 }
@@ -284,6 +289,7 @@ func (i *Input) SetText(text string) {
 	i.text.Reset()
 	i.text.WriteString(text)
 	i.cursorPos = runeCount(text)
+	i.runeCacheDirty = true
 	i.syncA11y()
 }
 
@@ -291,6 +297,7 @@ func (i *Input) SetText(text string) {
 func (i *Input) Clear() {
 	i.text.Reset()
 	i.cursorPos = 0
+	i.runeCacheDirty = true
 	i.syncA11y()
 }
 
@@ -777,7 +784,12 @@ func (i *Input) textRunes() []rune {
 	if i == nil {
 		return nil
 	}
-	return []rune(i.text.String())
+	if !i.runeCacheDirty && i.runeCache != nil {
+		return i.runeCache
+	}
+	i.runeCache = []rune(i.text.String())
+	i.runeCacheDirty = false
+	return i.runeCache
 }
 
 func (i *Input) setTextRunes(runes []rune) {
@@ -786,6 +798,7 @@ func (i *Input) setTextRunes(runes []rune) {
 	}
 	i.text.Reset()
 	i.text.WriteString(string(runes))
+	i.runeCacheDirty = true
 }
 
 var _ clipboard.Target = (*Input)(nil)

@@ -36,6 +36,30 @@ func TestSimpleAnnouncer(t *testing.T) {
 	}
 }
 
+func TestSimpleAnnouncerBoundedHistory(t *testing.T) {
+	a := &SimpleAnnouncer{}
+
+	// Add 150 announcements (exceeds defaultMaxHistory of 100)
+	for i := 0; i < 150; i++ {
+		a.Announce("message", PriorityPolite)
+	}
+
+	history := a.History()
+	if len(history) != 100 {
+		t.Fatalf("expected history to be bounded to 100, got %d", len(history))
+	}
+
+	// Verify history is still functional after trimming
+	a.Announce("latest", PriorityPolite)
+	history = a.History()
+	if len(history) != 100 {
+		t.Fatalf("expected history to remain at 100, got %d", len(history))
+	}
+	if history[len(history)-1].Message != "latest" {
+		t.Fatalf("expected last message to be 'latest', got %q", history[len(history)-1].Message)
+	}
+}
+
 func containsAll(message string, parts []string) bool {
 	for _, part := range parts {
 		if !strings.Contains(message, part) {
@@ -544,5 +568,126 @@ func TestMockBridgeAppInterface(t *testing.T) {
 	children = app.ChildAccessibles(child1)
 	if len(children) != 0 {
 		t.Errorf("expected 0 children for button, got %d", len(children))
+	}
+}
+
+func TestBaseHasExtendedARIA(t *testing.T) {
+	tests := []struct {
+		name string
+		base *Base
+		want bool
+	}{
+		{
+			name: "no extended ARIA",
+			base: &Base{
+				Role:  RoleButton,
+				Label: "Click me",
+			},
+			want: false,
+		},
+		{
+			name: "with ActiveDescendant",
+			base: &Base{
+				Role:             RoleCombobox,
+				ActiveDescendant: "option-1",
+			},
+			want: true,
+		},
+		{
+			name: "with Autocomplete",
+			base: &Base{
+				Role:         RoleTextbox,
+				Autocomplete: "list",
+			},
+			want: true,
+		},
+		{
+			name: "with Current",
+			base: &Base{
+				Role:    RoleLink,
+				Current: "page",
+			},
+			want: true,
+		},
+		{
+			name: "with Details",
+			base: &Base{
+				Role:    RoleButton,
+				Details: "help-text",
+			},
+			want: true,
+		},
+		{
+			name: "with ErrorMessage",
+			base: &Base{
+				Role:         RoleTextbox,
+				ErrorMessage: "error-1",
+			},
+			want: true,
+		},
+		{
+			name: "with HasPopup",
+			base: &Base{
+				Role:     RoleButton,
+				HasPopup: "menu",
+			},
+			want: true,
+		},
+		{
+			name: "with KeyShortcuts",
+			base: &Base{
+				Role:         RoleButton,
+				KeyShortcuts: "Ctrl+S",
+			},
+			want: true,
+		},
+		{
+			name: "with Placeholder",
+			base: &Base{
+				Role:        RoleTextbox,
+				Placeholder: "Enter text",
+			},
+			want: true,
+		},
+		{
+			name: "with RoleDescription",
+			base: &Base{
+				Role:            RoleButton,
+				RoleDescription: "submit button",
+			},
+			want: true,
+		},
+		{
+			name: "with Sort",
+			base: &Base{
+				Role: RoleColumnHeader,
+				Sort: "ascending",
+			},
+			want: true,
+		},
+		{
+			name: "multiple extended properties",
+			base: &Base{
+				Role:         RoleTextbox,
+				Placeholder:  "Enter email",
+				Autocomplete: "email",
+				ErrorMessage: "invalid-email",
+			},
+			want: true,
+		},
+		{
+			name: "nil base",
+			base: nil,
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.base.HasExtendedARIA()
+			if got != tt.want {
+				t.Errorf("HasExtendedARIA() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }

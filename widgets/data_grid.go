@@ -7,6 +7,7 @@ import (
 	"github.com/odvcencio/fluffyui/accessibility"
 	"github.com/odvcencio/fluffyui/backend"
 	"github.com/odvcencio/fluffyui/runtime"
+	"github.com/odvcencio/fluffyui/scroll"
 	"github.com/odvcencio/fluffyui/terminal"
 )
 
@@ -59,6 +60,13 @@ type DataGrid struct {
 	cachedTotal    int
 	cachedSig      uint32
 	editorHasFocus bool
+
+	// Virtual scrolling fields
+	virtualScroll bool
+	virtualList   *scroll.VirtualList
+	virtualOvrscn int
+	lastVisStart  int
+	lastVisEnd    int
 }
 
 // NewDataGrid creates a new data grid widget.
@@ -95,6 +103,71 @@ func (g *DataGrid) Unbind() {
 	if g.editor != nil {
 		g.editor.Unbind()
 	}
+}
+
+// SetVirtualScroll enables or disables virtual scrolling for large datasets.
+// When enabled, only visible rows (plus overscan) are rendered each frame.
+func (g *DataGrid) SetVirtualScroll(enabled bool) {
+	if g == nil {
+		return
+	}
+	g.virtualScroll = enabled
+	if enabled {
+		g.ensureVirtualList()
+	}
+}
+
+// VirtualScroll reports whether virtual scrolling is enabled.
+func (g *DataGrid) VirtualScroll() bool {
+	if g == nil {
+		return false
+	}
+	return g.virtualScroll
+}
+
+// SetVirtualOverscan sets the number of extra rows to render above and below
+// the visible area when virtual scrolling is enabled. Default is 2.
+func (g *DataGrid) SetVirtualOverscan(count int) {
+	if g == nil {
+		return
+	}
+	if count < 0 {
+		count = 0
+	}
+	g.virtualOvrscn = count
+	if g.virtualList != nil {
+		g.virtualList.SetOverscan(count)
+	}
+}
+
+// VisibleRange returns the [start, end) row indices currently rendered.
+func (g *DataGrid) VisibleRange() (start, end int) {
+	if g == nil {
+		return 0, 0
+	}
+	return g.lastVisStart, g.lastVisEnd
+}
+
+func (g *DataGrid) ensureVirtualList() {
+	if g.virtualList != nil {
+		return
+	}
+	g.virtualList = scroll.NewVirtualList(g.RowCount(), 1, nil)
+	overscan := g.virtualOvrscn
+	if overscan <= 0 {
+		overscan = 2
+	}
+	g.virtualList.SetOverscan(overscan)
+}
+
+func (g *DataGrid) syncVirtualList(rowArea int) {
+	if g.virtualList == nil {
+		return
+	}
+	g.virtualList.SetItemCount(g.RowCount())
+	g.virtualList.SetViewportHeight(rowArea)
+	g.virtualList.SetSelected(g.selectedRow)
+	g.virtualList.EnsureVisible(g.selectedRow)
 }
 
 // SetColumns updates the column definitions.
@@ -402,29 +475,39 @@ func (g *DataGrid) Render(ctx runtime.RenderContext) {
 		return
 	}
 	g.ensureSelectionInRange()
-	g.ensureSelectionVisibleWithHeight(rowArea)
-	rowCount := g.RowCount()
-	for row := 0; row < rowArea; row++ {
-		rowIndex := g.offset + row
-		if rowIndex < 0 || rowIndex >= rowCount {
-			break
+
+	if g.virtualScroll {
+		g.renderVirtualRows(ctx, content, widths, baseStyle, rowArea)
+	} else {
+		g.ensureSelectionVisibleWithHeight(rowArea)
+		g.lastVisStart = g.offset
+		g.lastVisEnd = g.offset + rowArea
+		rowCount := g.RowCount()
+		if g.lastVisEnd > rowCount {
+			g.lastVisEnd = rowCount
 		}
-		x = content.X
-		for colIndex, width := range widths {
-			if x >= content.X+content.Width {
+		for row := 0; row < rowArea; row++ {
+			rowIndex := g.offset + row
+			if rowIndex < 0 || rowIndex >= rowCount {
 				break
 			}
-			cell := g.GetCell(rowIndex, colIndex)
-			style := baseStyle
-			if rowIndex == g.selectedRow && colIndex == g.selectedCol {
-				style = mergeBackendStyles(baseStyle, g.selectedStyle)
-				if g.editing {
-					style = mergeBackendStyles(baseStyle, g.editingStyle)
+			x = content.X
+			for colIndex, width := range widths {
+				if x >= content.X+content.Width {
+					break
 				}
+				cell := g.GetCell(rowIndex, colIndex)
+				style := baseStyle
+				if rowIndex == g.selectedRow && colIndex == g.selectedCol {
+					style = mergeBackendStyles(baseStyle, g.selectedStyle)
+					if g.editing {
+						style = mergeBackendStyles(baseStyle, g.editingStyle)
+					}
+				}
+				cell = truncateString(cell, width)
+				writePadded(ctx.Buffer, x, content.Y+1+row, width, cell, style)
+				x += width + 1
 			}
-			cell = truncateString(cell, width)
-			writePadded(ctx.Buffer, x, content.Y+1+row, width, cell, style)
-			x += width + 1
 		}
 	}
 
@@ -517,6 +600,44 @@ func (g *DataGrid) HandleMessage(msg runtime.Message) runtime.HandleResult {
 		}
 	}
 	return runtime.Unhandled()
+}
+
+func (g *DataGrid) renderVirtualRows(ctx runtime.RenderContext, content runtime.Rect, widths []int, baseStyle backend.Style, rowArea int) {
+	g.ensureVirtualList()
+	g.syncVirtualList(rowArea)
+
+	start, end := g.virtualList.GetVisibleRange()
+	g.offset = g.virtualList.Offset()
+	g.lastVisStart = start
+	g.lastVisEnd = end
+
+	rowCount := g.RowCount()
+	for i := start; i < end; i++ {
+		if i < 0 || i >= rowCount {
+			continue
+		}
+		screenRow := i - g.offset
+		if screenRow < 0 || screenRow >= rowArea {
+			continue
+		}
+		x := content.X
+		for colIndex, width := range widths {
+			if x >= content.X+content.Width {
+				break
+			}
+			cell := g.GetCell(i, colIndex)
+			style := baseStyle
+			if i == g.selectedRow && colIndex == g.selectedCol {
+				style = mergeBackendStyles(baseStyle, g.selectedStyle)
+				if g.editing {
+					style = mergeBackendStyles(baseStyle, g.editingStyle)
+				}
+			}
+			cell = truncateString(cell, width)
+			writePadded(ctx.Buffer, x, content.Y+1+screenRow, width, cell, style)
+			x += width + 1
+		}
+	}
 }
 
 func (g *DataGrid) ensureSelectionInRange() {

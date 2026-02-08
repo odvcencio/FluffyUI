@@ -39,10 +39,11 @@ func WithGroupWindow(d time.Duration) HistoryOption {
 
 // historyNode represents a state in the history tree.
 type historyNode[T any] struct {
-	state     T
-	parent    *historyNode[T]
-	children  []*historyNode[T]
-	timestamp time.Time
+	state      T
+	parent     *historyNode[T]
+	children   []*historyNode[T]
+	timestamp  time.Time
+	cachedSize int64 // Cached total size of this node and all descendants
 }
 
 // History provides generic undo/redo with branching history support.
@@ -135,6 +136,8 @@ func (h *History[T]) pushLocked(state T, grouped bool) {
 			h.current.state = state
 			h.current.timestamp = now
 			h.lastPush = now
+			// Invalidate cached size for this node and ancestors
+			h.invalidateSizeCacheUpward(h.current)
 			h.notifyLocked()
 			return
 		}
@@ -149,6 +152,9 @@ func (h *History[T]) pushLocked(state T, grouped bool) {
 
 	// Add as child of current node
 	h.current.children = append(h.current.children, node)
+
+	// Invalidate cached size for current node and ancestors (new child added)
+	h.invalidateSizeCacheUpward(h.current)
 
 	// Move to new node
 	h.current = node
@@ -250,6 +256,8 @@ func (h *History[T]) Clear() {
 	h.current = h.root
 	h.redoStack = nil
 	h.lastPush = time.Time{}
+	// Invalidate cached size since structure changed
+	h.invalidateSizeCacheUpward(h.root)
 	h.mu.Unlock()
 	h.notify()
 }
@@ -317,17 +325,26 @@ func (h *History[T]) notify() {
 }
 
 func (h *History[T]) notifyLocked() {
+	if len(h.subscribers) == 0 {
+		return
+	}
+
+	// Collect subscribers under lock
 	subs := make([]func(), 0, len(h.subscribers))
 	for _, fn := range h.subscribers {
 		subs = append(subs, fn)
 	}
 
-	// Notify outside the lock to prevent deadlocks
-	go func() {
-		for _, fn := range subs {
-			fn()
-		}
-	}()
+	// Unlock mutex before calling subscribers
+	h.mu.Unlock()
+
+	// Call subscribers synchronously (no goroutine spam)
+	for _, fn := range subs {
+		fn()
+	}
+
+	// Re-lock mutex since caller expects it to be locked
+	h.mu.Lock()
 }
 
 func (h *History[T]) enforceLimitsLocked() {
@@ -366,6 +383,8 @@ func (h *History[T]) enforceDepthLocked() {
 		// Create new root from the keep child
 		keepChild.parent = nil
 		h.root = keepChild
+		// Invalidate cache for new root since structure changed
+		h.invalidateSizeCacheUpward(keepChild)
 		depth--
 	}
 }
@@ -383,6 +402,8 @@ func (h *History[T]) enforceBytesLocked() {
 		keepChild := path[1]
 		keepChild.parent = nil
 		h.root = keepChild
+		// Invalidate cache for new root since structure changed
+		h.invalidateSizeCacheUpward(keepChild)
 
 		totalSize = h.calculateTotalSizeLocked()
 	}
@@ -414,6 +435,11 @@ func (h *History[T]) calculateNodeSize(node *historyNode[T]) int64 {
 		return 0
 	}
 
+	// Return cached size if available
+	if node.cachedSize > 0 {
+		return node.cachedSize
+	}
+
 	var size int64
 	if h.sizeFunc != nil {
 		size = h.sizeFunc(node.state)
@@ -426,7 +452,17 @@ func (h *History[T]) calculateNodeSize(node *historyNode[T]) int64 {
 		size += h.calculateNodeSize(child)
 	}
 
+	// Cache the calculated size
+	node.cachedSize = size
 	return size
+}
+
+// invalidateSizeCacheUpward invalidates cached size for node and all ancestors.
+func (h *History[T]) invalidateSizeCacheUpward(node *historyNode[T]) {
+	for node != nil {
+		node.cachedSize = 0
+		node = node.parent
+	}
 }
 
 // Snapshot represents a serializable state of the history.

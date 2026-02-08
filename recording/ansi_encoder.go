@@ -46,7 +46,7 @@ func (e *ANSIEncoder) Encode(buffer *runtime.Buffer, full bool) string {
 			e.writeCell(writer, x, y, cell)
 		})
 	}
-	writer.Reset()
+	writer.ResetStyle()
 	return writer.String()
 }
 

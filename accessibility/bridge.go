@@ -827,6 +827,18 @@ func (b *Base) SetRoleDescription(desc string) {
 	b.RoleDescription = desc
 }
 
+// HasExtendedARIA returns true if any WAI-ARIA 1.2/1.3 extended properties are set.
+// This allows callers to skip serialization/processing of extended properties when none are in use.
+func (b *Base) HasExtendedARIA() bool {
+	if b == nil {
+		return false
+	}
+	return b.ActiveDescendant != "" || b.Autocomplete != "" ||
+		b.Current != "" || b.Details != "" || b.ErrorMessage != "" ||
+		b.HasPopup != "" || b.KeyShortcuts != "" || b.Placeholder != "" ||
+		b.RoleDescription != "" || b.Sort != ""
+}
+
 // BoolPtr returns a pointer to a bool.
 func BoolPtr(value bool) *bool {
 	return &value
@@ -837,6 +849,11 @@ type Announcement struct {
 	Message  string
 	Priority Priority
 }
+
+const (
+	// defaultMaxHistory limits SimpleAnnouncer history size to prevent unbounded growth.
+	defaultMaxHistory = 100
+)
 
 // SimpleAnnouncer stores announcements in memory.
 type SimpleAnnouncer struct {
@@ -908,6 +925,18 @@ func (a *SimpleAnnouncer) CloseSpeaker() {
 	}
 }
 
+// addToHistory appends an announcement to the history, maintaining a bounded size.
+// When the history exceeds defaultMaxHistory, the oldest entries are removed.
+// Must be called with a.mu held.
+func (a *SimpleAnnouncer) addToHistory(ann Announcement) {
+	a.history = append(a.history, ann)
+	if len(a.history) > defaultMaxHistory {
+		// Shift to avoid holding references to old entries.
+		copy(a.history, a.history[len(a.history)-defaultMaxHistory:])
+		a.history = a.history[:defaultMaxHistory]
+	}
+}
+
 // Announce publishes a message.
 func (a *SimpleAnnouncer) Announce(message string, priority Priority) {
 	if a == nil {
@@ -919,7 +948,7 @@ func (a *SimpleAnnouncer) Announce(message string, priority Priority) {
 	}
 	announcement := Announcement{Message: msg, Priority: priority}
 	a.mu.Lock()
-	a.history = append(a.history, announcement)
+	a.addToHistory(announcement)
 	cb := a.onMessage
 	speaker := a.speaker
 	a.mu.Unlock()

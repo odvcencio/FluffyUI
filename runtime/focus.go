@@ -16,6 +16,7 @@ const (
 // Each modal layer has its own FocusScope, so overlays trap focus.
 type FocusScope struct {
 	widgets         []Focusable
+	widgetSet       map[Focusable]struct{}
 	current         int // Index of focused widget, -1 if none
 	onChange        func(prev Focusable, next Focusable)
 	autoFocusPolicy AutoFocusPolicy
@@ -50,13 +51,18 @@ func (f *FocusScope) SetOnChange(fn func(prev Focusable, next Focusable)) {
 // Register adds a focusable widget to the scope.
 // Auto-focus behavior depends on the scope's AutoFocusPolicy.
 func (f *FocusScope) Register(w Focusable) {
-	// Check if already registered
-	for _, existing := range f.widgets {
-		if existing == w {
-			return
-		}
+	// Initialize map lazily
+	if f.widgetSet == nil {
+		f.widgetSet = make(map[Focusable]struct{})
 	}
+
+	// Check if already registered (O(1) lookup)
+	if _, exists := f.widgetSet[w]; exists {
+		return
+	}
+
 	f.widgets = append(f.widgets, w)
+	f.widgetSet[w] = struct{}{}
 
 	// Auto-focus based on policy
 	if f.autoFocusPolicy == AutoFocusNone {
@@ -86,8 +92,11 @@ func (f *FocusScope) Unregister(w Focusable) {
 				f.current--
 			}
 
-			// Remove from slice
+			// Remove from slice and map
 			f.widgets = append(f.widgets[:i], f.widgets[i+1:]...)
+			if f.widgetSet != nil {
+				delete(f.widgetSet, w)
+			}
 
 			// Find next focusable if needed
 			if f.current == -1 && len(f.widgets) > 0 {
@@ -203,6 +212,7 @@ func (f *FocusScope) Reset() {
 	}
 	f.ClearFocus()
 	f.widgets = nil
+	f.widgetSet = nil
 	f.current = -1
 }
 

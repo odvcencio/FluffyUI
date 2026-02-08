@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 )
 
 // ANSI escape sequences.
@@ -69,52 +70,53 @@ func CursorBack(n int) string {
 
 // StyleToANSI converts a Style to ANSI escape sequence.
 func StyleToANSI(s Style) string {
-	var parts []string
+	var b strings.Builder
+	b.Grow(32) // typical ANSI sequence length
 
-	// Start with reset
-	parts = append(parts, "0")
+	b.WriteString(ANSIEscape)
+	b.WriteByte('0')
 
 	// Attributes
 	if s.Bold {
-		parts = append(parts, "1")
+		b.WriteString(";1")
 	}
 	if s.Dim {
-		parts = append(parts, "2")
+		b.WriteString(";2")
 	}
 	if s.Italic {
-		parts = append(parts, "3")
+		b.WriteString(";3")
 	}
 	if s.Underline {
-		parts = append(parts, "4")
+		b.WriteString(";4")
 	}
 	if s.Blink {
-		parts = append(parts, "5")
+		b.WriteString(";5")
 	}
 	if s.Reverse {
-		parts = append(parts, "7")
+		b.WriteString(";7")
 	}
 	if s.Strikethrough {
-		parts = append(parts, "9")
+		b.WriteString(";9")
 	}
 
-	// Foreground color
-	parts = append(parts, colorToANSI(s.FG, true)...)
+	// Foreground and background colors
+	writeColorToBuilder(&b, s.FG, true)
+	writeColorToBuilder(&b, s.BG, false)
 
-	// Background color
-	parts = append(parts, colorToANSI(s.BG, false)...)
-
-	return ANSIEscape + strings.Join(parts, ";") + "m"
+	b.WriteByte('m')
+	return b.String()
 }
 
-// colorToANSI converts a Color to ANSI SGR parameters.
-func colorToANSI(c Color, fg bool) []string {
+// writeColorToBuilder writes a Color to ANSI SGR parameters directly to the builder.
+func writeColorToBuilder(b *strings.Builder, c Color, fg bool) {
 	switch c.Mode {
 	case ColorModeNone, ColorModeDefault:
 		// Use default color (39 for FG, 49 for BG)
 		if fg {
-			return []string{"39"}
+			b.WriteString(";39")
+		} else {
+			b.WriteString(";49")
 		}
-		return []string{"49"}
 
 	case ColorMode16:
 		// Basic 16 colors: 30-37 for FG (normal), 90-97 for FG (bright)
@@ -122,34 +124,47 @@ func colorToANSI(c Color, fg bool) []string {
 		idx := c.Value
 		if fg {
 			if idx < 8 {
-				return []string{strconv.Itoa(30 + int(idx))}
+				b.WriteByte(';')
+				b.WriteString(strconv.Itoa(30 + int(idx)))
+			} else {
+				b.WriteByte(';')
+				b.WriteString(strconv.Itoa(90 + int(idx) - 8))
 			}
-			return []string{strconv.Itoa(90 + int(idx) - 8)}
+		} else {
+			if idx < 8 {
+				b.WriteByte(';')
+				b.WriteString(strconv.Itoa(40 + int(idx)))
+			} else {
+				b.WriteByte(';')
+				b.WriteString(strconv.Itoa(100 + int(idx) - 8))
+			}
 		}
-		if idx < 8 {
-			return []string{strconv.Itoa(40 + int(idx))}
-		}
-		return []string{strconv.Itoa(100 + int(idx) - 8)}
 
 	case ColorMode256:
 		// 256-color: 38;5;n for FG, 48;5;n for BG
 		if fg {
-			return []string{"38", "5", strconv.Itoa(int(c.Value))}
+			b.WriteString(";38;5;")
+		} else {
+			b.WriteString(";48;5;")
 		}
-		return []string{"48", "5", strconv.Itoa(int(c.Value))}
+		b.WriteString(strconv.Itoa(int(c.Value)))
 
 	case ColorModeRGB:
 		// True color: 38;2;r;g;b for FG, 48;2;r;g;b for BG
 		r := (c.Value >> 16) & 0xFF
 		g := (c.Value >> 8) & 0xFF
-		b := c.Value & 0xFF
+		bl := c.Value & 0xFF
 		if fg {
-			return []string{"38", "2", strconv.Itoa(int(r)), strconv.Itoa(int(g)), strconv.Itoa(int(b))}
+			b.WriteString(";38;2;")
+		} else {
+			b.WriteString(";48;2;")
 		}
-		return []string{"48", "2", strconv.Itoa(int(r)), strconv.Itoa(int(g)), strconv.Itoa(int(b))}
+		b.WriteString(strconv.Itoa(int(r)))
+		b.WriteByte(';')
+		b.WriteString(strconv.Itoa(int(g)))
+		b.WriteByte(';')
+		b.WriteString(strconv.Itoa(int(bl)))
 	}
-
-	return nil
 }
 
 // StyleDelta returns ANSI codes to change from 'from' style to 'to' style.
@@ -225,11 +240,21 @@ func (w *ANSIWriter) WriteRune(r rune) {
 // WriteString writes a string.
 func (w *ANSIWriter) WriteString(s string) {
 	w.buf.WriteString(s)
-	w.lastX += len([]rune(s))
+	w.lastX += utf8.RuneCountInString(s)
 }
 
-// Reset adds a style reset.
+// Reset resets the writer for reuse, clearing the buffer and state while keeping capacity.
 func (w *ANSIWriter) Reset() {
+	w.buf.Reset()
+	w.lastStyle = Style{}
+	w.styleSet = false
+	w.lastX = -1
+	w.lastY = -1
+	w.posSet = false
+}
+
+// ResetStyle adds a style reset to the buffer.
+func (w *ANSIWriter) ResetStyle() {
 	w.buf.WriteString(ANSIReset)
 	w.styleSet = false
 }

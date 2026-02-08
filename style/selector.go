@@ -63,6 +63,8 @@ type Selector struct {
 	Attributes []AttributeSelector
 	Parent     *Selector
 	Combinator Combinator
+	spec       specificity // cached specificity
+	specCached bool        // whether specificity is cached
 }
 
 // SelectorBuilder builds selectors fluently.
@@ -190,6 +192,9 @@ type specificity struct {
 }
 
 func (s Selector) specificity() specificity {
+	if s.specCached {
+		return s.spec
+	}
 	spec := specificity{}
 	if s.ID != "" {
 		spec.ids++

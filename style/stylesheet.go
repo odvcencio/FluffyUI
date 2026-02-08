@@ -19,10 +19,17 @@ type Rule struct {
 
 // Stylesheet is a collection of style rules.
 type Stylesheet struct {
-	mu        sync.RWMutex
-	rules     []Rule
-	nextOrder int
-	variables map[string]string
+	mu            sync.RWMutex
+	rules         []Rule
+	nextOrder     int
+	variables     map[string]string
+	// Indices for fast rule lookup
+	typeIndex     map[string][]int // type name -> rule indices
+	idIndex       map[string][]int // id -> rule indices
+	classIndex    map[string][]int // class -> rule indices
+	otherRules    []int            // rules that don't match a simple type/id/class
+	indicesStale  bool             // whether indices need rebuilding
+	indicesBuilt  bool             // whether indices have been built at least once
 }
 
 // NewStylesheet creates an empty stylesheet.
@@ -108,6 +115,55 @@ func (s *Stylesheet) addRule(selector Selector, style Style, important Style, me
 	}
 	s.nextOrder++
 	s.rules = append(s.rules, rule)
+	// Mark indices as stale when rules are added
+	s.indicesStale = true
+}
+
+// buildIndices constructs lookup indices for fast rule matching.
+// Must be called with mu held (write lock).
+func (s *Stylesheet) buildIndices() {
+	if s == nil {
+		return
+	}
+	// Reset indices
+	s.typeIndex = make(map[string][]int)
+	s.idIndex = make(map[string][]int)
+	s.classIndex = make(map[string][]int)
+	s.otherRules = nil
+
+	// Build indices from rules
+	for i := range s.rules {
+		rule := &s.rules[i]
+		// Look at the first (rightmost) selector segment
+		sel := &rule.Selector
+		indexed := false
+
+		// Index by type
+		if sel.Type != "" && sel.Type != "*" {
+			s.typeIndex[sel.Type] = append(s.typeIndex[sel.Type], i)
+			indexed = true
+		}
+
+		// Index by ID
+		if sel.ID != "" {
+			s.idIndex[sel.ID] = append(s.idIndex[sel.ID], i)
+			indexed = true
+		}
+
+		// Index by classes
+		for _, class := range sel.Classes {
+			s.classIndex[class] = append(s.classIndex[class], i)
+			indexed = true
+		}
+
+		// If no simple index applies, add to otherRules
+		if !indexed {
+			s.otherRules = append(s.otherRules, i)
+		}
+	}
+
+	s.indicesStale = false
+	s.indicesBuilt = true
 }
 
 // Resolve returns the merged style for the given node.
@@ -120,14 +176,93 @@ func (s *Stylesheet) ResolveWithContext(node Node, ancestors []Node, ctx MediaCo
 	if s == nil || node == nil {
 		return Style{}
 	}
+
+	// Check if we need to rebuild indices (with read lock first for common case)
+	s.mu.RLock()
+	needsRebuild := s.indicesStale || !s.indicesBuilt
+	s.mu.RUnlock()
+
+	if needsRebuild {
+		s.mu.Lock()
+		// Double-check after acquiring write lock
+		if s.indicesStale || !s.indicesBuilt {
+			s.buildIndices()
+		}
+		s.mu.Unlock()
+	}
+
 	s.mu.RLock()
 	defer s.mu.RUnlock()
+
+	// If indices aren't built (shouldn't happen now), fall back to full scan
+	if !s.indicesBuilt {
+		var matches []Rule
+		for _, rule := range s.rules {
+			if rule.Selector.Matches(node, ancestors) && mediaMatches(rule.Media, ctx) {
+				matches = append(matches, rule)
+			}
+		}
+		if len(matches) == 0 {
+			return Style{}
+		}
+		sort.SliceStable(matches, func(i, j int) bool {
+			if matches[i].specificity == matches[j].specificity {
+				return matches[i].order < matches[j].order
+			}
+			return matches[i].specificity.less(matches[j].specificity)
+		})
+		var resolved Style
+		for _, rule := range matches {
+			resolved = resolved.Merge(rule.Style)
+		}
+		for _, rule := range matches {
+			resolved = resolved.Merge(rule.Important)
+		}
+		return resolved
+	}
+
+	// Collect candidate rule indices from node's type, id, and classes
+	candidateSet := make(map[int]struct{})
+
+	// Add rules matching node type
+	if indices, ok := s.typeIndex[node.StyleType()]; ok {
+		for _, idx := range indices {
+			candidateSet[idx] = struct{}{}
+		}
+	}
+
+	// Add rules matching node ID
+	if nodeID := node.StyleID(); nodeID != "" {
+		if indices, ok := s.idIndex[nodeID]; ok {
+			for _, idx := range indices {
+				candidateSet[idx] = struct{}{}
+			}
+		}
+	}
+
+	// Add rules matching any node class
+	for _, class := range node.StyleClasses() {
+		if indices, ok := s.classIndex[class]; ok {
+			for _, idx := range indices {
+				candidateSet[idx] = struct{}{}
+			}
+		}
+	}
+
+	// Always include otherRules (universal selectors, pseudo-only, etc.)
+	for _, idx := range s.otherRules {
+		candidateSet[idx] = struct{}{}
+	}
+
+	// Now test only the candidate rules
 	var matches []Rule
-	for _, rule := range s.rules {
+	for idx := range candidateSet {
+		rule := s.rules[idx]
 		if rule.Selector.Matches(node, ancestors) && mediaMatches(rule.Media, ctx) {
 			matches = append(matches, rule)
 		}
 	}
+
 	if len(matches) == 0 {
 		return Style{}
 	}
@@ -193,5 +328,7 @@ func Merge(sheets ...*Stylesheet) *Stylesheet {
 			}
 		}
 	}
+	// Build indices after merging all rules
+	merged.buildIndices()
 	return merged
 }

@@ -15,7 +15,30 @@ func EqualComparable[T comparable](a, b T) bool {
 }
 
 // deepEqual uses reflect.DeepEqual for complex types.
+// Optimizes common comparable types to avoid reflection overhead.
 func deepEqual[T any](a, b T) bool {
+	// Fast path: try direct comparison via interface for common types
+	switch av := any(a).(type) {
+	case int:
+		return av == any(b).(int)
+	case string:
+		return av == any(b).(string)
+	case bool:
+		return av == any(b).(bool)
+	case float64:
+		return av == any(b).(float64)
+	case int64:
+		return av == any(b).(int64)
+	case int32:
+		return av == any(b).(int32)
+	case uint:
+		return av == any(b).(uint)
+	case uint64:
+		return av == any(b).(uint64)
+	case uint32:
+		return av == any(b).(uint32)
+	}
+	// Fall back to reflect.DeepEqual for complex types
 	return reflect.DeepEqual(a, b)
 }
 
@@ -188,7 +211,7 @@ func acquireSubscribers(size int) []subscriber {
 	}
 	pooled := *pooledPtr
 	if cap(pooled) < size {
-		subscriberPool.Put(pooledPtr)
+		// Don't return too-small slice to pool - just discard it
 		return make([]subscriber, 0, size)
 	}
 	return pooled[:0]

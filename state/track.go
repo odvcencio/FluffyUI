@@ -2,6 +2,7 @@ package state
 
 import (
 	"sync"
+	"sync/atomic"
 )
 
 type dependencyTracker struct {
@@ -38,8 +39,9 @@ func (t *dependencyTracker) list() []Subscribable {
 }
 
 var (
-	trackerStackMu sync.Mutex
-	trackerStack   []*dependencyTracker
+	trackerStackMu  sync.Mutex
+	trackerStack    []*dependencyTracker
+	activeTracker   atomic.Pointer[dependencyTracker]
 )
 
 // trackDependencies runs fn while recording any signal reads.
@@ -53,6 +55,8 @@ func trackDependencies[T any](fn func() T) (T, []Subscribable) {
 	tracker := &dependencyTracker{deps: make(map[Subscribable]struct{})}
 	trackerStackMu.Lock()
 	trackerStack = append(trackerStack, tracker)
+	// Update active tracker to top of stack
+	activeTracker.Store(tracker)
 	trackerStackMu.Unlock()
 
 	result := fn()
@@ -61,17 +65,19 @@ func trackDependencies[T any](fn func() T) (T, []Subscribable) {
 	if len(trackerStack) > 0 {
 		trackerStack = trackerStack[:len(trackerStack)-1]
 	}
+	// Update active tracker to new top of stack (or nil)
+	if len(trackerStack) > 0 {
+		activeTracker.Store(trackerStack[len(trackerStack)-1])
+	} else {
+		activeTracker.Store(nil)
+	}
 	trackerStackMu.Unlock()
 	return result, tracker.list()
 }
 
 func recordDependency(dep Subscribable) {
-	trackerStackMu.Lock()
-	var tracker *dependencyTracker
-	if len(trackerStack) > 0 {
-		tracker = trackerStack[len(trackerStack)-1]
-	}
-	trackerStackMu.Unlock()
+	// Fast path: check atomic pointer first to avoid mutex
+	tracker := activeTracker.Load()
 	if tracker == nil {
 		return
 	}
