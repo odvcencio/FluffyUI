@@ -55,7 +55,8 @@ func NewSelect(options ...SelectOption) *Select {
 		focusStyle: backend.DefaultStyle().Reverse(true),
 		mode:       SelectInline,
 	}
-	s.Base.Role = accessibility.RoleList
+	s.Base.Role = accessibility.RoleListbox
+	s.Base.HasPopup = "listbox"
 	s.syncState()
 	return s
 }
@@ -180,6 +181,9 @@ func (s *Select) SetSelected(index int) {
 	}
 	s.selected = index
 	s.syncState()
+	if announcer := s.services.Announcer(); announcer != nil {
+		announcer.AnnounceChange(s)
+	}
 	s.relayout()
 	if s.onChange != nil {
 		s.onChange(s.options[index])
@@ -330,9 +334,14 @@ func (s *Select) syncState() {
 		label = "Select"
 	}
 	if s.Base.Role == "" {
-		s.Base.Role = accessibility.RoleList
+		s.Base.Role = accessibility.RoleListbox
 	}
 	s.Base.Label = label
+	s.Base.State.Expanded = accessibility.BoolPtr(s.dropdownOpen)
+	if s.selected >= 0 && s.selected < len(s.options) {
+		s.Base.PosInSet = s.selected + 1
+		s.Base.SetSize = len(s.options)
+	}
 	if opt, ok := s.SelectedOption(); ok {
 		s.Base.Value = &accessibility.ValueInfo{Text: opt.Label}
 	} else {

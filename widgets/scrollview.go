@@ -266,6 +266,7 @@ func (s *ScrollView) syncA11y() {
 		label = "Scroll View"
 	}
 	s.Base.Label = label
+	s.Base.Orientation = "vertical"
 	s.Base.Description = "scrollable content"
 }
 

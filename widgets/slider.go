@@ -54,6 +54,7 @@ type Slider struct {
 	style      backend.Style
 
 	dragging bool
+	lastDesc string
 	services runtime.Services
 	subs     state.Subscriptions
 }
@@ -190,7 +191,21 @@ func (s *Slider) SetValue(value float64) {
 	value = s.clampValue(value)
 	s.value.Set(value)
 	s.syncA11y()
+	s.announceIfChanged()
 	s.services.Invalidate()
+}
+
+func (s *Slider) announceIfChanged() {
+	if s == nil {
+		return
+	}
+	desc := fmt.Sprintf(s.valueFormat, s.Value())
+	if desc != s.lastDesc {
+		s.lastDesc = desc
+		if announcer := s.services.Announcer(); announcer != nil {
+			announcer.AnnounceChange(s)
+		}
+	}
 }
 
 // Value returns the current value.
@@ -535,7 +550,15 @@ func (s *Slider) syncA11y() {
 		label = "Slider"
 	}
 	s.Base.Label = label
-	s.Base.Value = &accessibility.ValueInfo{Text: fmt.Sprintf(s.valueFormat, s.Value())}
+	s.Base.Value = &accessibility.ValueInfo{
+		Min: s.min, Max: s.max, Current: s.Value(),
+		Text: fmt.Sprintf(s.valueFormat, s.Value()),
+	}
+	if s.orientation == Vertical {
+		s.Base.Orientation = "vertical"
+	} else {
+		s.Base.Orientation = "horizontal"
+	}
 }
 
 func sliderTrackRect(bounds runtime.Rect, orientation Orientation, valueText string) (runtime.Rect, runtime.Rect) {
@@ -591,6 +614,7 @@ type RangeSlider struct {
 
 	active   rangeHandle
 	dragging bool
+	lastDesc string
 	services runtime.Services
 	subs     state.Subscriptions
 }
@@ -1007,7 +1031,22 @@ func (r *RangeSlider) clampValues() {
 	r.minValue.Set(minVal)
 	r.maxValue.Set(maxVal)
 	r.syncA11y()
+	r.announceIfChanged()
 	r.services.Invalidate()
+}
+
+func (r *RangeSlider) announceIfChanged() {
+	if r == nil {
+		return
+	}
+	minVal, maxVal := r.Values()
+	desc := fmt.Sprintf("%s - %s", fmt.Sprintf(r.valueFormat, minVal), fmt.Sprintf(r.valueFormat, maxVal))
+	if desc != r.lastDesc {
+		r.lastDesc = desc
+		if announcer := r.services.Announcer(); announcer != nil {
+			announcer.AnnounceChange(r)
+		}
+	}
 }
 
 func (r *RangeSlider) valueToPos(value float64, length int) int {
@@ -1085,7 +1124,15 @@ func (r *RangeSlider) syncA11y() {
 	}
 	r.Base.Label = label
 	minVal, maxVal := r.Values()
-	r.Base.Value = &accessibility.ValueInfo{Text: fmt.Sprintf("%s - %s", fmt.Sprintf(r.valueFormat, minVal), fmt.Sprintf(r.valueFormat, maxVal))}
+	r.Base.Value = &accessibility.ValueInfo{
+		Min: r.min, Max: r.max, Current: minVal,
+		Text: fmt.Sprintf("%s - %s", fmt.Sprintf(r.valueFormat, minVal), fmt.Sprintf(r.valueFormat, maxVal)),
+	}
+	if r.orientation == Vertical {
+		r.Base.Orientation = "vertical"
+	} else {
+		r.Base.Orientation = "horizontal"
+	}
 }
 
 var _ runtime.Widget = (*RangeSlider)(nil)

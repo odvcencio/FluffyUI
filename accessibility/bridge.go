@@ -3,6 +3,7 @@ package accessibility
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -58,6 +59,34 @@ const (
 	RoleImg        Role = "img"
 	RoleNote       Role = "note"
 	RoleScrollbar  Role = "scrollbar"
+
+	// WAI-ARIA 1.2 composite and structural roles
+	RoleListbox          Role = "listbox"
+	RoleOption           Role = "option"
+	RoleRadioGroup       Role = "radiogroup"
+	RoleGrid             Role = "grid"
+	RoleGridCell         Role = "gridcell"
+	RoleColumnHeader     Role = "columnheader"
+	RoleRowHeader        Role = "rowheader"
+	RoleRowGroup         Role = "rowgroup"
+	RoleAlertDialog      Role = "alertdialog"
+	RoleMenuItemCheckbox Role = "menuitemcheckbox"
+	RoleMenuItemRadio    Role = "menuitemradio"
+	RoleMenuBar          Role = "menubar"
+	RoleTreeGrid         Role = "treegrid"
+	RoleDocument         Role = "document"
+	RoleMarquee          Role = "marquee"
+	RolePresentation     Role = "presentation"
+	RoleTooltip          Role = "tooltip"
+	RoleMeter            Role = "meter"
+
+	// WAI-ARIA 1.3 roles
+	RoleComment    Role = "comment"
+	RoleMark       Role = "mark"
+	RoleSuggestion Role = "suggestion"
+	RoleCode       Role = "code"
+	RoleTime       Role = "time"
+	RoleImage      Role = "image"
 )
 
 // Live describes how content changes are announced to assistive technology.
@@ -127,21 +156,39 @@ type Accessible interface {
 	AccessibleControls() string
 	AccessibleOwns() string
 	AccessibleFlowTo() string
+
+	// WAI-ARIA 1.2/1.3 properties
+	AccessibleLevel() int
+	AccessibleOrientation() string
+	AccessibleActiveDescendant() string
+	AccessiblePosInSet() int
+	AccessibleSetSize() int
+	AccessibleHasPopup() string
+	AccessibleErrorMessage() string
+	AccessibleCurrent() string
+	AccessibleAutocomplete() string
+	AccessiblePlaceholder() string
+	AccessibleSort() string
+	AccessibleKeyShortcuts() string
+	AccessibleDetails() string
+	AccessibleRoleDescription() string
 }
 
 // StateSet describes the state of a widget.
 type StateSet struct {
-	Checked  *bool // nil = not applicable
-	Expanded *bool
-	Pressed  *bool // nil = not applicable (tri-state, for toggle buttons)
-	Selected bool
-	Disabled bool
-	ReadOnly bool
-	Required bool
-	Invalid  bool
-	Hidden   bool
-	Busy     bool
-	Modal    bool
+	Checked         *bool // nil = not applicable
+	Expanded        *bool
+	Pressed         *bool // nil = not applicable (tri-state, for toggle buttons)
+	Selected        bool
+	Disabled        bool
+	ReadOnly        bool
+	Required        bool
+	Invalid         bool
+	Hidden          bool
+	Busy            bool
+	Modal           bool
+	Multiline       bool // aria-multiline
+	Multiselectable bool // aria-multiselectable
 }
 
 // Strings returns human-friendly descriptions of the state.
@@ -191,6 +238,12 @@ func (s StateSet) Strings() []string {
 	}
 	if s.Modal {
 		out = append(out, "modal")
+	}
+	if s.Multiline {
+		out = append(out, "multiline")
+	}
+	if s.Multiselectable {
+		out = append(out, "multiselectable")
 	}
 	return out
 }
@@ -308,6 +361,22 @@ type Base struct {
 
 	// Landmark (aria landmark roles)
 	Landmark Landmark
+
+	// WAI-ARIA 1.2/1.3 properties
+	Level            int    // aria-level (heading level, tree depth)
+	Orientation      string // aria-orientation (horizontal/vertical)
+	ActiveDescendant string // aria-activedescendant (ID of focused descendant)
+	PosInSet         int    // aria-posinset (position in set, 1-based)
+	SetSize          int    // aria-setsize (total items in set)
+	HasPopup         string // aria-haspopup (false/true/menu/listbox/tree/grid/dialog)
+	ErrorMessage     string // aria-errormessage (ID of error element)
+	Current          string // aria-current (page/step/location/date/time/true)
+	Autocomplete     string // aria-autocomplete (inline/list/both/none)
+	Placeholder      string // aria-placeholder
+	Sort             string // aria-sort (ascending/descending/none/other)
+	KeyShortcuts     string // aria-keyshortcuts
+	Details          string // aria-details (ID of detailed description)
+	RoleDescription  string // aria-roledescription (custom role label for AT)
 }
 
 // AccessibleRole returns the current role.
@@ -534,6 +603,230 @@ func (b *Base) SetFlowTo(id string) {
 	b.FlowTo = id
 }
 
+// AccessibleLevel returns the heading level or tree depth.
+func (b *Base) AccessibleLevel() int {
+	if b == nil {
+		return 0
+	}
+	return b.Level
+}
+
+// AccessibleOrientation returns the orientation (horizontal/vertical).
+func (b *Base) AccessibleOrientation() string {
+	if b == nil {
+		return ""
+	}
+	return b.Orientation
+}
+
+// AccessibleActiveDescendant returns the ID of the active descendant.
+func (b *Base) AccessibleActiveDescendant() string {
+	if b == nil {
+		return ""
+	}
+	return b.ActiveDescendant
+}
+
+// AccessiblePosInSet returns the 1-based position in the set.
+func (b *Base) AccessiblePosInSet() int {
+	if b == nil {
+		return 0
+	}
+	return b.PosInSet
+}
+
+// AccessibleSetSize returns the total items in the set.
+func (b *Base) AccessibleSetSize() int {
+	if b == nil {
+		return 0
+	}
+	return b.SetSize
+}
+
+// AccessibleHasPopup returns the popup type.
+func (b *Base) AccessibleHasPopup() string {
+	if b == nil {
+		return ""
+	}
+	return b.HasPopup
+}
+
+// AccessibleErrorMessage returns the ID of the error message element.
+func (b *Base) AccessibleErrorMessage() string {
+	if b == nil {
+		return ""
+	}
+	return b.ErrorMessage
+}
+
+// AccessibleCurrent returns the current indicator (page/step/location/date/time/true).
+func (b *Base) AccessibleCurrent() string {
+	if b == nil {
+		return ""
+	}
+	return b.Current
+}
+
+// AccessibleAutocomplete returns the autocomplete mode.
+func (b *Base) AccessibleAutocomplete() string {
+	if b == nil {
+		return ""
+	}
+	return b.Autocomplete
+}
+
+// AccessiblePlaceholder returns the placeholder text.
+func (b *Base) AccessiblePlaceholder() string {
+	if b == nil {
+		return ""
+	}
+	return b.Placeholder
+}
+
+// AccessibleSort returns the sort direction.
+func (b *Base) AccessibleSort() string {
+	if b == nil {
+		return ""
+	}
+	return b.Sort
+}
+
+// AccessibleKeyShortcuts returns the keyboard shortcuts.
+func (b *Base) AccessibleKeyShortcuts() string {
+	if b == nil {
+		return ""
+	}
+	return b.KeyShortcuts
+}
+
+// AccessibleDetails returns the ID of the details element.
+func (b *Base) AccessibleDetails() string {
+	if b == nil {
+		return ""
+	}
+	return b.Details
+}
+
+// AccessibleRoleDescription returns the custom role description.
+func (b *Base) AccessibleRoleDescription() string {
+	if b == nil {
+		return ""
+	}
+	return b.RoleDescription
+}
+
+// SetLevel updates the heading level or tree depth.
+func (b *Base) SetLevel(level int) {
+	if b == nil {
+		return
+	}
+	b.Level = level
+}
+
+// SetOrientation updates the orientation.
+func (b *Base) SetOrientation(orientation string) {
+	if b == nil {
+		return
+	}
+	b.Orientation = orientation
+}
+
+// SetActiveDescendant updates the ID of the active descendant.
+func (b *Base) SetActiveDescendant(id string) {
+	if b == nil {
+		return
+	}
+	b.ActiveDescendant = id
+}
+
+// SetPosInSet updates the 1-based position in the set.
+func (b *Base) SetPosInSet(pos int) {
+	if b == nil {
+		return
+	}
+	b.PosInSet = pos
+}
+
+// SetSetSize updates the total items in the set.
+func (b *Base) SetSetSize(size int) {
+	if b == nil {
+		return
+	}
+	b.SetSize = size
+}
+
+// SetHasPopup updates the popup type.
+func (b *Base) SetHasPopup(popup string) {
+	if b == nil {
+		return
+	}
+	b.HasPopup = popup
+}
+
+// SetErrorMessage updates the ID of the error message element.
+func (b *Base) SetErrorMessage(id string) {
+	if b == nil {
+		return
+	}
+	b.ErrorMessage = id
+}
+
+// SetCurrent updates the current indicator.
+func (b *Base) SetCurrent(current string) {
+	if b == nil {
+		return
+	}
+	b.Current = current
+}
+
+// SetAutocomplete updates the autocomplete mode.
+func (b *Base) SetAutocomplete(autocomplete string) {
+	if b == nil {
+		return
+	}
+	b.Autocomplete = autocomplete
+}
+
+// SetPlaceholder updates the placeholder text.
+func (b *Base) SetPlaceholder(placeholder string) {
+	if b == nil {
+		return
+	}
+	b.Placeholder = placeholder
+}
+
+// SetSort updates the sort direction.
+func (b *Base) SetSort(sort string) {
+	if b == nil {
+		return
+	}
+	b.Sort = sort
+}
+
+// SetKeyShortcuts updates the keyboard shortcuts.
+func (b *Base) SetKeyShortcuts(shortcuts string) {
+	if b == nil {
+		return
+	}
+	b.KeyShortcuts = shortcuts
+}
+
+// SetDetails updates the ID of the details element.
+func (b *Base) SetDetails(id string) {
+	if b == nil {
+		return
+	}
+	b.Details = id
+}
+
+// SetRoleDescription updates the custom role description.
+func (b *Base) SetRoleDescription(desc string) {
+	if b == nil {
+		return
+	}
+	b.RoleDescription = desc
+}
+
 // BoolPtr returns a pointer to a bool.
 func BoolPtr(value bool) *bool {
 	return &value
@@ -722,6 +1015,29 @@ func FormatChange(widget Accessible) string {
 		text := strings.TrimSpace(value.Text)
 		if text != "" {
 			parts = append(parts, text)
+		}
+	}
+	if level := widget.AccessibleLevel(); level > 0 {
+		parts = append(parts, fmt.Sprintf("level %d", level))
+	}
+	if orientation := widget.AccessibleOrientation(); orientation != "" {
+		parts = append(parts, orientation)
+	}
+	if current := widget.AccessibleCurrent(); current != "" {
+		parts = append(parts, "current "+current)
+	}
+	if pos, size := widget.AccessiblePosInSet(), widget.AccessibleSetSize(); pos > 0 && size > 0 {
+		parts = append(parts, fmt.Sprintf("%d of %d", pos, size))
+	}
+	if errMsg := widget.AccessibleErrorMessage(); errMsg != "" {
+		parts = append(parts, "error: "+errMsg)
+	}
+	if roleDesc := widget.AccessibleRoleDescription(); roleDesc != "" && role != "" {
+		for i, p := range parts {
+			if p == role {
+				parts[i] = roleDesc
+				break
+			}
 		}
 	}
 	return strings.Join(parts, ", ")

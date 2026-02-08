@@ -195,8 +195,10 @@ func (s *Splitter) syncA11y() {
 	s.Base.Label = label
 	if s.Orientation == SplitVertical {
 		s.Base.Description = "vertical split"
+		s.Base.Orientation = "vertical"
 	} else {
 		s.Base.Description = "horizontal split"
+		s.Base.Orientation = "horizontal"
 	}
 }
 

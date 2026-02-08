@@ -114,6 +114,20 @@ func (t *testCheckbox) AccessibleDescribedBy() string                { return ""
 func (t *testCheckbox) AccessibleControls() string                   { return "" }
 func (t *testCheckbox) AccessibleOwns() string                      { return "" }
 func (t *testCheckbox) AccessibleFlowTo() string                    { return "" }
+func (t *testCheckbox) AccessibleLevel() int                        { return 0 }
+func (t *testCheckbox) AccessibleOrientation() string               { return "" }
+func (t *testCheckbox) AccessibleActiveDescendant() string          { return "" }
+func (t *testCheckbox) AccessiblePosInSet() int                     { return 0 }
+func (t *testCheckbox) AccessibleSetSize() int                      { return 0 }
+func (t *testCheckbox) AccessibleHasPopup() string                  { return "" }
+func (t *testCheckbox) AccessibleErrorMessage() string              { return "" }
+func (t *testCheckbox) AccessibleCurrent() string                   { return "" }
+func (t *testCheckbox) AccessibleAutocomplete() string              { return "" }
+func (t *testCheckbox) AccessiblePlaceholder() string               { return "" }
+func (t *testCheckbox) AccessibleSort() string                      { return "" }
+func (t *testCheckbox) AccessibleKeyShortcuts() string              { return "" }
+func (t *testCheckbox) AccessibleDetails() string                   { return "" }
+func (t *testCheckbox) AccessibleRoleDescription() string           { return "" }
 
 type testList struct {
 	mu       sync.RWMutex
@@ -238,6 +252,20 @@ func (t *testList) AccessibleDescribedBy() string                { return "" }
 func (t *testList) AccessibleControls() string                   { return "" }
 func (t *testList) AccessibleOwns() string                      { return "" }
 func (t *testList) AccessibleFlowTo() string                    { return "" }
+func (t *testList) AccessibleLevel() int                        { return 0 }
+func (t *testList) AccessibleOrientation() string               { return "" }
+func (t *testList) AccessibleActiveDescendant() string          { return "" }
+func (t *testList) AccessiblePosInSet() int                     { return 0 }
+func (t *testList) AccessibleSetSize() int                      { return 0 }
+func (t *testList) AccessibleHasPopup() string                  { return "" }
+func (t *testList) AccessibleErrorMessage() string              { return "" }
+func (t *testList) AccessibleCurrent() string                   { return "" }
+func (t *testList) AccessibleAutocomplete() string              { return "" }
+func (t *testList) AccessiblePlaceholder() string               { return "" }
+func (t *testList) AccessibleSort() string                      { return "" }
+func (t *testList) AccessibleKeyShortcuts() string              { return "" }
+func (t *testList) AccessibleDetails() string                   { return "" }
+func (t *testList) AccessibleRoleDescription() string           { return "" }
 
 type recordWidget struct {
 	mu        sync.Mutex

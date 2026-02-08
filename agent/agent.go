@@ -307,6 +307,20 @@ func (a *Agent) extractWidgetInfo(w runtime.Widget, id string) WidgetInfo {
 		info.Controls = acc.AccessibleControls()
 		info.Owns = acc.AccessibleOwns()
 		info.FlowTo = acc.AccessibleFlowTo()
+		info.Level = acc.AccessibleLevel()
+		info.Orientation = acc.AccessibleOrientation()
+		info.ActiveDescendant = acc.AccessibleActiveDescendant()
+		info.PosInSet = acc.AccessiblePosInSet()
+		info.SetSize = acc.AccessibleSetSize()
+		info.HasPopup = acc.AccessibleHasPopup()
+		info.ErrorMessage = acc.AccessibleErrorMessage()
+		info.Current = acc.AccessibleCurrent()
+		info.Autocomplete = acc.AccessibleAutocomplete()
+		info.Placeholder = acc.AccessiblePlaceholder()
+		info.Sort = acc.AccessibleSort()
+		info.KeyShortcuts = acc.AccessibleKeyShortcuts()
+		info.Details = acc.AccessibleDetails()
+		info.RoleDescription = acc.AccessibleRoleDescription()
 	}
 
 	// Infer textbox role/value from focusable text widgets when accessibility is missing.
@@ -438,6 +452,18 @@ func actionsForRole(role accessibility.Role, state accessibility.StateSet) []str
 		return []string{"activate"}
 	case accessibility.RoleTab:
 		return []string{"activate", "focus"}
+	case accessibility.RoleListbox, accessibility.RoleGrid, accessibility.RoleTreeGrid:
+		return []string{"select", "focus", "scroll"}
+	case accessibility.RoleAlertDialog:
+		return []string{"focus"}
+	case accessibility.RoleMenuItemCheckbox, accessibility.RoleMenuItemRadio:
+		return []string{"toggle", "focus"}
+	case accessibility.RoleSwitch:
+		return []string{"toggle", "focus"}
+	case accessibility.RoleCombobox:
+		return []string{"expand", "type", "focus"}
+	case accessibility.RoleSpinButton:
+		return []string{"increment", "decrement", "focus"}
 	default:
 		return []string{"focus"}
 	}

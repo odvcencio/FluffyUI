@@ -30,6 +30,7 @@ func NewSparkline(data *state.Signal[[]float64]) *Sparkline {
 		label: "Sparkline",
 	}
 	s.Base.Role = accessibility.RoleChart
+	s.Base.RoleDescription = "chart"
 	s.Base.Live = accessibility.LivePolite
 	s.Base.Relevant = accessibility.RelevantText
 	s.Base.Atomic = true
@@ -194,6 +195,7 @@ func NewBarChart(data *state.Signal[[]BarData]) *BarChart {
 		label:      "Bar Chart",
 	}
 	b.Base.Role = accessibility.RoleChart
+	b.Base.RoleDescription = "chart"
 	b.Base.Live = accessibility.LivePolite
 	b.Base.Relevant = accessibility.RelevantText
 	b.Base.Atomic = true

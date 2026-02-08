@@ -1,6 +1,7 @@
 package widgets
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/odvcencio/fluffyui/accessibility"
@@ -25,6 +26,9 @@ type AutoComplete struct {
 
 	provider func(query string) []string
 	onSelect func(value string)
+
+	services            runtime.Services
+	prevSuggestionCount int
 }
 
 // NewAutoComplete creates a new AutoComplete widget.
@@ -41,7 +45,9 @@ func NewAutoComplete() *AutoComplete {
 	ac.input.SetOnChange(func(text string) {
 		ac.updateSuggestions(text)
 	})
-	ac.Base.Role = accessibility.RoleTextbox
+	ac.Base.Role = accessibility.RoleCombobox
+	ac.Base.HasPopup = "listbox"
+	ac.Base.Autocomplete = "list"
 	ac.syncA11y()
 	return ac
 }
@@ -303,7 +309,7 @@ func (a *AutoComplete) syncA11y() {
 		return
 	}
 	if a.Base.Role == "" {
-		a.Base.Role = accessibility.RoleTextbox
+		a.Base.Role = accessibility.RoleCombobox
 	}
 	label := strings.TrimSpace(a.label)
 	if label == "" {
@@ -313,9 +319,38 @@ func (a *AutoComplete) syncA11y() {
 	if a.input != nil {
 		a.Base.Value = &accessibility.ValueInfo{Text: a.input.Text()}
 	}
+	expanded := len(a.suggestions) > 0
+	a.Base.State.Expanded = accessibility.BoolPtr(expanded)
+
+	// Announce suggestion count changes
+	count := len(a.suggestions)
+	if count != a.prevSuggestionCount {
+		a.prevSuggestionCount = count
+		if announcer := a.services.Announcer(); announcer != nil && count > 0 {
+			announcer.Announce(fmt.Sprintf("%d suggestions available", count), accessibility.PriorityPolite)
+		}
+	}
+}
+
+// Bind attaches app services.
+func (a *AutoComplete) Bind(services runtime.Services) {
+	if a == nil {
+		return
+	}
+	a.services = services
+}
+
+// Unbind releases app services.
+func (a *AutoComplete) Unbind() {
+	if a == nil {
+		return
+	}
+	a.services = runtime.Services{}
 }
 
 var _ runtime.Widget = (*AutoComplete)(nil)
 var _ runtime.Focusable = (*AutoComplete)(nil)
+var _ runtime.Bindable = (*AutoComplete)(nil)
+var _ runtime.Unbindable = (*AutoComplete)(nil)
 var _ runtime.ChildProvider = (*AutoComplete)(nil)
 var _ Searchable = (*AutoComplete)(nil)

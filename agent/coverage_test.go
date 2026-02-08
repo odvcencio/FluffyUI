@@ -51,6 +51,20 @@ func (t *testWidget) AccessibleDescribedBy() string                { return "" }
 func (t *testWidget) AccessibleControls() string                   { return "" }
 func (t *testWidget) AccessibleOwns() string                      { return "" }
 func (t *testWidget) AccessibleFlowTo() string                    { return "" }
+func (t *testWidget) AccessibleLevel() int                        { return t.a11y.Level }
+func (t *testWidget) AccessibleOrientation() string               { return t.a11y.Orientation }
+func (t *testWidget) AccessibleActiveDescendant() string          { return t.a11y.ActiveDescendant }
+func (t *testWidget) AccessiblePosInSet() int                     { return t.a11y.PosInSet }
+func (t *testWidget) AccessibleSetSize() int                      { return t.a11y.SetSize }
+func (t *testWidget) AccessibleHasPopup() string                  { return t.a11y.HasPopup }
+func (t *testWidget) AccessibleErrorMessage() string              { return t.a11y.ErrorMessage }
+func (t *testWidget) AccessibleCurrent() string                   { return t.a11y.Current }
+func (t *testWidget) AccessibleAutocomplete() string              { return t.a11y.Autocomplete }
+func (t *testWidget) AccessiblePlaceholder() string               { return t.a11y.Placeholder }
+func (t *testWidget) AccessibleSort() string                      { return t.a11y.Sort }
+func (t *testWidget) AccessibleKeyShortcuts() string              { return t.a11y.KeyShortcuts }
+func (t *testWidget) AccessibleDetails() string                   { return t.a11y.Details }
+func (t *testWidget) AccessibleRoleDescription() string           { return t.a11y.RoleDescription }
 
 func (t *testWidget) Text() string { return t.text }
 

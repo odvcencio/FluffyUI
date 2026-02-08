@@ -557,6 +557,7 @@ func (d *Dialog) syncA11y() {
 	if d.Base.Role == "" {
 		d.Base.Role = accessibility.RoleDialog
 	}
+	d.Base.State.Modal = true
 	d.Base.Label = d.Title
 	if d.Content == nil {
 		d.Base.Description = d.Body

@@ -3194,6 +3194,51 @@ func widgetChanges(before WidgetInfo, after WidgetInfo) map[string]ValueChange {
 	if before.FlowTo != after.FlowTo {
 		changes["flow_to"] = ValueChange{Old: before.FlowTo, New: after.FlowTo}
 	}
+	if before.Level != after.Level {
+		changes["level"] = ValueChange{Old: before.Level, New: after.Level}
+	}
+	if before.Orientation != after.Orientation {
+		changes["orientation"] = ValueChange{Old: before.Orientation, New: after.Orientation}
+	}
+	if before.ActiveDescendant != after.ActiveDescendant {
+		changes["active_descendant"] = ValueChange{Old: before.ActiveDescendant, New: after.ActiveDescendant}
+	}
+	if before.PosInSet != after.PosInSet {
+		changes["pos_in_set"] = ValueChange{Old: before.PosInSet, New: after.PosInSet}
+	}
+	if before.SetSize != after.SetSize {
+		changes["set_size"] = ValueChange{Old: before.SetSize, New: after.SetSize}
+	}
+	if before.HasPopup != after.HasPopup {
+		changes["has_popup"] = ValueChange{Old: before.HasPopup, New: after.HasPopup}
+	}
+	if before.ErrorMessage != after.ErrorMessage {
+		changes["error_message"] = ValueChange{Old: before.ErrorMessage, New: after.ErrorMessage}
+	}
+	if before.Current != after.Current {
+		changes["current"] = ValueChange{Old: before.Current, New: after.Current}
+	}
+	if before.Autocomplete != after.Autocomplete {
+		changes["autocomplete"] = ValueChange{Old: before.Autocomplete, New: after.Autocomplete}
+	}
+	if before.Placeholder != after.Placeholder {
+		changes["placeholder"] = ValueChange{Old: before.Placeholder, New: after.Placeholder}
+	}
+	if before.Sort != after.Sort {
+		changes["sort"] = ValueChange{Old: before.Sort, New: after.Sort}
+	}
+	if before.KeyShortcuts != after.KeyShortcuts {
+		changes["key_shortcuts"] = ValueChange{Old: before.KeyShortcuts, New: after.KeyShortcuts}
+	}
+	if before.Details != after.Details {
+		changes["details"] = ValueChange{Old: before.Details, New: after.Details}
+	}
+	if before.RoleDescription != after.RoleDescription {
+		changes["role_description"] = ValueChange{Old: before.RoleDescription, New: after.RoleDescription}
+	}
+	if !valueInfoEqual(before.ValueInfo, after.ValueInfo) {
+		changes["value_info"] = ValueChange{Old: before.ValueInfo, New: after.ValueInfo}
+	}
 	stateChanges := stateDiff(before.State, after.State)
 	for key, change := range stateChanges {
 		changes["state."+key] = change
@@ -3239,6 +3284,12 @@ func stateDiff(before StateSet, after StateSet) map[string]ValueChange {
 	if before.Modal != after.Modal {
 		changes["modal"] = ValueChange{Old: before.Modal, New: after.Modal}
 	}
+	if before.Multiline != after.Multiline {
+		changes["multiline"] = ValueChange{Old: before.Multiline, New: after.Multiline}
+	}
+	if before.Multiselectable != after.Multiselectable {
+		changes["multiselectable"] = ValueChange{Old: before.Multiselectable, New: after.Multiselectable}
+	}
 	return changes
 }
 
@@ -3250,6 +3301,16 @@ func boolPtrEqual(a, b *bool) bool {
 		return false
 	}
 	return *a == *b
+}
+
+func valueInfoEqual(a, b *ValueInfoMCP) bool {
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+	return a.Min == b.Min && a.Max == b.Max && a.Current == b.Current && a.Text == b.Text
 }
 
 func equalStringSlice(a, b []string) bool {

@@ -37,7 +37,7 @@ func newSelectDropdown(parent *Select) *selectDropdown {
 		styleSet:      parent.styleSet,
 		selectedSet:   parent.focusSet,
 	}
-	drop.Base.Role = accessibility.RoleList
+	drop.Base.Role = accessibility.RoleListbox
 	drop.Base.Label = strings.TrimSpace(parent.label)
 	drop.Base.Description = "Select options"
 	drop.ensureSelectable()
@@ -241,7 +241,7 @@ func (d *selectDropdown) syncA11y() {
 		return
 	}
 	if d.Base.Role == "" {
-		d.Base.Role = accessibility.RoleList
+		d.Base.Role = accessibility.RoleListbox
 	}
 	label := strings.TrimSpace(d.label)
 	if label == "" {

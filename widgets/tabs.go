@@ -346,6 +346,7 @@ func (t *Tabs) syncA11y() {
 		label = "Tabs"
 	}
 	t.Base.Label = label
+	t.Base.Orientation = "horizontal"
 	if tab := t.selectedTab(); tab != nil {
 		t.Base.Value = &accessibility.ValueInfo{
 			Text:    tab.Title,
@@ -353,8 +354,14 @@ func (t *Tabs) syncA11y() {
 			Min:     1,
 			Max:     float64(len(t.Tabs)),
 		}
+		t.Base.Current = "true"
+		t.Base.PosInSet = t.selected + 1
+		t.Base.SetSize = len(t.Tabs)
 	} else {
 		t.Base.Value = nil
+		t.Base.Current = ""
+		t.Base.PosInSet = 0
+		t.Base.SetSize = 0
 	}
 	if len(t.Tabs) > 0 {
 		titles := make([]string, 0, len(t.Tabs))

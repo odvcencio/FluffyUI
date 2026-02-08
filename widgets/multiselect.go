@@ -29,6 +29,7 @@ type MultiSelect struct {
 	checkedStyle  backend.Style
 	disabledStyle backend.Style
 	onChange      func(selected []MultiSelectOption)
+	services      runtime.Services
 }
 
 // NewMultiSelect creates a new multi-select list.
@@ -43,7 +44,8 @@ func NewMultiSelect(options ...MultiSelectOption) *MultiSelect {
 		disabledStyle: backend.DefaultStyle().Dim(true),
 		checked:       map[int]bool{},
 	}
-	m.Base.Role = accessibility.RoleList
+	m.Base.Role = accessibility.RoleListbox
+	m.Base.State.Multiselectable = true
 	m.syncA11y()
 	return m
 }
@@ -205,6 +207,12 @@ func (m *MultiSelect) moveSelection(delta int) {
 		next = len(m.options) - 1
 	}
 	m.selected = next
+	m.syncA11y()
+	if announcer := m.services.Announcer(); announcer != nil {
+		if next >= 0 && next < len(m.options) {
+			announcer.Announce(m.options[next].Label, accessibility.PriorityPolite)
+		}
+	}
 }
 
 func (m *MultiSelect) toggleSelected() {
@@ -216,6 +224,13 @@ func (m *MultiSelect) toggleSelected() {
 	}
 	m.checked[m.selected] = !m.checked[m.selected]
 	m.syncA11y()
+	if announcer := m.services.Announcer(); announcer != nil {
+		if m.checked[m.selected] {
+			announcer.Announce("Option checked", accessibility.PriorityPolite)
+		} else {
+			announcer.Announce("Option unchecked", accessibility.PriorityPolite)
+		}
+	}
 	if m.onChange != nil {
 		m.onChange(m.SelectedOptions())
 	}
@@ -245,8 +260,9 @@ func (m *MultiSelect) syncA11y() {
 		return
 	}
 	if m.Base.Role == "" {
-		m.Base.Role = accessibility.RoleList
+		m.Base.Role = accessibility.RoleListbox
 	}
+	m.Base.State.Multiselectable = true
 	label := strings.TrimSpace(m.label)
 	if label == "" {
 		label = "Multi Select"
@@ -255,5 +271,23 @@ func (m *MultiSelect) syncA11y() {
 	m.Base.Description = "multi-select list"
 }
 
+// Bind attaches app services.
+func (m *MultiSelect) Bind(services runtime.Services) {
+	if m == nil {
+		return
+	}
+	m.services = services
+}
+
+// Unbind releases app services.
+func (m *MultiSelect) Unbind() {
+	if m == nil {
+		return
+	}
+	m.services = runtime.Services{}
+}
+
 var _ runtime.Widget = (*MultiSelect)(nil)
 var _ runtime.Focusable = (*MultiSelect)(nil)
+var _ runtime.Bindable = (*MultiSelect)(nil)
+var _ runtime.Unbindable = (*MultiSelect)(nil)

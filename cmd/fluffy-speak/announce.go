@@ -158,6 +158,31 @@ func formatWidget(w mcp.WidgetInfo) string {
 		parts = append(parts, value)
 	}
 
+	if w.RoleDescription != "" {
+		// Override role name with custom description
+		for i, p := range parts {
+			if p == role {
+				parts[i] = w.RoleDescription
+				break
+			}
+		}
+	}
+	if w.Level > 0 && role == "heading" {
+		parts = append(parts, fmt.Sprintf("level %d", w.Level))
+	}
+	if w.PosInSet > 0 && w.SetSize > 0 {
+		parts = append(parts, fmt.Sprintf("%d of %d", w.PosInSet, w.SetSize))
+	}
+	if w.Current != "" {
+		parts = append(parts, "current "+w.Current)
+	}
+	if w.Placeholder != "" && value == "" {
+		parts = append(parts, w.Placeholder)
+	}
+	if w.ErrorMessage != "" {
+		parts = append(parts, "error: "+w.ErrorMessage)
+	}
+
 	return strings.Join(parts, ", ")
 }
 
@@ -198,6 +223,12 @@ func formatStates(s mcp.StateSet) string {
 	}
 	if s.Modal {
 		parts = append(parts, "modal dialog")
+	}
+	if s.Multiline {
+		parts = append(parts, "multiline")
+	}
+	if s.Multiselectable {
+		parts = append(parts, "multiselectable")
 	}
 	return strings.Join(parts, " ")
 }

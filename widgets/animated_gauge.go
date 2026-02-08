@@ -1,8 +1,10 @@
 package widgets
 
 import (
+	"fmt"
 	"math"
 
+	"github.com/odvcencio/fluffyui/accessibility"
 	"github.com/odvcencio/fluffyui/animation"
 	"github.com/odvcencio/fluffyui/backend"
 	"github.com/odvcencio/fluffyui/effects"
@@ -45,6 +47,8 @@ func NewAnimatedGauge(minValue, maxValue float64) *AnimatedGauge {
 	}
 	g.spring = animation.NewSpring(0, cfg)
 	g.CanvasWidget = *NewCanvasWidget(g.drawGauge)
+	g.Base.Role = accessibility.RoleMeter
+	g.Base.Label = "Gauge"
 	return g
 }
 
@@ -88,6 +92,10 @@ func (g *AnimatedGauge) SetValue(value float64) {
 	}
 	if ratio > 1 {
 		ratio = 1
+	}
+	g.Base.Value = &accessibility.ValueInfo{
+		Min: g.min, Max: g.max, Current: value,
+		Text: fmt.Sprintf("%.0f%%", ratio*100),
 	}
 	if animator := g.services.Animator(); animator != nil {
 		animator.AnimateSpring(g, "value", g.spring, ratio)

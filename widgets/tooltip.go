@@ -37,7 +37,7 @@ func NewTooltip(target runtime.Widget, content runtime.Widget, opts ...TooltipOp
 		trigger:   TooltipHover,
 		placement: PopoverAuto,
 	}
-	t.Base.Role = accessibility.RoleGroup
+	t.Base.Role = accessibility.RoleTooltip
 	for _, opt := range opts {
 		if opt != nil {
 			opt(t)

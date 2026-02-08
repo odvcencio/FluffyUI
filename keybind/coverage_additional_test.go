@@ -38,6 +38,20 @@ func (t *testWidget) AccessibleDescribedBy() string                { return "" }
 func (t *testWidget) AccessibleControls() string                   { return "" }
 func (t *testWidget) AccessibleOwns() string                      { return "" }
 func (t *testWidget) AccessibleFlowTo() string                    { return "" }
+func (t *testWidget) AccessibleLevel() int                        { return 0 }
+func (t *testWidget) AccessibleOrientation() string               { return "" }
+func (t *testWidget) AccessibleActiveDescendant() string          { return "" }
+func (t *testWidget) AccessiblePosInSet() int                     { return 0 }
+func (t *testWidget) AccessibleSetSize() int                      { return 0 }
+func (t *testWidget) AccessibleHasPopup() string                  { return "" }
+func (t *testWidget) AccessibleErrorMessage() string              { return "" }
+func (t *testWidget) AccessibleCurrent() string                   { return "" }
+func (t *testWidget) AccessibleAutocomplete() string              { return "" }
+func (t *testWidget) AccessiblePlaceholder() string               { return "" }
+func (t *testWidget) AccessibleSort() string                      { return "" }
+func (t *testWidget) AccessibleKeyShortcuts() string              { return "" }
+func (t *testWidget) AccessibleDetails() string                   { return "" }
+func (t *testWidget) AccessibleRoleDescription() string           { return "" }
 
 type clipboardWidget struct {
 	testWidget

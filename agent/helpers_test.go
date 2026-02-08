@@ -35,6 +35,20 @@ func (s simpleAccessible) AccessibleDescribedBy() string                { return
 func (s simpleAccessible) AccessibleControls() string                   { return "" }
 func (s simpleAccessible) AccessibleOwns() string                      { return "" }
 func (s simpleAccessible) AccessibleFlowTo() string                    { return "" }
+func (s simpleAccessible) AccessibleLevel() int                        { return 0 }
+func (s simpleAccessible) AccessibleOrientation() string               { return "" }
+func (s simpleAccessible) AccessibleActiveDescendant() string          { return "" }
+func (s simpleAccessible) AccessiblePosInSet() int                     { return 0 }
+func (s simpleAccessible) AccessibleSetSize() int                      { return 0 }
+func (s simpleAccessible) AccessibleHasPopup() string                  { return "" }
+func (s simpleAccessible) AccessibleErrorMessage() string              { return "" }
+func (s simpleAccessible) AccessibleCurrent() string                   { return "" }
+func (s simpleAccessible) AccessibleAutocomplete() string              { return "" }
+func (s simpleAccessible) AccessiblePlaceholder() string               { return "" }
+func (s simpleAccessible) AccessibleSort() string                      { return "" }
+func (s simpleAccessible) AccessibleKeyShortcuts() string              { return "" }
+func (s simpleAccessible) AccessibleDetails() string                   { return "" }
+func (s simpleAccessible) AccessibleRoleDescription() string           { return "" }
 
 func TestAccessibleChoice(t *testing.T) {
 	if accessibleChoice(nil) != "" {

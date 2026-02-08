@@ -51,4 +51,20 @@ type WidgetInfo struct {
 	Controls    string `json:"controls,omitempty"`
 	Owns        string `json:"owns,omitempty"`
 	FlowTo      string `json:"flow_to,omitempty"`
+
+	// WAI-ARIA 1.2/1.3 properties
+	Level            int    `json:"level,omitempty"`
+	Orientation      string `json:"orientation,omitempty"`
+	ActiveDescendant string `json:"active_descendant,omitempty"`
+	PosInSet         int    `json:"pos_in_set,omitempty"`
+	SetSize          int    `json:"set_size,omitempty"`
+	HasPopup         string `json:"has_popup,omitempty"`
+	ErrorMessage     string `json:"error_message,omitempty"`
+	Current          string `json:"current,omitempty"`
+	Autocomplete     string `json:"autocomplete,omitempty"`
+	Placeholder      string `json:"placeholder,omitempty"`
+	Sort             string `json:"sort,omitempty"`
+	KeyShortcuts     string `json:"key_shortcuts,omitempty"`
+	Details          string `json:"details,omitempty"`
+	RoleDescription  string `json:"role_description,omitempty"`
 }

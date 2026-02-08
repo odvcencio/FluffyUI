@@ -639,6 +639,7 @@ func (i *Input) syncA11y() {
 		i.Base.Role = accessibility.RoleTextbox
 	}
 	i.Base.Label = label
+	i.Base.Placeholder = i.placeholder
 	i.Base.Value = &accessibility.ValueInfo{Text: i.Text()}
 }
 
@@ -1037,6 +1038,7 @@ func NewMultilineInput() *MultilineInput {
 		focusStyle: backend.DefaultStyle(),
 	}
 	input.Base.Role = accessibility.RoleTextbox
+	input.Base.State.Multiline = true
 	input.syncA11y()
 	return input
 }

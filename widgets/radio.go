@@ -231,6 +231,9 @@ func (r *Radio) HandleMessage(msg runtime.Message) runtime.HandleResult {
 		if r.group != nil {
 			r.group.SetSelected(r.index)
 			r.syncState()
+			if announcer := r.services.Announcer(); announcer != nil {
+				announcer.AnnounceChange(r)
+			}
 			return runtime.Handled()
 		}
 	}
@@ -249,14 +252,20 @@ func (r *Radio) syncState() {
 		return
 	}
 	selected := r.isSelected()
-	r.Base.State.Selected = selected
+	r.Base.State.Checked = accessibility.BoolPtr(selected)
 	if r.label != nil {
 		r.Base.Label = r.label.Get()
 	}
 	if r.Base.Role == "" {
 		r.Base.Role = accessibility.RoleRadio
 	}
+	if r.group != nil {
+		r.Base.PosInSet = r.index + 1
+		r.Base.SetSize = len(r.group.options)
+	}
 }
 
 var _ runtime.Widget = (*Radio)(nil)
 var _ runtime.Focusable = (*Radio)(nil)
+var _ runtime.Bindable = (*Radio)(nil)
+var _ runtime.Unbindable = (*Radio)(nil)

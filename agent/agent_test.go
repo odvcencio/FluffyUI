@@ -120,6 +120,20 @@ func (t *testInput) AccessibleDescribedBy() string                { return "" }
 func (t *testInput) AccessibleControls() string                   { return "" }
 func (t *testInput) AccessibleOwns() string                      { return "" }
 func (t *testInput) AccessibleFlowTo() string                    { return "" }
+func (t *testInput) AccessibleLevel() int                        { return 0 }
+func (t *testInput) AccessibleOrientation() string               { return "" }
+func (t *testInput) AccessibleActiveDescendant() string          { return "" }
+func (t *testInput) AccessiblePosInSet() int                     { return 0 }
+func (t *testInput) AccessibleSetSize() int                      { return 0 }
+func (t *testInput) AccessibleHasPopup() string                  { return "" }
+func (t *testInput) AccessibleErrorMessage() string              { return "" }
+func (t *testInput) AccessibleCurrent() string                   { return "" }
+func (t *testInput) AccessibleAutocomplete() string              { return "" }
+func (t *testInput) AccessiblePlaceholder() string               { return "" }
+func (t *testInput) AccessibleSort() string                      { return "" }
+func (t *testInput) AccessibleKeyShortcuts() string              { return "" }
+func (t *testInput) AccessibleDetails() string                   { return "" }
+func (t *testInput) AccessibleRoleDescription() string           { return "" }
 func (t *testInput) Text() string {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
@@ -218,6 +232,20 @@ func (t *testButton) AccessibleDescribedBy() string                { return "" }
 func (t *testButton) AccessibleControls() string                   { return "" }
 func (t *testButton) AccessibleOwns() string                      { return "" }
 func (t *testButton) AccessibleFlowTo() string                    { return "" }
+func (t *testButton) AccessibleLevel() int                        { return 0 }
+func (t *testButton) AccessibleOrientation() string               { return "" }
+func (t *testButton) AccessibleActiveDescendant() string          { return "" }
+func (t *testButton) AccessiblePosInSet() int                     { return 0 }
+func (t *testButton) AccessibleSetSize() int                      { return 0 }
+func (t *testButton) AccessibleHasPopup() string                  { return "" }
+func (t *testButton) AccessibleErrorMessage() string              { return "" }
+func (t *testButton) AccessibleCurrent() string                   { return "" }
+func (t *testButton) AccessibleAutocomplete() string              { return "" }
+func (t *testButton) AccessiblePlaceholder() string               { return "" }
+func (t *testButton) AccessibleSort() string                      { return "" }
+func (t *testButton) AccessibleKeyShortcuts() string              { return "" }
+func (t *testButton) AccessibleDetails() string                   { return "" }
+func (t *testButton) AccessibleRoleDescription() string           { return "" }
 
 func (t *testButton) Clicked() bool {
 	t.mu.RLock()

@@ -1,5 +1,38 @@
 # Changelog
 
+## v0.4.0 - 2026-02-08
+
+### Highlights
+- Full WAI-ARIA 1.2/1.3 compliance audit: fixed 9 critical/high issues, wired 6 interactive widgets with announcements, and added missing roles.
+- Every interactive widget now announces state changes to screen readers via `Bind`/`Unbind` service wiring.
+- MCP pipeline tracks `ValueInfo` diffs for rich slider/gauge change detection.
+
+### Accessibility
+- New roles: `RoleTooltip`, `RoleMeter`.
+- `FormatChange()`: now includes `ErrorMessage` and substitutes `RoleDescription` for raw role when set.
+- `Slider`/`RangeSlider`: `ValueInfo` now populates `Min`/`Max`/`Current` (required by WAI-ARIA `aria-valuemin`/`aria-valuemax`/`aria-valuenow`).
+- `RangeSlider`: added missing `Orientation` property.
+- `Radio`: uses `State.Checked` instead of `State.Selected` per ARIA spec; reports `PosInSet`/`SetSize` for group context.
+- `Dialog`: `syncA11y()` now always sets `State.Modal = true`.
+- `Log`: role corrected from `RoleList` to `RoleLog`.
+- `selectDropdown`: role corrected from `RoleList` to `RoleListbox`.
+- `AutoComplete`: fallback role fixed from `RoleTextbox` to `RoleCombobox`; sets `State.Expanded` based on suggestions; announces suggestion count changes.
+- `Tooltip`: role changed from `RoleGroup` to `RoleTooltip`.
+- `AnimatedGauge`: wired `RoleMeter` with label and `ValueInfo`.
+
+### Widget Announcements
+- `Select`: announces selection changes via `AnnounceChange`; sets `Expanded` state, `PosInSet`/`SetSize`.
+- `MultiSelect`: added `Bind`/`Unbind`; announces "Option checked"/"Option unchecked" on toggle and focused option on navigation.
+- `Slider`/`RangeSlider`: announce value changes (debounced via `lastDesc` pattern to avoid redundant speech).
+- `Radio`: announces selection change via `AnnounceChange`; added `Bindable`/`Unbindable` interface assertions.
+- `AutoComplete`: added `Bind`/`Unbind`; announces "N suggestions available" on count change.
+
+### Agent & MCP
+- `widgetChanges()`: added `ValueInfo` diff via `valueInfoEqual` helper for `ValueInfoMCP` comparison.
+
+### Tools
+- `cmd/fluffy-speak`: `formatWidget()` now includes `ErrorMessage`; `widgetChanges()` tracks `ValueInfo` diffs.
+
 ## v0.3.5 - 2026-02-07
 
 ### Highlights

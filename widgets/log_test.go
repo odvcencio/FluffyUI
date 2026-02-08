@@ -506,8 +506,8 @@ func TestLog_Accessibility(t *testing.T) {
 	log := NewLog()
 	log.SetLabel("Application Log")
 
-	if log.AccessibleRole() != "list" {
-		t.Errorf("AccessibleRole() = %q, want 'list'", log.AccessibleRole())
+	if log.AccessibleRole() != "log" {
+		t.Errorf("AccessibleRole() = %q, want 'log'", log.AccessibleRole())
 	}
 	if log.AccessibleLabel() != "Application Log" {
 		t.Errorf("AccessibleLabel() = %q, want 'Application Log'", log.AccessibleLabel())

@@ -78,6 +78,21 @@ func widgetInfoFromAgent(info agent.WidgetInfo, parentID string) WidgetInfo {
 		Controls:    info.Controls,
 		Owns:        info.Owns,
 		FlowTo:      info.FlowTo,
+		Level:            info.Level,
+		Orientation:      info.Orientation,
+		ActiveDescendant: info.ActiveDescendant,
+		PosInSet:         info.PosInSet,
+		SetSize:          info.SetSize,
+		HasPopup:         info.HasPopup,
+		ErrorMessage:     info.ErrorMessage,
+		Current:          info.Current,
+		Autocomplete:     info.Autocomplete,
+		Placeholder:      info.Placeholder,
+		Sort:             info.Sort,
+		KeyShortcuts:     info.KeyShortcuts,
+		Details:          info.Details,
+		RoleDescription:  info.RoleDescription,
+		ValueInfo:        valueInfoFromAgent(info.ValueInfo),
 	}
 }
 
@@ -105,6 +120,21 @@ func widgetNodeFromAgent(info agent.WidgetInfo) WidgetNode {
 		Controls:    info.Controls,
 		Owns:        info.Owns,
 		FlowTo:      info.FlowTo,
+		Level:            info.Level,
+		Orientation:      info.Orientation,
+		ActiveDescendant: info.ActiveDescendant,
+		PosInSet:         info.PosInSet,
+		SetSize:          info.SetSize,
+		HasPopup:         info.HasPopup,
+		ErrorMessage:     info.ErrorMessage,
+		Current:          info.Current,
+		Autocomplete:     info.Autocomplete,
+		Placeholder:      info.Placeholder,
+		Sort:             info.Sort,
+		KeyShortcuts:     info.KeyShortcuts,
+		Details:          info.Details,
+		RoleDescription:  info.RoleDescription,
+		ValueInfo:        valueInfoFromAgent(info.ValueInfo),
 	}
 }
 
@@ -132,6 +162,8 @@ func stateFromAgent(info agent.WidgetInfo) StateSet {
 		Hidden:   state.Hidden,
 		Busy:     state.Busy,
 		Modal:    state.Modal,
+		Multiline:       state.Multiline,
+		Multiselectable: state.Multiselectable,
 	}
 }
 
@@ -219,6 +251,54 @@ func roleToMCP(role accessibility.Role) string {
 		return "note"
 	case accessibility.RoleScrollbar:
 		return "scrollbar"
+	case accessibility.RoleListbox:
+		return "listbox"
+	case accessibility.RoleOption:
+		return "option"
+	case accessibility.RoleRadioGroup:
+		return "radiogroup"
+	case accessibility.RoleGrid:
+		return "grid"
+	case accessibility.RoleGridCell:
+		return "gridcell"
+	case accessibility.RoleColumnHeader:
+		return "columnheader"
+	case accessibility.RoleRowHeader:
+		return "rowheader"
+	case accessibility.RoleRowGroup:
+		return "rowgroup"
+	case accessibility.RoleAlertDialog:
+		return "alertdialog"
+	case accessibility.RoleMenuItemCheckbox:
+		return "menuitemcheckbox"
+	case accessibility.RoleMenuItemRadio:
+		return "menuitemradio"
+	case accessibility.RoleMenuBar:
+		return "menubar"
+	case accessibility.RoleTreeGrid:
+		return "treegrid"
+	case accessibility.RoleDocument:
+		return "document"
+	case accessibility.RoleMarquee:
+		return "marquee"
+	case accessibility.RolePresentation:
+		return "presentation"
+	case accessibility.RoleComment:
+		return "comment"
+	case accessibility.RoleMark:
+		return "mark"
+	case accessibility.RoleSuggestion:
+		return "suggestion"
+	case accessibility.RoleCode:
+		return "code"
+	case accessibility.RoleTime:
+		return "time"
+	case accessibility.RoleImage:
+		return "img"
+	case accessibility.RoleTooltip:
+		return "tooltip"
+	case accessibility.RoleMeter:
+		return "meter"
 	default:
 		return "unknown"
 	}
@@ -257,4 +337,16 @@ func explicitBaseID(explicit string) string {
 		return explicit[:idx]
 	}
 	return explicit
+}
+
+func valueInfoFromAgent(vi *accessibility.ValueInfo) *ValueInfoMCP {
+	if vi == nil {
+		return nil
+	}
+	return &ValueInfoMCP{
+		Min:     vi.Min,
+		Max:     vi.Max,
+		Current: vi.Current,
+		Text:    vi.Text,
+	}
 }

@@ -183,7 +183,7 @@ func NewLog(opts ...LogOption) *Log {
 		opt(l)
 	}
 	l.entries = make([]LogEntry, l.maxLines)
-	l.Base.Role = accessibility.RoleList
+	l.Base.Role = accessibility.RoleLog
 	l.Base.Live = accessibility.LivePolite
 	l.Base.Relevant = accessibility.RelevantAdditions
 	l.syncA11y()
@@ -743,7 +743,7 @@ func (l *Log) syncA11y() {
 		return
 	}
 	if l.Base.Role == "" {
-		l.Base.Role = accessibility.RoleList
+		l.Base.Role = accessibility.RoleLog
 	}
 	label := strings.TrimSpace(l.label)
 	if label == "" {
