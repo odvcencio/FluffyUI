@@ -24,6 +24,7 @@ type Tooltip struct {
 	placement PopoverPlacement
 	gap       int
 	open      bool
+	services  runtime.Services
 }
 
 // TooltipOption configures a tooltip.
@@ -253,6 +254,24 @@ func commandResult(cmd runtime.Command) runtime.HandleResult {
 	return runtime.HandleResult{Handled: false, Commands: []runtime.Command{cmd}}
 }
 
+// Bind attaches app services.
+func (t *Tooltip) Bind(services runtime.Services) {
+	if t == nil {
+		return
+	}
+	t.services = services
+}
+
+// Unbind releases app services.
+func (t *Tooltip) Unbind() {
+	if t == nil {
+		return
+	}
+	t.services = runtime.Services{}
+}
+
 var _ runtime.Widget = (*Tooltip)(nil)
 var _ runtime.ChildProvider = (*Tooltip)(nil)
 var _ runtime.HitSelfProvider = (*Tooltip)(nil)
+var _ runtime.Bindable = (*Tooltip)(nil)
+var _ runtime.Unbindable = (*Tooltip)(nil)

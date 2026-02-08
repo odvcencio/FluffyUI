@@ -22,6 +22,7 @@ type SignalLabel struct {
 	alignment Alignment
 	mounted   bool
 	styleSet  bool
+	services  runtime.Services
 }
 
 // NewSignalLabel creates a new signal-backed label.
@@ -160,4 +161,22 @@ func (s *SignalLabel) syncA11y() {
 	s.Base.Value = nil
 }
 
+// Bind attaches app services.
+func (s *SignalLabel) Bind(services runtime.Services) {
+	if s == nil {
+		return
+	}
+	s.services = services
+}
+
+// Unbind releases app services.
+func (s *SignalLabel) Unbind() {
+	if s == nil {
+		return
+	}
+	s.services = runtime.Services{}
+}
+
 var _ runtime.Widget = (*SignalLabel)(nil)
+var _ runtime.Bindable = (*SignalLabel)(nil)
+var _ runtime.Unbindable = (*SignalLabel)(nil)

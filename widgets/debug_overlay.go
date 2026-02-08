@@ -17,6 +17,7 @@ type DebugOverlay struct {
 	labelStyle backend.Style
 	showLabels bool
 	maxDepth   int
+	services   runtime.Services
 }
 
 // DebugOverlayOption configures a debug overlay.
@@ -154,4 +155,22 @@ func debugLabel(widget runtime.Widget) string {
 	return name
 }
 
+// Bind attaches app services.
+func (d *DebugOverlay) Bind(services runtime.Services) {
+	if d == nil {
+		return
+	}
+	d.services = services
+}
+
+// Unbind releases app services.
+func (d *DebugOverlay) Unbind() {
+	if d == nil {
+		return
+	}
+	d.services = runtime.Services{}
+}
+
 var _ runtime.Widget = (*DebugOverlay)(nil)
+var _ runtime.Bindable = (*DebugOverlay)(nil)
+var _ runtime.Unbindable = (*DebugOverlay)(nil)

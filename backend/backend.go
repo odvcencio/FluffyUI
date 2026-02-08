@@ -64,6 +64,22 @@ type InlineHeightSetter interface {
 	SetInlineHeight(lines int)
 }
 
+// CursorShape controls the terminal cursor appearance.
+type CursorShape int
+
+const (
+	CursorDefault   CursorShape = iota // Terminal default
+	CursorBlock                        // Block cursor
+	CursorUnderline                    // Underline cursor
+	CursorBeam                         // Beam/bar cursor
+)
+
+// CursorShapeSetter allows backends to control cursor appearance.
+// This is optional — backends that don't support it will be skipped.
+type CursorShapeSetter interface {
+	SetCursorShape(shape CursorShape)
+}
+
 // RenderTarget is a subset of Backend for rendering operations only.
 // Widgets render to this interface, not the full Backend.
 type RenderTarget interface {

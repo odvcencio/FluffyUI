@@ -2,15 +2,23 @@ package widgets
 
 import (
 	"strings"
+	"time"
 
 	"github.com/odvcencio/fluffyui/accessibility"
 	"github.com/odvcencio/fluffyui/backend"
 	"github.com/odvcencio/fluffyui/clipboard"
 	"github.com/odvcencio/fluffyui/forms"
 	"github.com/odvcencio/fluffyui/runtime"
+	"github.com/odvcencio/fluffyui/state"
 	uistyle "github.com/odvcencio/fluffyui/style"
 	"github.com/odvcencio/fluffyui/terminal"
 )
+
+// textAreaState represents the state of a text area for undo/redo.
+type textAreaState struct {
+	text   []rune
+	cursor int
+}
 
 // TextArea is a multi-line text input widget.
 type TextArea struct {
@@ -29,6 +37,9 @@ type TextArea struct {
 	validators  []forms.Validator
 	valErrors   []forms.ValidationError
 	valMessages []string
+
+	// History (undo/redo)
+	history *state.History[textAreaState]
 }
 
 // NewTextArea creates a new text area.
@@ -38,6 +49,7 @@ func NewTextArea() *TextArea {
 		style:      backend.DefaultStyle(),
 		focusStyle: backend.DefaultStyle().Reverse(true),
 	}
+	ta.history = state.NewHistory(textAreaState{}, state.WithGroupWindow(300*time.Millisecond))
 	ta.Base.Role = accessibility.RoleTextbox
 	ta.syncA11y()
 	return ta
@@ -61,6 +73,7 @@ func (t *TextArea) SetText(text string) {
 	t.text = []rune(text)
 	t.cursor = len(t.text)
 	t.syncValue()
+	t.pushHistory(false) // non-grouped: explicit set is a distinct operation
 }
 
 // CursorOffset returns the cursor offset in the text.
@@ -205,6 +218,74 @@ func (t *TextArea) Valid() bool {
 	return len(t.Validate()) == 0
 }
 
+// Undo reverts to the previous state.
+// Returns true if undo was successful.
+func (t *TextArea) Undo() bool {
+	if t == nil || t.history == nil {
+		return false
+	}
+	s, ok := t.history.Undo()
+	if !ok {
+		return false
+	}
+	t.text = s.text
+	t.cursor = s.cursor
+	t.syncValue()
+	return true
+}
+
+// Redo reapplies a previously undone state.
+// Returns true if redo was successful.
+func (t *TextArea) Redo() bool {
+	if t == nil || t.history == nil {
+		return false
+	}
+	s, ok := t.history.Redo()
+	if !ok {
+		return false
+	}
+	t.text = s.text
+	t.cursor = s.cursor
+	t.syncValue()
+	return true
+}
+
+// CanUndo returns true if undo is available.
+func (t *TextArea) CanUndo() bool {
+	if t == nil || t.history == nil {
+		return false
+	}
+	return t.history.CanUndo()
+}
+
+// CanRedo returns true if redo is available.
+func (t *TextArea) CanRedo() bool {
+	if t == nil || t.history == nil {
+		return false
+	}
+	return t.history.CanRedo()
+}
+
+// ClearHistory resets the undo/redo history.
+func (t *TextArea) ClearHistory() {
+	if t == nil || t.history == nil {
+		return
+	}
+	t.history.Clear()
+}
+
+func (t *TextArea) pushHistory(grouped bool) {
+	if t.history == nil {
+		return
+	}
+	s := textAreaState{text: append([]rune(nil), t.text...), cursor: t.cursor}
+	if grouped {
+		t.history.PushGrouped(s)
+	} else {
+		t.history.Push(s)
+	}
+}
+
 // SetLabel updates the accessibility label.
 func (t *TextArea) SetLabel(label string) {
 	if t == nil {
@@ -334,6 +415,16 @@ func (t *TextArea) HandleMessage(msg runtime.Message) runtime.HandleResult {
 	}
 
 	switch key.Key {
+	case terminal.KeyCtrlZ:
+		if key.Shift {
+			t.Redo()
+		} else {
+			t.Undo()
+		}
+		return runtime.Handled()
+	case terminal.KeyCtrlY:
+		t.Redo()
+		return runtime.Handled()
 	case terminal.KeyCtrlC:
 		if t.copyToClipboard() {
 			return runtime.Handled()
@@ -347,15 +438,18 @@ func (t *TextArea) HandleMessage(msg runtime.Message) runtime.HandleResult {
 			return runtime.Handled()
 		}
 	case terminal.KeyEnter:
+		t.pushHistory(true)
 		t.insertRune('\n')
 		return runtime.Handled()
 	case terminal.KeyBackspace:
 		if t.cursor > 0 {
+			t.pushHistory(true)
 			t.deleteRune(t.cursor - 1)
 		}
 		return runtime.Handled()
 	case terminal.KeyDelete:
 		if t.cursor < len(t.text) {
+			t.pushHistory(true)
 			t.deleteRune(t.cursor)
 		}
 		return runtime.Handled()
@@ -383,6 +477,7 @@ func (t *TextArea) HandleMessage(msg runtime.Message) runtime.HandleResult {
 		return runtime.Handled()
 	case terminal.KeyRune:
 		if key.Rune != 0 {
+			t.pushHistory(true)
 			t.insertRune(key.Rune)
 			return runtime.Handled()
 		}
@@ -565,6 +660,7 @@ func (t *TextArea) ClipboardCut() (string, bool) {
 	if t == nil {
 		return "", false
 	}
+	t.pushHistory(true)
 	text := t.Text()
 	t.text = nil
 	t.cursor = 0
@@ -578,6 +674,9 @@ func (t *TextArea) ClipboardPaste(text string) bool {
 	if t == nil || text == "" {
 		return false
 	}
+	// Large pastes (> 100 chars) are not grouped
+	grouped := len(text) <= 100
+	t.pushHistory(grouped)
 	t.insertText(text)
 	return true
 }

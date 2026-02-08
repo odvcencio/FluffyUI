@@ -31,6 +31,7 @@ type Tree struct {
 	flatCache     []treeRow
 	flatDirty     bool
 	rootRef       *TreeNode
+	services      runtime.Services
 }
 
 // NewTree creates a tree widget.
@@ -353,5 +354,23 @@ func (t *Tree) syncA11y() {
 
 var _ scroll.Controller = (*Tree)(nil)
 
+// Bind attaches app services.
+func (t *Tree) Bind(services runtime.Services) {
+	if t == nil {
+		return
+	}
+	t.services = services
+}
+
+// Unbind releases app services.
+func (t *Tree) Unbind() {
+	if t == nil {
+		return
+	}
+	t.services = runtime.Services{}
+}
+
 var _ runtime.Widget = (*Tree)(nil)
 var _ runtime.Focusable = (*Tree)(nil)
+var _ runtime.Bindable = (*Tree)(nil)
+var _ runtime.Unbindable = (*Tree)(nil)

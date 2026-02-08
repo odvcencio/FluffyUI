@@ -29,8 +29,9 @@ type TimePicker struct {
 	digitBuf  string
 	lastDigit time.Time
 
-	onChange func(time.Time)
+	onChange  func(time.Time)
 	onSubmit func(time.Time)
+	services runtime.Services
 }
 
 // NewTimePicker creates a new time picker.
@@ -295,5 +296,23 @@ func (t *TimePicker) format() string {
 	return "15:04"
 }
 
+// Bind attaches app services.
+func (t *TimePicker) Bind(services runtime.Services) {
+	if t == nil {
+		return
+	}
+	t.services = services
+}
+
+// Unbind releases app services.
+func (t *TimePicker) Unbind() {
+	if t == nil {
+		return
+	}
+	t.services = runtime.Services{}
+}
+
 var _ runtime.Widget = (*TimePicker)(nil)
 var _ runtime.Focusable = (*TimePicker)(nil)
+var _ runtime.Bindable = (*TimePicker)(nil)
+var _ runtime.Unbindable = (*TimePicker)(nil)

@@ -10,6 +10,7 @@ type SimpleWidget struct {
 	LayoutFunc        func(runtime.Rect)
 	RenderFunc        func(runtime.RenderContext)
 	HandleMessageFunc func(runtime.Message) runtime.HandleResult
+	services          runtime.Services
 }
 
 // NewSimpleWidget creates a SimpleWidget.
@@ -50,4 +51,22 @@ func (s *SimpleWidget) HandleMessage(msg runtime.Message) runtime.HandleResult {
 	return s.HandleMessageFunc(msg)
 }
 
+// Bind attaches app services.
+func (s *SimpleWidget) Bind(services runtime.Services) {
+	if s == nil {
+		return
+	}
+	s.services = services
+}
+
+// Unbind releases app services.
+func (s *SimpleWidget) Unbind() {
+	if s == nil {
+		return
+	}
+	s.services = runtime.Services{}
+}
+
 var _ runtime.Widget = (*SimpleWidget)(nil)
+var _ runtime.Bindable = (*SimpleWidget)(nil)
+var _ runtime.Unbindable = (*SimpleWidget)(nil)

@@ -75,6 +75,7 @@ type App struct {
 	commandHandler    CommandHandler
 	keyHandler        KeyHandler
 	messages          chan Message
+	priorityQueue     *PriorityQueue
 	tickRate          time.Duration
 	stateQueue        *state.Queue
 	queueScheduler    *QueueScheduler
@@ -141,6 +142,7 @@ func NewApp(cfg AppConfig) *App {
 		commandHandler:    cfg.CommandHandler,
 		keyHandler:        cfg.KeyHandler,
 		messages:          make(chan Message, bufferSize),
+		priorityQueue:     NewPriorityQueue(bufferSize),
 		tickRate:          cfg.TickRate,
 		stateQueue:        queue,
 		flushPolicy:       policy,
@@ -376,6 +378,19 @@ func (a *App) tryPost(msg Message) bool {
 	if a == nil || a.messages == nil {
 		return false
 	}
+	// callMsg must go through the legacy channel because the event loop
+	// handles it synchronously with a done channel.
+	if _, isCall := msg.(callMsg); isCall {
+		select {
+		case a.messages <- msg:
+			return true
+		default:
+			return false
+		}
+	}
+	if a.priorityQueue != nil {
+		return a.priorityQueue.TrySend(msg)
+	}
 	select {
 	case a.messages <- msg:
 		return true
@@ -487,6 +502,19 @@ func (a *App) Run(ctx context.Context) error {
 		ticks = ticker.C
 	}
 
+	// Bridge: goroutine reads from priority queue and forwards to a channel
+	// that the main event loop can select on alongside ticks and callMsg.
+	pqCh := make(chan Message, 1)
+	go func() {
+		for {
+			msg, ok := a.priorityQueue.Recv(taskCtx)
+			if !ok {
+				return
+			}
+			pqCh <- msg
+		}
+	}()
+
 	for a.running.Load() {
 		var msg Message
 		select {
@@ -494,6 +522,7 @@ func (a *App) Run(ctx context.Context) error {
 			a.running.Store(false)
 			a.cancelTasks()
 		case msg = <-a.messages:
+			// Legacy channel now only carries callMsg.
 			if call, ok := msg.(callMsg); ok {
 				if call.fn != nil {
 					call.done <- call.fn(a)
@@ -502,6 +531,10 @@ func (a *App) Run(ctx context.Context) error {
 				}
 				continue
 			}
+			if a.update(a, msg) {
+				a.dirty = true
+			}
+		case msg = <-pqCh:
 			if a.update(a, msg) {
 				a.dirty = true
 			}

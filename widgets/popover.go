@@ -31,6 +31,7 @@ type Popover struct {
 	childBounds runtime.Rect
 	onClose     func()
 	closed      bool
+	services    runtime.Services
 }
 
 // PopoverOption configures a popover.
@@ -283,7 +284,25 @@ func (p *Popover) close() {
 	}
 }
 
+// Bind attaches app services.
+func (p *Popover) Bind(services runtime.Services) {
+	if p == nil {
+		return
+	}
+	p.services = services
+}
+
+// Unbind releases app services.
+func (p *Popover) Unbind() {
+	if p == nil {
+		return
+	}
+	p.services = runtime.Services{}
+}
+
 var _ runtime.Widget = (*Popover)(nil)
 var _ runtime.ChildProvider = (*Popover)(nil)
 var _ runtime.Lifecycle = (*Popover)(nil)
 var _ runtime.HitSelfProvider = (*Popover)(nil)
+var _ runtime.Bindable = (*Popover)(nil)
+var _ runtime.Unbindable = (*Popover)(nil)

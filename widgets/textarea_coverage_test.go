@@ -56,6 +56,72 @@ func TestTextAreaCoverage(t *testing.T) {
 	_ = mem.Write("paste")
 	_ = area.pasteFromClipboard()
 
+	// Undo/redo via key messages
+	area.HandleMessage(runtime.KeyMsg{Key: terminal.KeyCtrlZ})
+	area.HandleMessage(runtime.KeyMsg{Key: terminal.KeyCtrlZ, Shift: true})
+	area.HandleMessage(runtime.KeyMsg{Key: terminal.KeyCtrlY})
+
 	_ = flufftest.RenderToString(area, 20, 4)
 	area.Unbind()
+}
+
+func TestTextArea_UndoRedo(t *testing.T) {
+	ta := NewTextArea()
+	ta.SetText("hello")
+	ta.SetText("world")
+
+	if !ta.CanUndo() {
+		t.Fatal("expected CanUndo after two SetText calls")
+	}
+
+	ta.Undo()
+	if string(ta.text) != "hello" {
+		t.Fatalf("after undo expected 'hello', got %q", string(ta.text))
+	}
+
+	if !ta.CanRedo() {
+		t.Fatal("expected CanRedo after undo")
+	}
+
+	ta.Redo()
+	if string(ta.text) != "world" {
+		t.Fatalf("after redo expected 'world', got %q", string(ta.text))
+	}
+}
+
+func TestTextArea_UndoAtRoot(t *testing.T) {
+	ta := NewTextArea()
+	if ta.CanUndo() {
+		t.Fatal("expected no undo at start")
+	}
+	if ta.Undo() {
+		t.Fatal("expected Undo to return false at root")
+	}
+}
+
+func TestTextArea_ClearHistory(t *testing.T) {
+	ta := NewTextArea()
+	ta.SetText("a")
+	ta.SetText("b")
+	ta.ClearHistory()
+	if ta.CanUndo() {
+		t.Fatal("expected no undo after ClearHistory")
+	}
+}
+
+func TestTextArea_UndoRedoNilSafety(t *testing.T) {
+	var ta *TextArea
+	if ta.Undo() {
+		t.Fatal("expected Undo on nil to return false")
+	}
+	if ta.Redo() {
+		t.Fatal("expected Redo on nil to return false")
+	}
+	if ta.CanUndo() {
+		t.Fatal("expected CanUndo on nil to return false")
+	}
+	if ta.CanRedo() {
+		t.Fatal("expected CanRedo on nil to return false")
+	}
+	ta.ClearHistory() // should not panic
 }

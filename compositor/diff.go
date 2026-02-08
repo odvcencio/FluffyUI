@@ -27,6 +27,7 @@ func (r *Renderer) Render() string {
 	r.writer = NewANSIWriter()
 	r.writer.Grow(r.screen.width * r.screen.height / 4) // ~25% change estimate
 
+	r.writer.buf.WriteString(ANSISyncStart)
 	r.writer.HideCursor()
 
 	lastX, lastY := -1, -1
@@ -91,6 +92,7 @@ func (r *Renderer) Render() string {
 		}
 	}
 
+	r.writer.buf.WriteString(ANSISyncEnd)
 	return r.writer.String()
 }
 
@@ -101,6 +103,8 @@ func (r *Renderer) RenderFull() string {
 
 	r.writer = NewANSIWriter()
 	r.writer.Grow(r.screen.width * r.screen.height * 2)
+
+	r.writer.buf.WriteString(ANSISyncStart)
 
 	// Clear screen and home cursor
 	r.writer.buf.WriteString(ANSIClearScreen)
@@ -153,6 +157,7 @@ func (r *Renderer) RenderFull() string {
 		copy(r.screen.previous[y], r.screen.current[y])
 	}
 
+	r.writer.buf.WriteString(ANSISyncEnd)
 	return r.writer.String()
 }
 

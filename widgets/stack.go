@@ -13,6 +13,7 @@ type Stack struct {
 	Base
 	Children []runtime.Widget
 	label    string
+	services runtime.Services
 }
 
 // NewStack creates a stack container.
@@ -120,4 +121,22 @@ func (s *Stack) syncA11y() {
 	s.Base.Label = label
 }
 
+// Bind attaches app services.
+func (s *Stack) Bind(services runtime.Services) {
+	if s == nil {
+		return
+	}
+	s.services = services
+}
+
+// Unbind releases app services.
+func (s *Stack) Unbind() {
+	if s == nil {
+		return
+	}
+	s.services = runtime.Services{}
+}
+
 var _ runtime.Widget = (*Stack)(nil)
+var _ runtime.Bindable = (*Stack)(nil)
+var _ runtime.Unbindable = (*Stack)(nil)

@@ -28,10 +28,11 @@ type Step struct {
 // Stepper renders a sequence of steps.
 type Stepper struct {
 	Base
-	Steps []Step
-	style backend.Style
-	label string
+	Steps    []Step
+	style    backend.Style
+	label    string
 	styleSet bool
+	services runtime.Services
 }
 
 // NewStepper creates a stepper.
@@ -143,4 +144,22 @@ func (s *Stepper) activeStep() string {
 	return ""
 }
 
+// Bind attaches app services.
+func (s *Stepper) Bind(services runtime.Services) {
+	if s == nil {
+		return
+	}
+	s.services = services
+}
+
+// Unbind releases app services.
+func (s *Stepper) Unbind() {
+	if s == nil {
+		return
+	}
+	s.services = runtime.Services{}
+}
+
 var _ runtime.Widget = (*Stepper)(nil)
+var _ runtime.Bindable = (*Stepper)(nil)
+var _ runtime.Unbindable = (*Stepper)(nil)

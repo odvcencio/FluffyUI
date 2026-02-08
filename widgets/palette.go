@@ -51,6 +51,7 @@ type PaletteWidget struct {
 	categoryStyle backend.Style
 	descStyle     backend.Style
 	shortcutStyle backend.Style
+	services      runtime.Services
 }
 
 // NewPaletteWidget creates a new palette widget.
@@ -513,5 +514,23 @@ func (p *PaletteWidget) HandleMessage(msg runtime.Message) runtime.HandleResult 
 	return runtime.Unhandled()
 }
 
+// Bind attaches app services.
+func (p *PaletteWidget) Bind(services runtime.Services) {
+	if p == nil {
+		return
+	}
+	p.services = services
+}
+
+// Unbind releases app services.
+func (p *PaletteWidget) Unbind() {
+	if p == nil {
+		return
+	}
+	p.services = runtime.Services{}
+}
+
 var _ runtime.Widget = (*PaletteWidget)(nil)
 var _ runtime.Focusable = (*PaletteWidget)(nil)
+var _ runtime.Bindable = (*PaletteWidget)(nil)
+var _ runtime.Unbindable = (*PaletteWidget)(nil)

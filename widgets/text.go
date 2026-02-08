@@ -17,6 +17,7 @@ type Text struct {
 	lines     []string // Cached line splits
 	a11yLabel string
 	styleSet  bool
+	services  runtime.Services
 }
 
 // TextOption configures a Text widget.
@@ -187,6 +188,7 @@ type Label struct {
 	alignment Alignment
 	a11yLabel string
 	styleSet  bool
+	services  runtime.Services
 }
 
 // LabelOption configures a Label widget.
@@ -362,5 +364,41 @@ func (l *Label) syncA11y() {
 	l.Base.Value = nil
 }
 
+// Bind attaches app services.
+func (t *Text) Bind(services runtime.Services) {
+	if t == nil {
+		return
+	}
+	t.services = services
+}
+
+// Unbind releases app services.
+func (t *Text) Unbind() {
+	if t == nil {
+		return
+	}
+	t.services = runtime.Services{}
+}
+
+// Bind attaches app services.
+func (l *Label) Bind(services runtime.Services) {
+	if l == nil {
+		return
+	}
+	l.services = services
+}
+
+// Unbind releases app services.
+func (l *Label) Unbind() {
+	if l == nil {
+		return
+	}
+	l.services = runtime.Services{}
+}
+
 var _ runtime.Widget = (*Text)(nil)
+var _ runtime.Bindable = (*Text)(nil)
+var _ runtime.Unbindable = (*Text)(nil)
 var _ runtime.Widget = (*Label)(nil)
+var _ runtime.Bindable = (*Label)(nil)
+var _ runtime.Unbindable = (*Label)(nil)

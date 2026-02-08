@@ -2,6 +2,7 @@ package widgets
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/odvcencio/fluffyui/accessibility"
@@ -10,6 +11,24 @@ import (
 	"github.com/odvcencio/fluffyui/scroll"
 	"github.com/odvcencio/fluffyui/terminal"
 )
+
+// SortDirection indicates the direction of column sorting.
+type SortDirection int
+
+const (
+	// SortNone means no sorting is applied.
+	SortNone SortDirection = iota
+	// SortAsc sorts in ascending order.
+	SortAsc
+	// SortDesc sorts in descending order.
+	SortDesc
+)
+
+// TableSortState holds the current sort column and direction.
+type TableSortState struct {
+	Column    int
+	Direction SortDirection
+}
 
 // TableColumn defines a column in a table.
 type TableColumn struct {
@@ -32,6 +51,10 @@ type Table struct {
 	cachedWidths  []int
 	cachedTotal   int
 	cachedSig     uint32
+	services      runtime.Services
+	sortState     TableSortState
+	filterFn      func(row []string) bool
+	sortedIndices []int
 }
 
 // NewTable creates a table with columns.
@@ -84,6 +107,7 @@ func (t *Table) SetRows(rows [][]string) {
 	}
 	t.dataSource = nil
 	t.Rows = rows
+	t.rebuildSortedIndices()
 	t.syncA11y()
 }
 
@@ -112,6 +136,104 @@ func (t *Table) SetLabel(label string) {
 	}
 	t.label = label
 	t.syncA11y()
+}
+
+// SetSortColumn sets the sort column and direction, then rebuilds the view.
+func (t *Table) SetSortColumn(col int, dir SortDirection) {
+	if t == nil {
+		return
+	}
+	t.sortState = TableSortState{Column: col, Direction: dir}
+	t.rebuildSortedIndices()
+	t.syncA11y()
+}
+
+// Sort returns the current sort state.
+func (t *Table) Sort() TableSortState {
+	if t == nil {
+		return TableSortState{}
+	}
+	return t.sortState
+}
+
+// SetFilter sets a filter function. Only rows for which fn returns true will
+// be displayed. Pass nil to remove the filter. Filtering only applies to
+// static Rows data, not to a TabularDataSource.
+func (t *Table) SetFilter(fn func(row []string) bool) {
+	if t == nil {
+		return
+	}
+	t.filterFn = fn
+	t.rebuildSortedIndices()
+	t.selected = 0
+	t.offset = 0
+	t.syncA11y()
+}
+
+// ClearFilter removes any active filter.
+func (t *Table) ClearFilter() {
+	if t == nil {
+		return
+	}
+	t.filterFn = nil
+	t.rebuildSortedIndices()
+	t.selected = 0
+	t.offset = 0
+	t.syncA11y()
+}
+
+// rebuildSortedIndices recomputes the display-order indices by applying the
+// current filter and sort to the static Rows slice. When no filter or sort is
+// active (or when a dataSource is set), sortedIndices is set to nil so that
+// the original row order is used directly.
+func (t *Table) rebuildSortedIndices() {
+	if t == nil {
+		return
+	}
+	// Sorting/filtering only applies to static Rows, not dataSource.
+	if t.dataSource != nil {
+		t.sortedIndices = nil
+		return
+	}
+	hasFilter := t.filterFn != nil
+	hasSort := t.sortState.Direction != SortNone
+
+	if !hasFilter && !hasSort {
+		t.sortedIndices = nil
+		return
+	}
+
+	// Build initial index set, applying filter.
+	indices := make([]int, 0, len(t.Rows))
+	for i, row := range t.Rows {
+		if hasFilter && !t.filterFn(row) {
+			continue
+		}
+		indices = append(indices, i)
+	}
+
+	// Apply sort.
+	if hasSort && t.sortState.Column >= 0 {
+		col := t.sortState.Column
+		dir := t.sortState.Direction
+		sort.Slice(indices, func(a, b int) bool {
+			rowA := t.Rows[indices[a]]
+			rowB := t.Rows[indices[b]]
+			var cellA, cellB string
+			if col < len(rowA) {
+				cellA = rowA[col]
+			}
+			if col < len(rowB) {
+				cellB = rowB[col]
+			}
+			if dir == SortAsc {
+				return cellA < cellB
+			}
+			return cellA > cellB
+		})
+	}
+
+	t.sortedIndices = indices
 }
 
 // SelectedIndex returns the currently selected row index.
@@ -157,10 +279,15 @@ func (t *Table) SelectedRow() []string {
 	if t.dataSource != nil {
 		return nil
 	}
-	return t.Rows[t.selected]
+	origIndex := t.mapRowIndex(t.selected)
+	if origIndex < 0 || origIndex >= len(t.Rows) {
+		return nil
+	}
+	return t.Rows[origIndex]
 }
 
 // GetCell returns the cell value at the given row and column.
+// When sorting or filtering is active, row refers to the display index.
 func (t *Table) GetCell(row, col int) string {
 	if t == nil || row < 0 || row >= t.rowCount() {
 		return ""
@@ -168,13 +295,18 @@ func (t *Table) GetCell(row, col int) string {
 	if t.dataSource != nil {
 		return t.dataSource.Cell(row, col)
 	}
-	if col < 0 || col >= len(t.Rows[row]) {
+	origRow := t.mapRowIndex(row)
+	if origRow < 0 || origRow >= len(t.Rows) {
 		return ""
 	}
-	return t.Rows[row][col]
+	if col < 0 || col >= len(t.Rows[origRow]) {
+		return ""
+	}
+	return t.Rows[origRow][col]
 }
 
 // SetCell updates a cell value at the given row and column.
+// When sorting or filtering is active, row refers to the display index.
 func (t *Table) SetCell(row, col int, value string) {
 	if t == nil || row < 0 || row >= t.rowCount() {
 		return
@@ -186,11 +318,15 @@ func (t *Table) SetCell(row, col int, value string) {
 	if t.dataSource != nil {
 		return
 	}
-	// Expand row if needed
-	for len(t.Rows[row]) <= col {
-		t.Rows[row] = append(t.Rows[row], "")
+	origRow := t.mapRowIndex(row)
+	if origRow < 0 || origRow >= len(t.Rows) {
+		return
 	}
-	t.Rows[row][col] = value
+	// Expand row if needed
+	for len(t.Rows[origRow]) <= col {
+		t.Rows[origRow] = append(t.Rows[origRow], "")
+	}
+	t.Rows[origRow][col] = value
 }
 
 // Measure returns the desired size.
@@ -366,7 +502,11 @@ func (t *Table) selectedRowSummary() string {
 		}
 		return strings.Join(cells, " | ")
 	}
-	return summarizeRow(t.Rows[t.selected])
+	origIndex := t.mapRowIndex(t.selected)
+	if origIndex < 0 || origIndex >= len(t.Rows) {
+		return ""
+	}
+	return summarizeRow(t.Rows[origIndex])
 }
 
 func (t *Table) rowCount() int {
@@ -379,7 +519,19 @@ func (t *Table) rowCount() int {
 		}
 		return 0
 	}
+	if t.sortedIndices != nil {
+		return len(t.sortedIndices)
+	}
 	return len(t.Rows)
+}
+
+// mapRowIndex translates a display row index to an original Rows index.
+// When no sortedIndices are active it returns the index unchanged.
+func (t *Table) mapRowIndex(displayIndex int) int {
+	if t.sortedIndices != nil && displayIndex >= 0 && displayIndex < len(t.sortedIndices) {
+		return t.sortedIndices[displayIndex]
+	}
+	return displayIndex
 }
 
 func summarizeRow(row []string) string {
@@ -504,5 +656,23 @@ func (t *Table) ScrollToEnd() {
 
 var _ scroll.Controller = (*Table)(nil)
 
+// Bind attaches app services.
+func (t *Table) Bind(services runtime.Services) {
+	if t == nil {
+		return
+	}
+	t.services = services
+}
+
+// Unbind releases app services.
+func (t *Table) Unbind() {
+	if t == nil {
+		return
+	}
+	t.services = runtime.Services{}
+}
+
 var _ runtime.Widget = (*Table)(nil)
 var _ runtime.Focusable = (*Table)(nil)
+var _ runtime.Bindable = (*Table)(nil)
+var _ runtime.Unbindable = (*Table)(nil)

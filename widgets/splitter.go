@@ -24,6 +24,7 @@ type Splitter struct {
 	Ratio       float64
 	DividerSize int
 	label       string
+	services    runtime.Services
 }
 
 // NewSplitter creates a splitter with two panes.
@@ -202,4 +203,22 @@ func (s *Splitter) syncA11y() {
 	}
 }
 
+// Bind attaches app services.
+func (s *Splitter) Bind(services runtime.Services) {
+	if s == nil {
+		return
+	}
+	s.services = services
+}
+
+// Unbind releases app services.
+func (s *Splitter) Unbind() {
+	if s == nil {
+		return
+	}
+	s.services = runtime.Services{}
+}
+
 var _ runtime.Widget = (*Splitter)(nil)
+var _ runtime.Bindable = (*Splitter)(nil)
+var _ runtime.Unbindable = (*Splitter)(nil)

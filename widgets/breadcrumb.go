@@ -22,6 +22,7 @@ type Breadcrumb struct {
 	selected   int // Currently selected/focused item index
 	onNavigate func(index int)
 	separator  string
+	services   runtime.Services
 }
 
 // NewBreadcrumb creates a breadcrumb.
@@ -268,5 +269,23 @@ func (b *Breadcrumb) pathString() string {
 	return strings.Join(parts, sep)
 }
 
+// Bind attaches app services.
+func (b *Breadcrumb) Bind(services runtime.Services) {
+	if b == nil {
+		return
+	}
+	b.services = services
+}
+
+// Unbind releases app services.
+func (b *Breadcrumb) Unbind() {
+	if b == nil {
+		return
+	}
+	b.services = runtime.Services{}
+}
+
 var _ runtime.Widget = (*Breadcrumb)(nil)
 var _ runtime.Focusable = (*Breadcrumb)(nil)
+var _ runtime.Bindable = (*Breadcrumb)(nil)
+var _ runtime.Unbindable = (*Breadcrumb)(nil)

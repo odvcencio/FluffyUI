@@ -11,9 +11,10 @@ import (
 // AspectRatio constrains a child to a fixed width/height ratio.
 type AspectRatio struct {
 	Base
-	child runtime.Widget
-	ratio float64
-	label string
+	child    runtime.Widget
+	ratio    float64
+	label    string
+	services runtime.Services
 }
 
 // NewAspectRatio creates an aspect ratio container.
@@ -162,5 +163,23 @@ func fitAspectRect(bounds runtime.Rect, ratio float64) runtime.Rect {
 	return runtime.Rect{X: x, Y: y, Width: width, Height: height}
 }
 
+// Bind attaches app services.
+func (a *AspectRatio) Bind(services runtime.Services) {
+	if a == nil {
+		return
+	}
+	a.services = services
+}
+
+// Unbind releases app services.
+func (a *AspectRatio) Unbind() {
+	if a == nil {
+		return
+	}
+	a.services = runtime.Services{}
+}
+
 var _ runtime.Widget = (*AspectRatio)(nil)
 var _ runtime.ChildProvider = (*AspectRatio)(nil)
+var _ runtime.Bindable = (*AspectRatio)(nil)
+var _ runtime.Unbindable = (*AspectRatio)(nil)

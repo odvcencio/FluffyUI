@@ -26,9 +26,10 @@ type Axis struct {
 // LineChart renders one or more series using a CanvasWidget.
 type LineChart struct {
 	CanvasWidget
-	series []ChartSeries
-	yAxis  Axis
-	label  string
+	series   []ChartSeries
+	yAxis    Axis
+	label    string
+	services runtime.Services
 }
 
 // NewLineChart creates an empty line chart.
@@ -208,4 +209,22 @@ func (c *LineChart) HandleMessage(msg runtime.Message) runtime.HandleResult {
 	return runtime.Unhandled()
 }
 
+// Bind attaches app services.
+func (c *LineChart) Bind(services runtime.Services) {
+	if c == nil {
+		return
+	}
+	c.services = services
+}
+
+// Unbind releases app services.
+func (c *LineChart) Unbind() {
+	if c == nil {
+		return
+	}
+	c.services = runtime.Services{}
+}
+
 var _ runtime.Widget = (*LineChart)(nil)
+var _ runtime.Bindable = (*LineChart)(nil)
+var _ runtime.Unbindable = (*LineChart)(nil)

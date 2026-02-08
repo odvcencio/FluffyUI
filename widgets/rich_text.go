@@ -87,6 +87,7 @@ type RichText struct {
 	contentSize   runtime.Size
 	anchorOffsets map[string]int
 	pendingAnchor string
+	services      runtime.Services
 }
 
 // NewRichText creates a new RichText widget.
@@ -669,6 +670,24 @@ func drawScrollbar(buf *runtime.Buffer, bounds runtime.Rect, bar scroll.Scrollba
 	}
 }
 
+// Bind attaches app services.
+func (r *RichText) Bind(services runtime.Services) {
+	if r == nil {
+		return
+	}
+	r.services = services
+}
+
+// Unbind releases app services.
+func (r *RichText) Unbind() {
+	if r == nil {
+		return
+	}
+	r.services = runtime.Services{}
+}
+
 var _ runtime.Widget = (*RichText)(nil)
 var _ runtime.Focusable = (*RichText)(nil)
 var _ scroll.Controller = (*RichText)(nil)
+var _ runtime.Bindable = (*RichText)(nil)
+var _ runtime.Unbindable = (*RichText)(nil)

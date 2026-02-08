@@ -673,6 +673,32 @@ func TestRenderToString(t *testing.T) {
 	}
 }
 
+func TestRender_SynchronizedOutput(t *testing.T) {
+	s := NewScreen(10, 2)
+	s.Set(0, 0, 'X', DefaultStyle())
+	r := NewRenderer(s)
+	output := r.Render()
+	if !strings.Contains(output, ANSISyncStart) {
+		t.Error("missing sync start marker in Render output")
+	}
+	if !strings.Contains(output, ANSISyncEnd) {
+		t.Error("missing sync end marker in Render output")
+	}
+}
+
+func TestRenderFull_SynchronizedOutput(t *testing.T) {
+	s := NewScreen(10, 2)
+	s.Set(0, 0, 'X', DefaultStyle())
+	r := NewRenderer(s)
+	output := r.RenderFull()
+	if !strings.Contains(output, ANSISyncStart) {
+		t.Error("missing sync start marker in RenderFull output")
+	}
+	if !strings.Contains(output, ANSISyncEnd) {
+		t.Error("missing sync end marker in RenderFull output")
+	}
+}
+
 func BenchmarkScreenSet(b *testing.B) {
 	screen := NewScreen(80, 24)
 	style := DefaultStyle()
@@ -926,5 +952,13 @@ func BenchmarkStreamRenderer(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		sr.Update(texts[i%len(texts)], style)
+	}
+}
+
+func TestHyperlink(t *testing.T) {
+	result := Hyperlink("https://example.com", "click here")
+	expected := "\x1b]8;;https://example.com\x1b\\click here\x1b]8;;\x1b\\"
+	if result != expected {
+		t.Errorf("Hyperlink mismatch:\ngot:  %q\nwant: %q", result, expected)
 	}
 }

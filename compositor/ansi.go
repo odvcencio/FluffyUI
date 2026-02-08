@@ -19,7 +19,15 @@ const (
 	ANSIRestoreCursor = "\x1b[u"
 	ANSIAltScreen    = "\x1b[?1049h"
 	ANSIMainScreen   = "\x1b[?1049l"
+	ANSISyncStart    = "\x1b[?2026h"
+	ANSISyncEnd      = "\x1b[?2026l"
 )
+
+// CursorShapeSeq returns the DECSCUSR sequence for the given cursor shape.
+// Ps: 0=default, 2=block, 4=underline, 6=beam.
+func CursorShapeSeq(ps int) string {
+	return fmt.Sprintf("\x1b[%d q", ps)
+}
 
 // CursorTo returns ANSI sequence to move cursor to (x, y).
 // Coordinates are 0-indexed, but ANSI uses 1-indexed.
@@ -249,4 +257,11 @@ func (w *ANSIWriter) Len() int {
 // Grow pre-allocates buffer capacity.
 func (w *ANSIWriter) Grow(n int) {
 	w.buf.Grow(n)
+}
+
+// Hyperlink wraps text in an OSC-8 hyperlink sequence.
+// Terminals that don't support OSC-8 will ignore the escape sequences
+// and display the text normally.
+func Hyperlink(url, text string) string {
+	return "\x1b]8;;" + url + "\x1b\\" + text + "\x1b]8;;\x1b\\"
 }

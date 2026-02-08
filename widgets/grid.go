@@ -25,6 +25,7 @@ type Grid struct {
 	Gap      int
 	Children []GridChild
 	label    string
+	services runtime.Services
 }
 
 // NewGrid creates a grid with the given dimensions.
@@ -204,4 +205,22 @@ func (g *Grid) syncA11y() {
 	g.Base.Label = label
 }
 
+// Bind attaches app services.
+func (g *Grid) Bind(services runtime.Services) {
+	if g == nil {
+		return
+	}
+	g.services = services
+}
+
+// Unbind releases app services.
+func (g *Grid) Unbind() {
+	if g == nil {
+		return
+	}
+	g.services = runtime.Services{}
+}
+
 var _ runtime.Widget = (*Grid)(nil)
+var _ runtime.Bindable = (*Grid)(nil)
+var _ runtime.Unbindable = (*Grid)(nil)

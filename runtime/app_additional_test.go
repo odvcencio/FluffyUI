@@ -73,9 +73,8 @@ func TestAppAccessorsAndCommands(t *testing.T) {
 	root := &appTestWidget{}
 	app.SetRoot(root)
 	app.PostQueueFlush()
-	select {
-	case <-app.messages:
-	default:
+	ctx := context.Background()
+	if msg, ok := app.priorityQueue.Recv(ctx); !ok || msg == nil {
 		t.Fatalf("expected queue flush message")
 	}
 

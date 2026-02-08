@@ -27,6 +27,7 @@ type Screen struct {
 	autoFocusPolicy    AutoFocusPolicy
 	hitGridDirty       bool
 	relayoutOnFocus    bool
+	measureCache       *MeasureCache
 	styleResolver      *StyleResolver
 	styleResolverSheet *style.Stylesheet
 	styleResolverRoots []Widget
@@ -42,6 +43,7 @@ func NewScreen(w, h int) *Screen {
 		buffer:       NewBuffer(w, h),
 		hitGrid:      NewHitGrid(w, h),
 		hitGridDirty: true,
+		measureCache: NewMeasureCache(),
 	}
 }
 
@@ -270,10 +272,25 @@ func (s *Screen) currentRoots() []Widget {
 	return roots
 }
 
+// MeasureCache returns the screen's measurement cache.
+// Containers (like Flex) use this to avoid redundant Measure calls.
+func (s *Screen) MeasureCache() *MeasureCache {
+	if s == nil {
+		return nil
+	}
+	return s.measureCache
+}
+
 func (s *Screen) relayout() {
 	if s == nil || len(s.layers) == 0 {
 		return
 	}
+
+	// Bump measurement cache generation so stale entries expire.
+	if s.measureCache != nil {
+		s.measureCache.BumpGeneration()
+	}
+
 	roots := s.currentRoots()
 	media := style.MediaContext{
 		Width:         s.width,
@@ -296,6 +313,7 @@ func (s *Screen) relayout() {
 		}
 		focused := i == len(s.layers)-1
 		applyLayoutStyles(layer.Root, resolver, focused, s.errorReporter)
+		injectMeasureCache(layer.Root, s.measureCache)
 		s.safeLayout(layer.Root, bounds)
 	}
 	s.hitGridDirty = true

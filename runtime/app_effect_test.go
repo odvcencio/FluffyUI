@@ -14,13 +14,10 @@ func TestApp_HandleCommand_SendMsg(t *testing.T) {
 		t.Fatalf("expected SendMsg to not force render")
 	}
 
-	select {
-	case got := <-app.messages:
-		if got != msg {
-			t.Fatalf("unexpected message: %#v", got)
-		}
-	default:
-		t.Fatal("expected message to be posted")
+	ctx := context.Background()
+	got, ok := app.priorityQueue.Recv(ctx)
+	if !ok || got != msg {
+		t.Fatalf("unexpected message: %#v", got)
 	}
 }
 
@@ -39,9 +36,9 @@ func TestApp_HandleCommand_Effect(t *testing.T) {
 		t.Fatal("effect did not run")
 	}
 
-	select {
-	case <-app.messages:
-	case <-time.After(100 * time.Millisecond):
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+	if _, ok := app.priorityQueue.Recv(ctx); !ok {
 		t.Fatal("expected effect to post a message")
 	}
 }

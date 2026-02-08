@@ -4,6 +4,8 @@
 package tcell
 
 import (
+	"fmt"
+	"os"
 	"strings"
 
 	"github.com/gdamore/tcell/v3"
@@ -710,5 +712,27 @@ func reverseConvertMouseButton(b terminal.MouseButton) tcell.ButtonMask {
 	}
 }
 
-// Ensure Backend implements backend.Backend
+// SetCursorShape changes the terminal cursor appearance using DECSCUSR.
+func (b *Backend) SetCursorShape(shape backend.CursorShape) {
+	var ps int
+	switch shape {
+	case backend.CursorBlock:
+		ps = 2
+	case backend.CursorUnderline:
+		ps = 4
+	case backend.CursorBeam:
+		ps = 6
+	default:
+		ps = 0
+	}
+	seq := fmt.Sprintf("\x1b[%d q", ps)
+	if b.raw != nil {
+		_ = b.raw.WriteRaw([]byte(seq))
+	} else {
+		fmt.Fprint(os.Stdout, seq)
+	}
+}
+
+// Ensure Backend implements backend.Backend and optional interfaces.
 var _ backend.Backend = (*Backend)(nil)
+var _ backend.CursorShapeSetter = (*Backend)(nil)

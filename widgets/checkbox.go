@@ -21,6 +21,7 @@ type Checkbox struct {
 	focusStyle backend.Style
 	styleSet   bool
 	focusSet   bool
+	services   runtime.Services
 }
 
 // NewCheckbox creates a checkbox with a label.
@@ -199,5 +200,23 @@ func (c *Checkbox) syncState() {
 	}
 }
 
+// Bind attaches app services.
+func (c *Checkbox) Bind(services runtime.Services) {
+	if c == nil {
+		return
+	}
+	c.services = services
+}
+
+// Unbind releases app services.
+func (c *Checkbox) Unbind() {
+	if c == nil {
+		return
+	}
+	c.services = runtime.Services{}
+}
+
 var _ runtime.Widget = (*Checkbox)(nil)
 var _ runtime.Focusable = (*Checkbox)(nil)
+var _ runtime.Bindable = (*Checkbox)(nil)
+var _ runtime.Unbindable = (*Checkbox)(nil)

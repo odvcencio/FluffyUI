@@ -43,9 +43,10 @@ func Sized(w Widget, basis int) FlexChild {
 
 // Flex is a container that lays out children along an axis.
 type Flex struct {
-	Direction FlexDirection
-	Children  []FlexChild
-	Gap       int // Space between children
+	Direction    FlexDirection
+	Children     []FlexChild
+	Gap          int           // Space between children
+	MeasureCache *MeasureCache // Optional measurement cache (set by Screen)
 
 	// Cached layout
 	bounds      Rect
@@ -110,7 +111,7 @@ func (f *Flex) Measure(constraints Constraints) Size {
 		if child.Basis >= 0 {
 			childSizes[i] = f.sizeWithBasis(child.Basis)
 		} else {
-			childSizes[i] = child.Widget.Measure(childConstraints)
+			childSizes[i] = f.cachedMeasure(child.Widget, childConstraints)
 		}
 		WarnZeroMeasure("runtime.Flex.Measure.child", childConstraints, childSizes[i])
 
@@ -166,7 +167,7 @@ func (f *Flex) Layout(bounds Rect) {
 		if child.Basis >= 0 {
 			childSizes[i] = f.sizeWithBasis(child.Basis)
 		} else {
-			childSizes[i] = child.Widget.Measure(childConstraints)
+			childSizes[i] = f.cachedMeasure(child.Widget, childConstraints)
 		}
 		WarnZeroMeasure("runtime.Flex.Layout.child", childConstraints, childSizes[i])
 
@@ -404,6 +405,22 @@ func (f *Flex) HandleMessage(msg Message) HandleResult {
 		}
 	}
 	return Unhandled()
+}
+
+// cachedMeasure measures a child widget, using the cache when available.
+// If the cache is nil or the entry misses, it falls back to a direct
+// Measure call and stores the result for future lookups.
+func (f *Flex) cachedMeasure(w Widget, constraints Constraints) Size {
+	if f.MeasureCache == nil {
+		return w.Measure(constraints)
+	}
+	gen := f.MeasureCache.Generation()
+	if cached, ok := f.MeasureCache.Get(w, constraints, gen); ok {
+		return cached
+	}
+	result := w.Measure(constraints)
+	f.MeasureCache.Set(w, constraints, result, gen)
+	return result
 }
 
 // mainSize returns the size along the main axis.

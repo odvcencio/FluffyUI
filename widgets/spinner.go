@@ -9,10 +9,11 @@ import (
 // Spinner is an animated loading indicator.
 type Spinner struct {
 	Base
-	Frames []string
-	index  int
-	style  backend.Style
+	Frames   []string
+	index    int
+	style    backend.Style
 	styleSet bool
+	services runtime.Services
 }
 
 // NewSpinner creates a spinner.
@@ -95,4 +96,22 @@ func (s *Spinner) syncA11y() {
 	}
 }
 
+// Bind attaches app services.
+func (s *Spinner) Bind(services runtime.Services) {
+	if s == nil {
+		return
+	}
+	s.services = services
+}
+
+// Unbind releases app services.
+func (s *Spinner) Unbind() {
+	if s == nil {
+		return
+	}
+	s.services = runtime.Services{}
+}
+
 var _ runtime.Widget = (*Spinner)(nil)
+var _ runtime.Bindable = (*Spinner)(nil)
+var _ runtime.Unbindable = (*Spinner)(nil)

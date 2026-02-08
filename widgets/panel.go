@@ -20,6 +20,7 @@ type Panel struct {
 	label          string
 	styleSet       bool
 	borderStyleSet bool
+	services       runtime.Services
 }
 
 // PanelOption configures a Panel widget.
@@ -285,6 +286,7 @@ type Box struct {
 	style    backend.Style
 	label    string
 	styleSet bool
+	services runtime.Services
 }
 
 // BoxOption configures a Box widget.
@@ -405,5 +407,41 @@ func (b *Box) syncA11y() {
 	b.Base.Label = label
 }
 
+// Bind attaches app services.
+func (p *Panel) Bind(services runtime.Services) {
+	if p == nil {
+		return
+	}
+	p.services = services
+}
+
+// Unbind releases app services.
+func (p *Panel) Unbind() {
+	if p == nil {
+		return
+	}
+	p.services = runtime.Services{}
+}
+
+// Bind attaches app services.
+func (b *Box) Bind(services runtime.Services) {
+	if b == nil {
+		return
+	}
+	b.services = services
+}
+
+// Unbind releases app services.
+func (b *Box) Unbind() {
+	if b == nil {
+		return
+	}
+	b.services = runtime.Services{}
+}
+
 var _ runtime.Widget = (*Panel)(nil)
+var _ runtime.Bindable = (*Panel)(nil)
+var _ runtime.Unbindable = (*Panel)(nil)
 var _ runtime.Widget = (*Box)(nil)
+var _ runtime.Bindable = (*Box)(nil)
+var _ runtime.Unbindable = (*Box)(nil)

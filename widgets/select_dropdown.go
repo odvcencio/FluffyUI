@@ -24,6 +24,7 @@ type selectDropdown struct {
 	disabledSet   bool
 	onSelect      func(index int)
 	onClose       func()
+	services      runtime.Services
 }
 
 func newSelectDropdown(parent *Select) *selectDropdown {
@@ -266,5 +267,23 @@ func (d *selectDropdown) StyleType() string {
 	return "Select"
 }
 
+// Bind attaches app services.
+func (d *selectDropdown) Bind(services runtime.Services) {
+	if d == nil {
+		return
+	}
+	d.services = services
+}
+
+// Unbind releases app services.
+func (d *selectDropdown) Unbind() {
+	if d == nil {
+		return
+	}
+	d.services = runtime.Services{}
+}
+
 var _ runtime.Widget = (*selectDropdown)(nil)
 var _ runtime.Focusable = (*selectDropdown)(nil)
+var _ runtime.Bindable = (*selectDropdown)(nil)
+var _ runtime.Unbindable = (*selectDropdown)(nil)
