@@ -416,10 +416,10 @@ func TestGolden_DataGrid(t *testing.T) {
 		{
 			"default",
 			func() *DataGrid {
-				g := NewDataGrid(
-					TableColumn{Title: "Col A"},
-					TableColumn{Title: "Col B"},
-				)
+				g := NewDataGrid([]DataGridColumn{
+					{Header: "Col A", Width: 10},
+					{Header: "Col B", Width: 10},
+				})
 				g.SetRows([][]string{{"A1", "B1"}, {"A2", "B2"}})
 				return g
 			},
@@ -428,12 +428,12 @@ func TestGolden_DataGrid(t *testing.T) {
 		{
 			"selected_cell",
 			func() *DataGrid {
-				g := NewDataGrid(
-					TableColumn{Title: "X"},
-					TableColumn{Title: "Y"},
-				)
+				g := NewDataGrid([]DataGridColumn{
+					{Header: "X", Width: 8},
+					{Header: "Y", Width: 8},
+				})
 				g.SetRows([][]string{{"1", "2"}, {"3", "4"}})
-				g.SetSelected(1, 1)
+				g.SetSelectedCell(1, 1)
 				g.Focus()
 				return g
 			},
@@ -1450,4 +1450,57 @@ func TestGolden_RangeSlider(t *testing.T) {
 	maxValue := state.NewSignal(80.0)
 	slider := NewRangeSlider(minValue, maxValue, WithRangeSliderShowValue(true))
 	assertGolden(t, slider, 32, 1, "range_slider_basic")
+}
+
+func TestGolden_HeatMap(t *testing.T) {
+	tests := []struct {
+		name   string
+		setup  func() *HeatMap
+		width  int
+		height int
+	}{
+		{
+			"basic",
+			func() *HeatMap {
+				data := state.NewSignal([][]float64{
+					{1, 2, 3},
+					{4, 5, 6},
+				})
+				return NewHeatMap(data)
+			},
+			12, 3,
+		},
+		{
+			"with_labels",
+			func() *HeatMap {
+				data := state.NewSignal([][]float64{
+					{10, 20},
+					{30, 40},
+				})
+				hm := NewHeatMap(data)
+				hm.RowLabels = []string{"A", "B"}
+				hm.ColLabels = []string{"X", "Y"}
+				return hm
+			},
+			12, 4,
+		},
+		{
+			"with_values",
+			func() *HeatMap {
+				data := state.NewSignal([][]float64{
+					{0, 5},
+					{10, 15},
+				})
+				hm := NewHeatMap(data)
+				hm.ShowValues = true
+				return hm
+			},
+			10, 3,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assertGolden(t, tt.setup(), tt.width, tt.height, "heatmap_"+tt.name)
+		})
+	}
 }

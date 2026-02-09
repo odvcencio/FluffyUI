@@ -66,7 +66,7 @@ func TestWidgetSmokeRender(t *testing.T) {
 		}), 10, 4},
 		{"Checkbox", NewCheckbox("Accept"), 15, 1},
 		{"DataGrid", func() runtime.Widget {
-			grid := NewDataGrid(TableColumn{Title: "Name"}, TableColumn{Title: "Value"})
+			grid := NewDataGrid([]DataGridColumn{{Header: "Name", Width: 10}, {Header: "Value", Width: 10}})
 			grid.SetRows([][]string{{"Alpha", "1"}, {"Beta", "2"}})
 			return grid
 		}(), 30, 6},
@@ -181,6 +181,8 @@ func TestWidgetSmokeRender(t *testing.T) {
 			canvas.Clear(color.RGBA{R: 20, G: 40, B: 60, A: 255})
 		}), 12, 4},
 		{"BarChart", NewBarChart(barData), 20, 6},
+		{"HeatMap", NewHeatMap(state.NewSignal([][]float64{{1, 2}, {3, 4}})), 12, 3},
+		{"Image", NewImage(image.NewRGBA(image.Rect(0, 0, 4, 4))), 8, 4},
 	}
 
 	for _, tc := range cases {

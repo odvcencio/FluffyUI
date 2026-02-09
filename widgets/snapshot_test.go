@@ -10,6 +10,7 @@ import (
 
 	"github.com/odvcencio/fluffyui/backend"
 	"github.com/odvcencio/fluffyui/runtime"
+	"github.com/odvcencio/fluffyui/state"
 	"github.com/odvcencio/fluffyui/terminal"
 )
 
@@ -107,12 +108,12 @@ func TestSnapshot_RichText(t *testing.T) {
 }
 
 func TestSnapshot_DataGrid(t *testing.T) {
-	grid := NewDataGrid(
-		TableColumn{Title: "Name"},
-		TableColumn{Title: "Value"},
-	)
+	grid := NewDataGrid([]DataGridColumn{
+		{Header: "Name", Width: 10},
+		{Header: "Value", Width: 10},
+	})
 	grid.SetRows([][]string{{"Alpha", "1"}, {"Beta", "2"}, {"Gamma", "3"}})
-	grid.SetSelected(1, 1)
+	grid.SetSelectedCell(1, 1)
 	output := renderToString(grid, 30, 6)
 	assertSnapshot(t, "data_grid", output)
 }
@@ -180,4 +181,17 @@ func TestSnapshot_Log(t *testing.T) {
 	log.Focus()
 	output := renderToString(log, 40, 5)
 	assertSnapshot(t, "log", output)
+}
+
+func TestSnapshot_HeatMap(t *testing.T) {
+	data := state.NewSignal([][]float64{
+		{0, 5, 10},
+		{15, 20, 25},
+		{30, 35, 40},
+	})
+	hm := NewHeatMap(data)
+	hm.RowLabels = []string{"R1", "R2", "R3"}
+	hm.ColLabels = []string{"C1", "C2", "C3"}
+	output := renderToString(hm, 15, 5)
+	assertSnapshot(t, "heatmap", output)
 }
