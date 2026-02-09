@@ -47,7 +47,8 @@ type TextArea struct {
 	lineMetaDirty  bool
 }
 
-// NewTextArea creates a new text area.
+// NewTextArea creates a multi-line text editor with line wrapping, selection,
+// clipboard support, and undo/redo history.
 func NewTextArea() *TextArea {
 	ta := &TextArea{
 		label:      "Text Area",

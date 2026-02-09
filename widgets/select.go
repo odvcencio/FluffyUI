@@ -46,7 +46,8 @@ type Select struct {
 	dropdownOpen bool
 }
 
-// NewSelect creates a select widget.
+// NewSelect creates a single-selection picker from the given options.
+// Use SetOnChange to handle selection. Apply WithDropdownMode for overlay rendering.
 func NewSelect(options ...SelectOption) *Select {
 	s := &Select{
 		options:      options,

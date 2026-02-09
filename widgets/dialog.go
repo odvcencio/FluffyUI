@@ -361,17 +361,24 @@ func (d *Dialog) Layout(bounds runtime.Rect) {
 
 	if d.Content != nil {
 		inner := d.ContentBounds().Inset(1, 1, 1, 1)
-		contentBounds := runtime.Rect{
-			X:      inner.X,
-			Y:      inner.Y + 1, // below title
-			Width:  inner.Width,
-			Height: inner.Height - 1,
+		if inner.Width <= 0 || inner.Height <= 0 {
+			return
 		}
+		contentHeight := inner.Height - 1 // below title
 		if len(d.Buttons) > 0 {
-			contentBounds.Height--
+			contentHeight--
 		}
 		if d.autoDismiss > 0 {
-			contentBounds.Height--
+			contentHeight--
+		}
+		if contentHeight < 0 {
+			contentHeight = 0
+		}
+		contentBounds := runtime.Rect{
+			X:      inner.X,
+			Y:      inner.Y + 1,
+			Width:  inner.Width,
+			Height: contentHeight,
 		}
 		d.Content.Layout(contentBounds)
 	}

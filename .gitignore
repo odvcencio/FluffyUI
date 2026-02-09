@@ -1,6 +1,13 @@
 # Compiled binaries
+/a11y-showcase
 /aria-demo
 /fluffy-speak
+/minimal-counter
+/minimal-temperature
+/minimal-todo
+/showcase
+/cover.out
+*.exe
 examples/aria-demo/aria-demo
 
 docs/demos/candy-wars.cast

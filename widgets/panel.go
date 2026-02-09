@@ -181,8 +181,11 @@ func (p *Panel) Layout(bounds runtime.Rect) {
 
 // Render draws the panel.
 func (p *Panel) Render(ctx runtime.RenderContext) {
+	if p == nil {
+		return
+	}
 	bounds := p.bounds
-	if bounds.Width == 0 || bounds.Height == 0 {
+	if bounds.Width <= 0 || bounds.Height <= 0 {
 		return
 	}
 	p.syncA11y()
@@ -361,6 +364,12 @@ func (b *Box) Layout(bounds runtime.Rect) {
 
 // Render draws the background and child.
 func (b *Box) Render(ctx runtime.RenderContext) {
+	if b == nil {
+		return
+	}
+	if b.bounds.Width <= 0 || b.bounds.Height <= 0 {
+		return
+	}
 	// Fill background
 	background := b.style
 	resolved := ctx.ResolveStyle(b)

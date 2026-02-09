@@ -125,8 +125,11 @@ func (t *Text) Measure(constraints runtime.Constraints) runtime.Size {
 
 // Render draws the text.
 func (t *Text) Render(ctx runtime.RenderContext) {
+	if t == nil {
+		return
+	}
 	bounds := t.ContentBounds()
-	if bounds.Width == 0 || bounds.Height == 0 {
+	if bounds.Width <= 0 || bounds.Height <= 0 {
 		return
 	}
 	t.syncA11y()
@@ -305,8 +308,11 @@ func (l *Label) Measure(constraints runtime.Constraints) runtime.Size {
 
 // Render draws the label.
 func (l *Label) Render(ctx runtime.RenderContext) {
+	if l == nil {
+		return
+	}
 	bounds := l.ContentBounds()
-	if bounds.Width == 0 || bounds.Height == 0 {
+	if bounds.Width <= 0 || bounds.Height <= 0 {
 		return
 	}
 	l.syncA11y()

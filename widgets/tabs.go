@@ -31,7 +31,8 @@ type Tabs struct {
 	titlesCacheDirty bool
 }
 
-// NewTabs creates a tab container.
+// NewTabs creates a tabbed container that shows one tab's content at a time.
+// Navigate tabs with arrow keys when focused.
 func NewTabs(tabs ...Tab) *Tabs {
 	w := &Tabs{
 		Tabs:             tabs,

@@ -64,7 +64,9 @@ type Table struct {
 	lastVisEnd     int
 }
 
-// NewTable creates a table with columns.
+// NewTable creates a data table with the given column definitions. Populate
+// rows with SetRows or SetDataSource. Supports keyboard navigation, sorting,
+// filtering, and virtual scrolling for large datasets.
 func NewTable(columns ...TableColumn) *Table {
 	table := &Table{
 		Columns:       columns,

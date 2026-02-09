@@ -93,23 +93,21 @@ func (l *Link) SetFocusStyle(s backend.Style) {
 
 // Measure returns the size needed to display the link text.
 func (l *Link) Measure(constraints runtime.Constraints) runtime.Size {
-	w := textWidth(l.label)
-	if w < constraints.MinWidth {
-		w = constraints.MinWidth
-	}
-	if w > constraints.MaxWidth {
-		w = constraints.MaxWidth
-	}
-	h := 1
-	if h < constraints.MinHeight {
-		h = constraints.MinHeight
-	}
-	return runtime.Size{Width: w, Height: h}
+	return l.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {
+		w := textWidth(l.label)
+		if w < 1 {
+			w = 1
+		}
+		return contentConstraints.Constrain(runtime.Size{Width: w, Height: 1})
+	})
 }
 
 // Render draws the link text with underline styling.
 func (l *Link) Render(ctx runtime.RenderContext) {
-	bounds := l.bounds
+	if l == nil {
+		return
+	}
+	bounds := l.ContentBounds()
 	if bounds.Width <= 0 || bounds.Height <= 0 {
 		return
 	}

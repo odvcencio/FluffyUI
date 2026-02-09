@@ -70,7 +70,9 @@ func deepEqual[T any](a, b T) bool {
 	return reflect.DeepEqual(a, b)
 }
 
-// Subscribable emits change notifications.
+// Subscribable is implemented by any reactive value that supports change
+// notifications. Subscribe returns an unsubscribe function. Both Signal
+// and Computed implement this interface.
 type Subscribable interface {
 	Subscribe(fn func()) func()
 }
@@ -80,7 +82,9 @@ type subscriber struct {
 	scheduler Scheduler
 }
 
-// Signal holds a value and notifies subscribers on change.
+// Signal holds a mutable value and notifies subscribers when it changes.
+// It is the core reactive primitive -- use Get to read, Set to write.
+// Redundant Set calls (same value) are suppressed via equality checking.
 type Signal[T any] struct {
 	mu    sync.Mutex
 	value T

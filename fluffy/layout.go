@@ -2,9 +2,13 @@ package fluffy
 
 import "github.com/odvcencio/fluffyui/runtime"
 
-// Flex re-exports.
+// Flex is a container that lays out children along a horizontal or vertical axis.
 type Flex = runtime.Flex
+
+// FlexChild wraps a widget with flex layout properties (grow, shrink, basis).
 type FlexChild = runtime.FlexChild
+
+// FlexDirection specifies the main axis: Row (horizontal) or Column (vertical).
 type FlexDirection = runtime.FlexDirection
 
 const (
@@ -46,10 +50,21 @@ func HFlex(children ...runtime.FlexChild) *runtime.Flex {
 	return runtime.HBox(children...)
 }
 
-// Flex child helpers.
+// Fixed wraps a widget as a flex child that uses its natural measured size.
 func Fixed(w runtime.Widget) runtime.FlexChild { return runtime.Fixed(w) }
+
+// Flexible wraps a widget as a flex child that grows by the given factor.
+// A grow of 1 shares remaining space equally with other flexible children.
 func Flexible(w runtime.Widget, grow float64) runtime.FlexChild { return runtime.Flexible(w, grow) }
+
+// Expanded wraps a widget as a flex child that fills all remaining space (grow=1).
 func Expanded(w runtime.Widget) runtime.FlexChild { return runtime.Expanded(w) }
+
+// Sized wraps a widget as a flex child with a fixed basis size in the main axis.
 func Sized(w runtime.Widget, basis int) runtime.FlexChild { return runtime.Sized(w, basis) }
+
+// Space creates an expanding empty spacer for pushing siblings apart.
 func Space() runtime.FlexChild { return runtime.Space() }
+
+// FixedSpace creates an empty spacer with a fixed size in the main axis.
 func FixedSpace(size int) runtime.FlexChild { return runtime.FixedSpace(size) }

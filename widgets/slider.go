@@ -59,7 +59,9 @@ type Slider struct {
 	subs     state.Subscriptions
 }
 
-// NewSlider creates a new slider.
+// NewSlider creates a draggable value slider bound to the given signal.
+// The signal's value is clamped to the slider's min/max range (default 0-100).
+// Configure with SliderOption functions like WithSliderRange and WithSliderStep.
 func NewSlider(value *state.Signal[float64], opts ...SliderOption) *Slider {
 	if value == nil {
 		value = state.NewSignal(0.0)

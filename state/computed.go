@@ -2,7 +2,8 @@ package state
 
 import "sync"
 
-// Computed derives its value from other signals.
+// Computed derives its value from other reactive sources and automatically
+// recalculates when dependencies change. Read with Get; subscribe with Subscribe.
 type Computed[T any] struct {
 	signal    *Signal[T]
 	compute   func() T

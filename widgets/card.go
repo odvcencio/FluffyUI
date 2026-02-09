@@ -280,15 +280,9 @@ func (c *Card) Render(ctx runtime.RenderContext) {
 	}
 
 	// Render children.
-	if c.header != nil {
-		c.header.Render(ctx)
-	}
-	if c.body != nil {
-		c.body.Render(ctx)
-	}
-	if c.footer != nil {
-		c.footer.Render(ctx)
-	}
+	runtime.RenderChild(ctx, c.header)
+	runtime.RenderChild(ctx, c.body)
+	runtime.RenderChild(ctx, c.footer)
 }
 
 func (c *Card) renderBorder(ctx runtime.RenderContext, bounds runtime.Rect, style backend.Style) {
@@ -314,8 +308,16 @@ func (c *Card) renderBorder(ctx runtime.RenderContext, bounds runtime.Rect, styl
 	}
 }
 
-// HandleMessage returns unhandled (container delegates to children).
+// HandleMessage forwards messages to children.
 func (c *Card) HandleMessage(msg runtime.Message) runtime.HandleResult {
+	if c == nil {
+		return runtime.Unhandled()
+	}
+	for _, child := range c.ChildWidgets() {
+		if result := child.HandleMessage(msg); result.Handled {
+			return result
+		}
+	}
 	return runtime.Unhandled()
 }
 

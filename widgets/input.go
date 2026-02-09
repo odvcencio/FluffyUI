@@ -56,7 +56,8 @@ type Input struct {
 // defaultInputGroupWindow is the default time window for grouping rapid edits.
 const defaultInputGroupWindow = 500 * time.Millisecond
 
-// NewInput creates a new input widget.
+// NewInput creates a single-line text input with cursor, selection, and undo/redo.
+// Configure with SetPlaceholder, SetOnSubmit, and SetOnChange.
 func NewInput() *Input {
 	input := &Input{
 		style:          backend.DefaultStyle(),

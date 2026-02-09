@@ -48,6 +48,9 @@ func NewAvatar(name string, opts ...AvatarOption) *Avatar {
 	}
 	a.initials = computeInitials(name)
 	for _, opt := range opts {
+		if opt == nil {
+			continue
+		}
 		opt(a)
 	}
 	a.syncA11y()

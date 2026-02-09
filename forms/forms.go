@@ -442,7 +442,6 @@ func (f *SimpleField) ValidateAsync(ctx context.Context) <-chan []ValidationErro
 	f.setValidating(true)
 
 	go func() {
-		defer f.setValidating(false)
 		var errs []ValidationError
 		for _, validator := range validators {
 			if validator == nil {
@@ -461,6 +460,9 @@ func (f *SimpleField) ValidateAsync(ctx context.Context) <-chan []ValidationErro
 		if ctx.Err() == nil && f.currentValidationID() == validationID {
 			f.setAsyncErrors(errs)
 		}
+		// Clear validating state before sending results so that callers
+		// reading from the channel observe Validating() == false.
+		f.setValidating(false)
 		out <- errs
 	}()
 

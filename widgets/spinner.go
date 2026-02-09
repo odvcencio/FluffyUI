@@ -16,7 +16,8 @@ type Spinner struct {
 	services runtime.Services
 }
 
-// NewSpinner creates a spinner.
+// NewSpinner creates an animated loading indicator that cycles through frames
+// on each tick. Shows a static indicator when reduced motion is enabled.
 func NewSpinner() *Spinner {
 	spinner := &Spinner{
 		Frames: []string{"-", "\\", "|", "/"},

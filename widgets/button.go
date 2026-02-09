@@ -45,7 +45,8 @@ type Button struct {
 // ButtonOption configures a button.
 type ButtonOption = Option[Button]
 
-// NewButton creates a new button.
+// NewButton creates a clickable button with the given label. Use ButtonOption
+// functions (WithOnClick, WithVariant, WithDisabled, WithLoading) to configure behavior.
 func NewButton(label string, opts ...ButtonOption) *Button {
 	btn := &Button{
 		label:       state.NewSignal(label),

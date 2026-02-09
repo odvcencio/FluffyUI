@@ -94,10 +94,12 @@ func NewComputed[T any](compute func() T, deps ...state.Subscribable) *state.Com
 // STYLE HELPERS
 // =============================================================================
 
+// DefaultStyle returns the base terminal style (no colors, no attributes).
 func DefaultStyle() backend.Style {
 	return backend.DefaultStyle()
 }
 
+// DefaultStylesheet returns the built-in stylesheet with standard widget styles.
 func DefaultStylesheet() *style.Stylesheet {
 	return theme.DefaultStylesheet()
 }
@@ -180,22 +182,27 @@ type Component = widgets.Component
 // CONTAINER WIDGETS
 // =============================================================================
 
+// NewPanel wraps a child widget in a bordered panel with optional title.
 func NewPanel(child runtime.Widget) *widgets.Panel {
 	return widgets.NewPanel(child)
 }
 
+// NewGrid creates a rows-by-cols grid layout. Add children with Grid.Add.
 func NewGrid(rows, cols int) *widgets.Grid {
 	return widgets.NewGrid(rows, cols)
 }
 
+// NewStack layers children on top of each other (last child drawn on top).
 func NewStack(children ...runtime.Widget) *widgets.Stack {
 	return widgets.NewStack(children...)
 }
 
+// NewScrollView wraps content in a scrollable viewport with scrollbars.
 func NewScrollView(content runtime.Widget) *widgets.ScrollView {
 	return widgets.NewScrollView(content)
 }
 
+// NewAspectRatio constrains child to the given width:height ratio (e.g. 16.0/9.0).
 func NewAspectRatio(child runtime.Widget, ratio float64) *widgets.AspectRatio {
 	return widgets.NewAspectRatio(child, ratio)
 }
@@ -213,18 +220,22 @@ const (
 	VariantDanger    = widgets.VariantDanger
 )
 
+// WithVariant sets the button's visual variant (Primary, Secondary, or Danger).
 func WithVariant(variant Variant) ButtonOption {
 	return widgets.WithVariant(variant)
 }
 
+// WithDisabled binds a signal that controls whether the button is disabled.
 func WithDisabled(disabled *state.Signal[bool]) ButtonOption {
 	return widgets.WithDisabled(disabled)
 }
 
+// WithLoading binds a signal that shows a spinner and disables the button.
 func WithLoading(loading *state.Signal[bool]) ButtonOption {
 	return widgets.WithLoading(loading)
 }
 
+// WithOnClick sets the callback invoked when the button is activated.
 func WithOnClick(fn func()) ButtonOption {
 	return widgets.WithOnClick(fn)
 }
@@ -256,10 +267,14 @@ type (
 // IMAGE WIDGETS
 // =============================================================================
 
+// NewAsyncImage loads an image from path in a background goroutine and renders
+// it using Unicode half-block characters. Supports PNG, JPEG, and GIF.
 func NewAsyncImage(path string, opts ...widgets.AsyncImageOption) *widgets.AsyncImage {
 	return widgets.NewAsyncImage(path, opts...)
 }
 
+// NewAsyncImageWithLoader creates an image widget that uses a custom loader
+// function instead of reading from a file path.
 func NewAsyncImageWithLoader(loader func() (image.Image, error), opts ...widgets.AsyncImageOption) *widgets.AsyncImage {
 	return widgets.NewAsyncImageWithLoader(loader, opts...)
 }
@@ -268,6 +283,8 @@ func NewAsyncImageWithLoader(loader func() (image.Image, error), opts ...widgets
 // DEBUG WIDGETS
 // =============================================================================
 
+// NewDebugOverlay wraps root with a toggleable overlay showing widget bounds,
+// focus state, and render statistics. Press F12 to toggle.
 func NewDebugOverlay(root runtime.Widget, opts ...widgets.DebugOverlayOption) *widgets.DebugOverlay {
 	return widgets.NewDebugOverlay(root, opts...)
 }

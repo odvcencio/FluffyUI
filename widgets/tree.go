@@ -41,7 +41,8 @@ type Tree struct {
 	lastVisEnd    int
 }
 
-// NewTree creates a tree widget.
+// NewTree creates a hierarchical tree view rooted at the given node.
+// Nodes can be expanded/collapsed with Enter and navigated with arrow keys.
 func NewTree(root *TreeNode) *Tree {
 	tree := &Tree{
 		Root:          root,
