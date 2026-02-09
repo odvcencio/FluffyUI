@@ -1,6 +1,7 @@
 package fluffy
 
 import (
+	"github.com/odvcencio/fluffyui/runtime"
 	"github.com/odvcencio/fluffyui/state"
 	"github.com/odvcencio/fluffyui/widgets"
 )
@@ -101,4 +102,28 @@ func SelectFromStrings(options []string, onChange func(string)) *widgets.Select 
 func ReactiveText(render func() string, deps ...state.Subscribable) *widgets.SignalLabel {
 	computed := state.NewComputed(render, deps...)
 	return widgets.NewSignalLabel(computed, nil)
+}
+
+// Form creates a form with labeled fields, validation, and submit handling.
+//
+// This is a shorthand for widgets.NewForm(fields...).
+// Use this when you need a simple form that collects text input from
+// labeled fields with built-in validation and Tab navigation.
+//
+// Example:
+//
+//	form := fluffy.Form(
+//	    fluffy.FormField("Name", fluffy.Input("Enter name")),
+//	    fluffy.FormField("Email", fluffy.Input("Enter email")),
+//	)
+//	form.SetOnSubmit(func(values map[string]string) { ... })
+func Form(fields ...widgets.FormFieldDef) *widgets.Form {
+	return widgets.NewForm(fields...)
+}
+
+// FormField creates a labeled form field definition for use with Form.
+//
+// This is a shorthand for widgets.FormField(label, widget).
+func FormField(label string, widget runtime.Widget) widgets.FormFieldDef {
+	return widgets.FormField(label, widget)
 }
