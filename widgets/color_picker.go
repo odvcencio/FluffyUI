@@ -42,8 +42,12 @@ func NewColorPicker(opts ...ColorPickerOption) *ColorPicker {
 		style:    backend.DefaultStyle(),
 	}
 	for _, opt := range opts {
+		if opt == nil {
+			continue
+		}
 		opt(cp)
 	}
+	cp.Base.Role = accessibility.RoleListbox
 	cp.syncA11y()
 	return cp
 }
@@ -51,6 +55,9 @@ func NewColorPicker(opts ...ColorPickerOption) *ColorPicker {
 // WithColorPickerOnChange sets the change handler.
 func WithColorPickerOnChange(fn func(backend.Color)) ColorPickerOption {
 	return func(cp *ColorPicker) {
+		if cp == nil {
+			return
+		}
 		cp.onChange = fn
 	}
 }
@@ -58,6 +65,9 @@ func WithColorPickerOnChange(fn func(backend.Color)) ColorPickerOption {
 // WithColorPickerPalette sets custom palette colors.
 func WithColorPickerPalette(colors []backend.Color, names []string) ColorPickerOption {
 	return func(cp *ColorPicker) {
+		if cp == nil {
+			return
+		}
 		entries := make([]colorEntry, len(colors))
 		for i, c := range colors {
 			name := fmt.Sprintf("Color %d", i)

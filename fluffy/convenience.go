@@ -1,15 +1,34 @@
 package fluffy
 
-import "github.com/odvcencio/fluffyui/widgets"
+import (
+	"github.com/odvcencio/fluffyui/state"
+	"github.com/odvcencio/fluffyui/widgets"
+)
 
 // Button creates a button with a label and click handler.
-// This is a shorthand for NewButton(label, WithOnClick(onClick)).
+//
+// This is a shorthand for widgets.NewButton(label, WithOnClick(onClick)).
+// Use this when you need a simple clickable button with a single handler.
+// For buttons that need variants, disabled state, or loading indicators,
+// use NewButton with option functions instead.
+//
+// Example:
+//
+//	btn := fluffy.Button("Save", func() { save() })
 func Button(label string, onClick func()) *widgets.Button {
 	return widgets.NewButton(label, widgets.WithOnClick(onClick))
 }
 
-// Input creates a text input with a placeholder.
-// This is a shorthand for creating an Input and setting its placeholder.
+// Input creates a text input with a placeholder string.
+//
+// This is a shorthand for creating a widgets.Input and calling SetPlaceholder.
+// Use this for simple text fields where a placeholder is sufficient.
+// For inputs that need validators, submit handlers, or custom styling,
+// use NewInput and configure it with setter methods instead.
+//
+// Example:
+//
+//	email := fluffy.Input("you@example.com")
 func Input(placeholder string) *widgets.Input {
 	inp := widgets.NewInput()
 	inp.SetPlaceholder(placeholder)
@@ -17,8 +36,19 @@ func Input(placeholder string) *widgets.Input {
 }
 
 // Checkbox creates a checkbox with a label and change handler.
+//
 // The onChange callback receives the new checked state as a *bool
-// (nil indicates indeterminate).
+// (nil indicates indeterminate). Pass nil for onChange if no handler is needed.
+// Use this for simple checkboxes. For checkboxes that need custom styling
+// or indeterminate state management, use NewCheckbox and configure it directly.
+//
+// Example:
+//
+//	agree := fluffy.Checkbox("I agree", func(checked *bool) {
+//	    if checked != nil && *checked {
+//	        enableSubmit()
+//	    }
+//	})
 func Checkbox(label string, onChange func(*bool)) *widgets.Checkbox {
 	cb := widgets.NewCheckbox(label)
 	if onChange != nil {
@@ -28,7 +58,18 @@ func Checkbox(label string, onChange func(*bool)) *widgets.Checkbox {
 }
 
 // SelectFromStrings creates a select widget from string option labels and a change handler.
+//
 // Each string becomes a SelectOption with the string as both Label and Value.
+// The onChange callback receives the label of the selected option.
+// Use this for simple string-based dropdowns. For selects that need separate
+// labels and values, or typed SelectOption structs, use widgets.NewSelect directly.
+//
+// Example:
+//
+//	color := fluffy.SelectFromStrings(
+//	    []string{"Red", "Green", "Blue"},
+//	    func(selected string) { fmt.Println("Picked:", selected) },
+//	)
 func SelectFromStrings(options []string, onChange func(string)) *widgets.Select {
 	selectOpts := make([]widgets.SelectOption, len(options))
 	for i, opt := range options {
@@ -41,4 +82,23 @@ func SelectFromStrings(options []string, onChange func(string)) *widgets.Select 
 		})
 	}
 	return s
+}
+
+// ReactiveText creates a text widget that automatically updates when
+// any of the given dependencies change. The render function is called
+// to produce the displayed text content.
+//
+// This is the simplest way to display reactive data. For static text,
+// use Label instead. For rich formatted text, use widgets.NewSignalLabel
+// directly with a custom format function.
+//
+// Example:
+//
+//	count := fluffy.NewSignal(0)
+//	label := fluffy.ReactiveText(func() string {
+//	    return fmt.Sprintf("Count: %d", count.Get())
+//	}, count)
+func ReactiveText(render func() string, deps ...state.Subscribable) *widgets.SignalLabel {
+	computed := state.NewComputed(render, deps...)
+	return widgets.NewSignalLabel(computed, nil)
 }

@@ -33,6 +33,7 @@ func TestLink_Measure(t *testing.T) {
 
 func TestLink_Activate(t *testing.T) {
 	l := NewLink("Click", "https://example.com")
+	l.Focus()
 	var activated string
 	l.SetOnActivate(func(url string) {
 		activated = url

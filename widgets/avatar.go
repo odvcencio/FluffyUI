@@ -33,6 +33,7 @@ type Avatar struct {
 	name     string
 	initials string
 	size     AvatarSize
+	services runtime.Services
 
 	style    backend.Style
 	styleSet bool
@@ -56,6 +57,9 @@ func NewAvatar(name string, opts ...AvatarOption) *Avatar {
 // WithAvatarSize sets the display size.
 func WithAvatarSize(size AvatarSize) AvatarOption {
 	return func(a *Avatar) {
+		if a == nil {
+			return
+		}
 		a.size = size
 	}
 }
@@ -63,6 +67,9 @@ func WithAvatarSize(size AvatarSize) AvatarOption {
 // WithAvatarInitials overrides the computed initials.
 func WithAvatarInitials(initials string) AvatarOption {
 	return func(a *Avatar) {
+		if a == nil {
+			return
+		}
 		a.initials = initials
 	}
 }
@@ -180,6 +187,7 @@ func (a *Avatar) Bind(services runtime.Services) {
 	if a == nil {
 		return
 	}
+	a.services = services
 }
 
 // Unbind releases app services.
@@ -187,6 +195,7 @@ func (a *Avatar) Unbind() {
 	if a == nil {
 		return
 	}
+	a.services = runtime.Services{}
 }
 
 func (a *Avatar) syncA11y() {

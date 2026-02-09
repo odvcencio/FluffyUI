@@ -55,12 +55,8 @@ func (d *DatePicker) Bind(services runtime.Services) {
 		d.subs.Observe(sig, func() {
 			d.syncInput()
 			d.services.Invalidate()
-			if announcer := d.services.Announcer(); announcer != nil {
-				date := sig.Get()
-				if !date.IsZero() {
-					announcer.Announce(date.Format("January 2, 2006"), accessibility.PriorityPolite)
-				}
-			}
+			// Note: the Calendar widget already announces date selection changes,
+			// so we do not duplicate the announcement here.
 		})
 	}
 }

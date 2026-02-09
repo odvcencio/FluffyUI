@@ -1,3 +1,29 @@
+// Package fluffy provides the high-level API for building terminal UIs.
+//
+// For a minimal app, use Run with pre-built widgets:
+//
+//	fluffy.Run(fluffy.Label("Hello, world!"))
+//
+// For interactive apps, use NewSignal for state and ReactiveText for display:
+//
+//	count := fluffy.NewSignal(0)
+//	fluffy.Run(fluffy.VStack(
+//	    fluffy.ReactiveText(func() string {
+//	        return fmt.Sprintf("Count: %d", count.Get())
+//	    }, count),
+//	    fluffy.Button("+1", func() { count.Set(count.Get() + 1) }),
+//	))
+//
+// For advanced apps with custom configuration, use NewApp with options:
+//
+//	app, err := fluffy.NewApp(fluffy.WithRoot(myWidget))
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//	app.Run(ctx)
+//
+// The package re-exports commonly used types from runtime, state, and widgets
+// so most apps only need to import "fluffy".
 package fluffy
 
 import (
@@ -69,6 +95,9 @@ func Run(root runtime.Widget, opts ...AppOption) error {
 
 // RunContext builds and runs an app with the provided root widget and context.
 func RunContext(ctx context.Context, root runtime.Widget, opts ...AppOption) error {
+	if root == nil {
+		return fmt.Errorf("fluffy.Run: root widget must not be nil; pass a widget such as fluffy.Label(\"hello\")")
+	}
 	merged := make([]AppOption, 0, len(opts)+1)
 	merged = append(merged, opts...)
 	merged = append(merged, WithRoot(root))

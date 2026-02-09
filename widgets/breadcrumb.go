@@ -45,11 +45,18 @@ func (b *Breadcrumb) SetSeparator(sep string) {
 	}
 }
 
-// OnNavigate sets the callback for navigation to a breadcrumb item.
-func (b *Breadcrumb) OnNavigate(fn func(index int)) {
+// SetOnNavigate sets the callback for navigation to a breadcrumb item.
+func (b *Breadcrumb) SetOnNavigate(fn func(index int)) {
 	if b != nil {
 		b.onNavigate = fn
 	}
+}
+
+// OnNavigate sets the callback for navigation to a breadcrumb item.
+//
+// Deprecated: Use SetOnNavigate instead. This method will be removed in v1.0.
+func (b *Breadcrumb) OnNavigate(fn func(index int)) {
+	b.SetOnNavigate(fn)
 }
 
 // Selected returns the currently selected item index.

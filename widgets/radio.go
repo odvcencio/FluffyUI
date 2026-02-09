@@ -48,7 +48,9 @@ func (g *RadioGroup) SetOnChange(fn func(index int)) {
 	g.onChange = fn
 }
 
-// Deprecated: use SetOnChange instead.
+// OnChange registers a selection callback on the radio group.
+//
+// Deprecated: Use SetOnChange instead. This method will be removed in v1.0.
 func (g *RadioGroup) OnChange(fn func(index int)) {
 	g.SetOnChange(fn)
 }

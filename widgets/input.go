@@ -111,7 +111,9 @@ func (i *Input) SetOnSubmit(fn func(text string)) {
 	i.onSubmit = fn
 }
 
-// Deprecated: use SetOnSubmit instead.
+// OnSubmit sets the callback for when Enter is pressed.
+//
+// Deprecated: Use SetOnSubmit instead. This method will be removed in v1.0.
 func (i *Input) OnSubmit(fn func(text string)) {
 	i.SetOnSubmit(fn)
 }
@@ -124,7 +126,9 @@ func (i *Input) SetOnChange(fn func(text string)) {
 	i.onChange = fn
 }
 
-// Deprecated: use SetOnChange instead.
+// OnChange sets the callback for when the input text changes.
+//
+// Deprecated: Use SetOnChange instead. This method will be removed in v1.0.
 func (i *Input) OnChange(fn func(text string)) {
 	i.SetOnChange(fn)
 }
@@ -1214,7 +1218,9 @@ func (m *MultilineInput) SetOnSubmit(fn func(text string)) {
 	m.onSubmit = fn
 }
 
-// Deprecated: use SetOnSubmit instead.
+// OnSubmit sets the callback for when Ctrl+Enter is pressed.
+//
+// Deprecated: Use SetOnSubmit instead. This method will be removed in v1.0.
 func (m *MultilineInput) OnSubmit(fn func(text string)) {
 	m.SetOnSubmit(fn)
 }
@@ -1227,7 +1233,9 @@ func (m *MultilineInput) SetOnChange(fn func(text string)) {
 	m.onChange = fn
 }
 
-// Deprecated: use SetOnChange instead.
+// OnChange sets the callback for when the multiline input text changes.
+//
+// Deprecated: Use SetOnChange instead. This method will be removed in v1.0.
 func (m *MultilineInput) OnChange(fn func(text string)) {
 	m.SetOnChange(fn)
 }

@@ -159,7 +159,9 @@ func (l *List[T]) SetOnSelect(fn func(index int, item T)) {
 	l.onSelect = fn
 }
 
-// Deprecated: use SetOnSelect instead.
+// OnSelect registers a selection handler on the list.
+//
+// Deprecated: Use SetOnSelect instead. This method will be removed in v1.0.
 func (l *List[T]) OnSelect(fn func(index int, item T)) {
 	l.SetOnSelect(fn)
 }

@@ -156,7 +156,8 @@ func (b *Button) SetVariant(variant Variant) {
 
 // Primary applies the primary variant and returns the button for chaining.
 //
-// Deprecated: prefer WithVariant(VariantPrimary) during construction.
+// Deprecated: Use WithVariant(VariantPrimary) during construction or
+// SetVariant for mutation. This method will be removed in v1.0.
 func (b *Button) Primary() *Button {
 	if b != nil {
 		b.variant = VariantPrimary
@@ -166,7 +167,8 @@ func (b *Button) Primary() *Button {
 
 // Secondary applies the secondary variant and returns the button for chaining.
 //
-// Deprecated: prefer WithVariant(VariantSecondary) during construction.
+// Deprecated: Use WithVariant(VariantSecondary) during construction or
+// SetVariant for mutation. This method will be removed in v1.0.
 func (b *Button) Secondary() *Button {
 	if b != nil {
 		b.variant = VariantSecondary
@@ -176,7 +178,8 @@ func (b *Button) Secondary() *Button {
 
 // Danger applies the danger variant and returns the button for chaining.
 //
-// Deprecated: prefer WithVariant(VariantDanger) during construction.
+// Deprecated: Use WithVariant(VariantDanger) during construction or
+// SetVariant for mutation. This method will be removed in v1.0.
 func (b *Button) Danger() *Button {
 	if b != nil {
 		b.variant = VariantDanger
@@ -186,7 +189,8 @@ func (b *Button) Danger() *Button {
 
 // Disabled sets the disabled signal and returns the button for chaining.
 //
-// Deprecated: prefer WithDisabled during construction.
+// Deprecated: Use WithDisabled during construction. This method will be
+// removed in v1.0.
 func (b *Button) Disabled(disabled *state.Signal[bool]) *Button {
 	if b != nil && disabled != nil {
 		b.disabled = disabled
@@ -196,7 +200,8 @@ func (b *Button) Disabled(disabled *state.Signal[bool]) *Button {
 
 // Loading sets the loading signal and returns the button for chaining.
 //
-// Deprecated: prefer WithLoading during construction.
+// Deprecated: Use WithLoading during construction. This method will be
+// removed in v1.0.
 func (b *Button) Loading(loading *state.Signal[bool]) *Button {
 	if b != nil && loading != nil {
 		b.loading = loading
@@ -214,7 +219,8 @@ func (b *Button) SetOnClick(fn func()) {
 
 // OnClick sets the click handler and returns the button for chaining.
 //
-// Deprecated: prefer WithOnClick during construction or SetOnClick for mutation.
+// Deprecated: Use SetOnClick for mutation or WithOnClick during construction.
+// This method will be removed in v1.0.
 func (b *Button) OnClick(fn func()) *Button {
 	if b != nil {
 		b.onClick = fn
@@ -224,7 +230,8 @@ func (b *Button) OnClick(fn func()) *Button {
 
 // Class adds a style class and returns the button for chaining.
 //
-// Deprecated: prefer WithClass during construction.
+// Deprecated: Use WithClass during construction or AddClass for mutation.
+// This method will be removed in v1.0.
 func (b *Button) Class(class string) *Button {
 	if b != nil {
 		b.AddClass(class)
@@ -234,7 +241,8 @@ func (b *Button) Class(class string) *Button {
 
 // Classes adds style classes and returns the button for chaining.
 //
-// Deprecated: prefer WithClasses during construction.
+// Deprecated: Use WithClasses during construction or AddClasses for mutation.
+// This method will be removed in v1.0.
 func (b *Button) Classes(classes ...string) *Button {
 	if b != nil {
 		b.AddClasses(classes...)

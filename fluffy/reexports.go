@@ -55,18 +55,37 @@ var (
 // =============================================================================
 
 type (
-	Signal[T any]    = state.Signal[T]
-	Computed[T any]  = state.Computed[T]
 	Subscribable     = state.Subscribable
 	EqualFunc[T any] = state.EqualFunc[T]
 )
 
+// Signal creates a new reactive signal with an initial value.
+// This is the simplest way to create reactive state:
+//
+//	count := fluffy.Signal(0)
+//	count.Set(count.Get() + 1)
+func Signal[T any](initial T) *state.Signal[T] {
+	return state.NewSignal(initial)
+}
+
+// Computed creates a derived value that automatically recalculates
+// when any dependency changes. If no deps are provided, dependencies
+// are detected automatically by tracking signal reads.
+//
+//	count := fluffy.Signal(0)
+//	doubled := fluffy.Computed(func() int { return count.Get() * 2 }, count)
+func Computed[T any](fn func() T, deps ...state.Subscribable) *state.Computed[T] {
+	return state.NewComputed(fn, deps...)
+}
+
 // NewSignal creates a signal with smart defaults for equality checking.
+// Prefer Signal() for new code.
 func NewSignal[T any](initial T) *state.Signal[T] {
 	return state.NewSignal(initial)
 }
 
 // NewComputed creates a computed value from dependencies.
+// Prefer Computed() for new code.
 func NewComputed[T any](compute func() T, deps ...state.Subscribable) *state.Computed[T] {
 	return state.NewComputed(compute, deps...)
 }

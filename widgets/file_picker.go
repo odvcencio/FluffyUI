@@ -44,8 +44,12 @@ func NewFilePicker(dir string, opts ...FilePickerOption) *FilePicker {
 		style:      backend.DefaultStyle(),
 	}
 	for _, opt := range opts {
+		if opt == nil {
+			continue
+		}
 		opt(fp)
 	}
+	fp.Base.Role = accessibility.RoleTree
 	fp.loadEntries()
 	fp.syncA11y()
 	return fp
@@ -54,6 +58,9 @@ func NewFilePicker(dir string, opts ...FilePickerOption) *FilePicker {
 // WithFileFilter sets the file extension filter (e.g. "*.go").
 func WithFileFilter(pattern string) FilePickerOption {
 	return func(fp *FilePicker) {
+		if fp == nil {
+			return
+		}
 		fp.filter = pattern
 	}
 }
@@ -61,6 +68,9 @@ func WithFileFilter(pattern string) FilePickerOption {
 // WithFilePickerShowHidden controls whether hidden files are shown.
 func WithFilePickerShowHidden(show bool) FilePickerOption {
 	return func(fp *FilePicker) {
+		if fp == nil {
+			return
+		}
 		fp.showHidden = show
 	}
 }
@@ -68,6 +78,9 @@ func WithFilePickerShowHidden(show bool) FilePickerOption {
 // WithOnFileSelect sets the file selection callback.
 func WithOnFileSelect(fn func(string)) FilePickerOption {
 	return func(fp *FilePicker) {
+		if fp == nil {
+			return
+		}
 		fp.onSelect = fn
 	}
 }
@@ -75,6 +88,9 @@ func WithOnFileSelect(fn func(string)) FilePickerOption {
 // WithStartDir sets the starting directory.
 func WithStartDir(dir string) FilePickerOption {
 	return func(fp *FilePicker) {
+		if fp == nil {
+			return
+		}
 		fp.currentDir = dir
 	}
 }

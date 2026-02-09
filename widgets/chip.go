@@ -217,5 +217,6 @@ func (c *Chip) syncA11y() {
 }
 
 var _ runtime.Widget = (*Chip)(nil)
+var _ runtime.Focusable = (*Chip)(nil)
 var _ runtime.Bindable = (*Chip)(nil)
 var _ runtime.Unbindable = (*Chip)(nil)

@@ -46,8 +46,12 @@ func NewCommandPalette(commands []Command, opts ...CommandPaletteOption) *Comman
 	}
 	cp.filterCommands()
 	for _, opt := range opts {
+		if opt == nil {
+			continue
+		}
 		opt(cp)
 	}
+	cp.Base.Role = accessibility.RoleCombobox
 	cp.syncA11y()
 	return cp
 }
@@ -55,6 +59,9 @@ func NewCommandPalette(commands []Command, opts ...CommandPaletteOption) *Comman
 // WithCommandPaletteOpen sets the initial open state.
 func WithCommandPaletteOpen(open bool) CommandPaletteOption {
 	return func(cp *CommandPalette) {
+		if cp == nil {
+			return
+		}
 		cp.open = open
 	}
 }

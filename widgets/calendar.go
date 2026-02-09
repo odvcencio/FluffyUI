@@ -403,20 +403,34 @@ func (c *Calendar) SetDayRenderer(fn DayRenderFunc) {
 	c.invalidate()
 }
 
-// OnSelect registers a single-date selection callback.
-func (c *Calendar) OnSelect(fn func(time.Time)) {
+// SetOnSelect registers a single-date selection callback.
+func (c *Calendar) SetOnSelect(fn func(time.Time)) {
 	if c == nil {
 		return
 	}
 	c.onSelect = fn
 }
 
-// OnRangeSelect registers a range selection callback.
-func (c *Calendar) OnRangeSelect(fn func(start, end time.Time)) {
+// OnSelect registers a single-date selection callback.
+//
+// Deprecated: Use SetOnSelect instead. This method will be removed in v1.0.
+func (c *Calendar) OnSelect(fn func(time.Time)) {
+	c.SetOnSelect(fn)
+}
+
+// SetOnRangeSelect registers a range selection callback.
+func (c *Calendar) SetOnRangeSelect(fn func(start, end time.Time)) {
 	if c == nil {
 		return
 	}
 	c.onRangeSelect = fn
+}
+
+// OnRangeSelect registers a range selection callback.
+//
+// Deprecated: Use SetOnRangeSelect instead. This method will be removed in v1.0.
+func (c *Calendar) OnRangeSelect(fn func(start, end time.Time)) {
+	c.SetOnRangeSelect(fn)
 }
 
 // SetStyles configures calendar styles.

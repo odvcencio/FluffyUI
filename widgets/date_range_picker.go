@@ -166,12 +166,19 @@ func (d *DateRangePicker) SelectedRange() (time.Time, time.Time, bool) {
 	return *start, *end, true
 }
 
-// OnRangeSelect registers a selection callback.
-func (d *DateRangePicker) OnRangeSelect(fn func(start, end time.Time)) {
+// SetOnRangeSelect registers a selection callback.
+func (d *DateRangePicker) SetOnRangeSelect(fn func(start, end time.Time)) {
 	if d == nil {
 		return
 	}
 	d.onRangeSelect = fn
+}
+
+// OnRangeSelect registers a selection callback.
+//
+// Deprecated: Use SetOnRangeSelect instead. This method will be removed in v1.0.
+func (d *DateRangePicker) OnRangeSelect(fn func(start, end time.Time)) {
+	d.SetOnRangeSelect(fn)
 }
 
 // StyleType returns the selector type name.

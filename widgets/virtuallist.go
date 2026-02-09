@@ -209,7 +209,9 @@ func (v *VirtualList[T]) SetOnSelect(fn func(index int, item T)) {
 	v.onSelect = fn
 }
 
-// Deprecated: use SetOnSelect instead.
+// OnSelect registers a selection handler on the virtual list.
+//
+// Deprecated: Use SetOnSelect instead. This method will be removed in v1.0.
 func (v *VirtualList[T]) OnSelect(fn func(index int, item T)) {
 	v.SetOnSelect(fn)
 }

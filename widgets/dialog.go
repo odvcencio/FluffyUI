@@ -187,7 +187,10 @@ func (d *Dialog) SetContent(content runtime.Widget) {
 	d.Content = content
 }
 
-// Deprecated: prefer WithDialogContent during construction or SetContent for mutation.
+// WithContent sets a custom widget as dialog body and returns the dialog for chaining.
+//
+// Deprecated: Use SetContent for mutation or WithDialogContent during construction.
+// This method will be removed in v1.0.
 func (d *Dialog) WithContent(content runtime.Widget) *Dialog {
 	d.SetContent(content)
 	return d
@@ -201,7 +204,10 @@ func (d *Dialog) SetDismissable(dismissable bool) {
 	d.dismissable = dismissable
 }
 
-// Deprecated: prefer WithDialogDismissable during construction or SetDismissable for mutation.
+// WithDismissable sets whether Escape closes the dialog and returns it for chaining.
+//
+// Deprecated: Use SetDismissable for mutation or WithDialogDismissable during construction.
+// This method will be removed in v1.0.
 func (d *Dialog) WithDismissable(dismissable bool) *Dialog {
 	d.SetDismissable(dismissable)
 	return d
@@ -215,7 +221,10 @@ func (d *Dialog) SetOnDismiss(fn func()) {
 	d.onDismiss = fn
 }
 
-// Deprecated: prefer WithDialogOnDismiss during construction or SetOnDismiss for mutation.
+// OnDismiss sets the dismiss callback and returns the dialog for chaining.
+//
+// Deprecated: Use SetOnDismiss for mutation or WithDialogOnDismiss during construction.
+// This method will be removed in v1.0.
 func (d *Dialog) OnDismiss(fn func()) *Dialog {
 	d.SetOnDismiss(fn)
 	return d
@@ -238,8 +247,11 @@ func (d *Dialog) SetButtons(buttons ...DialogButton) {
 	d.Buttons = buttons
 }
 
-// Deprecated: prefer WithDialogAutoDismiss during construction or SetAutoDismiss for mutation.
+// WithAutoDismiss enables auto-dismiss after duration and returns the dialog for chaining.
 // Call ShouldDismiss() periodically to check if time has elapsed.
+//
+// Deprecated: Use SetAutoDismiss for mutation or WithDialogAutoDismiss during construction.
+// This method will be removed in v1.0.
 func (d *Dialog) WithAutoDismiss(duration time.Duration) *Dialog {
 	d.SetAutoDismiss(duration)
 	return d

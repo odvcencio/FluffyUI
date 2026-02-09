@@ -176,7 +176,9 @@ func (t *TextArea) SetOnChange(fn func(text string)) {
 	t.onChange = fn
 }
 
-// Deprecated: use SetOnChange instead.
+// OnChange registers a callback for text changes.
+//
+// Deprecated: Use SetOnChange instead. This method will be removed in v1.0.
 func (t *TextArea) OnChange(fn func(text string)) {
 	t.SetOnChange(fn)
 }

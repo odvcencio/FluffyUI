@@ -173,7 +173,9 @@ func (c *Checkbox) HandleMessage(msg runtime.Message) runtime.HandleResult {
 		next := c.toggleValue()
 		c.SetChecked(next)
 		if announcer := c.services.Announcer(); announcer != nil {
-			if next != nil && *next {
+			if next == nil {
+				announcer.Announce("indeterminate", accessibility.PriorityPolite)
+			} else if *next {
 				announcer.Announce("checked", accessibility.PriorityPolite)
 			} else {
 				announcer.Announce("unchecked", accessibility.PriorityPolite)

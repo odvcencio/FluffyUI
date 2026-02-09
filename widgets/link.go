@@ -45,11 +45,17 @@ func NewLink(label, url string) *Link {
 
 // Bind attaches app services.
 func (l *Link) Bind(services runtime.Services) {
+	if l == nil {
+		return
+	}
 	l.services = services
 }
 
 // Unbind releases app services.
 func (l *Link) Unbind() {
+	if l == nil {
+		return
+	}
 	l.services = runtime.Services{}
 }
 
@@ -119,6 +125,9 @@ func (l *Link) Render(ctx runtime.RenderContext) {
 
 // HandleMessage processes input events.
 func (l *Link) HandleMessage(msg runtime.Message) runtime.HandleResult {
+	if l == nil || !l.focused {
+		return runtime.Unhandled()
+	}
 	switch m := msg.(type) {
 	case runtime.KeyMsg:
 		if m.Key == terminal.KeyEnter {
