@@ -14,11 +14,12 @@ import (
 )
 
 const (
-	resourceScreenURI     = "fluffy://screen"
-	resourceWidgetsURI    = "fluffy://widgets"
-	resourceFocusedURI    = "fluffy://focused"
-	resourceClipboardURI  = "fluffy://clipboard"
-	resourceDimensionsURI = "fluffy://dimensions"
+	resourceScreenURI       = "fluffy://screen"
+	resourceWidgetsURI      = "fluffy://widgets"
+	resourceFocusedURI      = "fluffy://focused"
+	resourceClipboardURI    = "fluffy://clipboard"
+	resourceDimensionsURI   = "fluffy://dimensions"
+	resourceInstructionsURI = "fluffy://instructions"
 )
 
 func registerResources(s *Server) {
@@ -60,6 +61,13 @@ func registerResources(s *Server) {
 			mcp.WithMIMEType("application/json"),
 		),
 		s.handleResourceDimensions,
+	)
+	s.mcpServer.AddResource(
+		mcp.NewResource(resourceInstructionsURI, "instructions",
+			mcp.WithResourceDescription("Agent guide for navigating and controlling FluffyUI apps."),
+			mcp.WithMIMEType("text/plain"),
+		),
+		s.handleResourceInstructions,
 	)
 
 	s.mcpServer.AddResourceTemplate(
@@ -133,6 +141,10 @@ func (s *Server) handleResourceClipboard(ctx context.Context, req mcp.ReadResour
 
 func (s *Server) handleResourceDimensions(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
 	return resourceJSON(req.Params.URI, s.currentDimensions())
+}
+
+func (s *Server) handleResourceInstructions(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
+	return resourceText(req.Params.URI, AgentInstructions, "text/plain"), nil
 }
 
 func (s *Server) handleResourceWidget(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
@@ -236,6 +248,7 @@ const (
 	resourceFocused
 	resourceClipboard
 	resourceDimensions
+	resourceInstructions
 	resourceWidget
 	resourceWidgetValue
 	resourceWidgetChildren
@@ -271,6 +284,9 @@ func parseResourceURI(uri string) resourceRef {
 		return ref
 	case "dimensions":
 		ref.kind = resourceDimensions
+		return ref
+	case "instructions":
+		ref.kind = resourceInstructions
 		return ref
 	case "widget":
 		path := strings.TrimPrefix(parsed.Path, "/")

@@ -127,7 +127,7 @@ func NewServer(app *runtime.App, opts runtime.MCPOptions) (*Server, error) {
 		mcpserver.WithToolCapabilities(false),
 		mcpserver.WithNotificationQueuePolicy(opts.SlowClientPolicy),
 		mcpserver.WithHooks(hooks),
-		mcpserver.WithInstructions("Fluffy UI MCP server for observing and controlling terminal widgets."),
+		mcpserver.WithInstructions(AgentInstructions),
 	)
 
 	registerTools(srv)

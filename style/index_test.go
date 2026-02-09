@@ -2,6 +2,7 @@ package style
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 )
 
@@ -69,7 +70,7 @@ func TestIndexingCorrectness(t *testing.T) {
 			resultNoIndex := sheet.Resolve(tt.node, nil)
 
 			// Results should be identical
-			if resultWithIndex != resultNoIndex {
+			if !reflect.DeepEqual(resultWithIndex, resultNoIndex) {
 				t.Errorf("Results differ:\nWith index: %+v\nNo index: %+v", resultWithIndex, resultNoIndex)
 			}
 
@@ -114,7 +115,7 @@ func TestIndexingWithComplexSelectors(t *testing.T) {
 	resultNoIndex := sheet.Resolve(button, ancestors)
 
 	// Results should be identical
-	if resultWithIndex != resultNoIndex {
+	if !reflect.DeepEqual(resultWithIndex, resultNoIndex) {
 		t.Errorf("Results differ:\nWith index: %+v\nNo index: %+v", resultWithIndex, resultNoIndex)
 	}
 

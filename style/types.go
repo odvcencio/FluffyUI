@@ -1,9 +1,32 @@
 package style
 
 import (
+	"time"
+
 	"github.com/odvcencio/fluffyui/backend"
 	"github.com/odvcencio/fluffyui/compositor"
 )
+
+// EasingFunc identifies a CSS-like easing function for transitions.
+type EasingFunc int
+
+const (
+	// EaseLinear applies no acceleration.
+	EaseLinear EasingFunc = iota
+	// EaseIn starts slow and accelerates.
+	EaseIn
+	// EaseOut starts fast and decelerates.
+	EaseOut
+	// EaseInOut starts slow, speeds up, then decelerates.
+	EaseInOut
+)
+
+// Transition defines a CSS-like property transition.
+type Transition struct {
+	Property string        // "foreground", "background", "opacity", "all", etc.
+	Duration time.Duration // e.g. 200ms
+	Easing   EasingFunc    // linear, ease-in, ease-out, ease-in-out
+}
 
 // Color represents a terminal color.
 // This is an alias to compositor.Color for compatibility.
@@ -244,6 +267,9 @@ type Style struct {
 
 	// Cursor
 	Cursor CursorStyle
+
+	// Transitions
+	Transitions []Transition
 }
 
 // IsZero reports whether no style fields are set.
@@ -270,7 +296,8 @@ func (s Style) IsZero() bool {
 		s.Visibility == VisibilityNone &&
 		s.Overflow == OverflowNone &&
 		s.Opacity == nil &&
-		s.Cursor == CursorNone
+		s.Cursor == CursorNone &&
+		len(s.Transitions) == 0
 }
 
 // AffectsLayout reports whether the style includes layout-affecting fields.
@@ -358,6 +385,9 @@ func (s Style) Merge(override Style) Style {
 	}
 	if override.Cursor != CursorNone {
 		s.Cursor = override.Cursor
+	}
+	if len(override.Transitions) > 0 {
+		s.Transitions = override.Transitions
 	}
 	return s
 }

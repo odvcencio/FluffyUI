@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Parse parses a Fluffy Style Sheet (FSS) string.
@@ -419,6 +420,13 @@ func parseStyleBlock(block string, sheet *Stylesheet) (Style, Style, []error) {
 				continue
 			}
 			target.WhiteSpace = ws
+		case "transition":
+			transitions, err := parseTransitions(value)
+			if err != nil {
+				errs = append(errs, err)
+				continue
+			}
+			target.Transitions = append(target.Transitions, transitions...)
 		default:
 			errs = append(errs, fmt.Errorf("style: unknown property %q", name))
 		}
@@ -1098,4 +1106,111 @@ func readIdent(s string, start int) (string, int) {
 		idx++
 	}
 	return s[start:idx], idx
+}
+
+// parseTransitions parses one or more comma-separated transition declarations.
+// Format: property duration [easing], property duration [easing], ...
+func parseTransitions(value string) ([]Transition, error) {
+	parts := strings.Split(value, ",")
+	var transitions []Transition
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		t, err := parseSingleTransition(part)
+		if err != nil {
+			return nil, err
+		}
+		transitions = append(transitions, t)
+	}
+	if len(transitions) == 0 {
+		return nil, fmt.Errorf("style: empty transition value")
+	}
+	return transitions, nil
+}
+
+// parseSingleTransition parses "property duration [easing]".
+func parseSingleTransition(value string) (Transition, error) {
+	fields := strings.Fields(value)
+	if len(fields) < 2 {
+		return Transition{}, fmt.Errorf("style: transition requires property and duration, got %q", value)
+	}
+	property := strings.ToLower(fields[0])
+	if !isValidTransitionProperty(property) {
+		return Transition{}, fmt.Errorf("style: unknown transition property %q", property)
+	}
+	duration, err := parseDuration(fields[1])
+	if err != nil {
+		return Transition{}, err
+	}
+	easing := EaseLinear
+	if len(fields) >= 3 {
+		easing, err = parseEasing(fields[2])
+		if err != nil {
+			return Transition{}, err
+		}
+	}
+	return Transition{
+		Property: property,
+		Duration: duration,
+		Easing:   easing,
+	}, nil
+}
+
+// isValidTransitionProperty reports whether a property name can be transitioned.
+func isValidTransitionProperty(prop string) bool {
+	switch prop {
+	case "all",
+		"foreground", "color", "fg",
+		"background", "bg",
+		"opacity",
+		"padding", "margin":
+		return true
+	}
+	return false
+}
+
+// parseDuration parses a CSS-like duration string ("200ms", "1.5s", "0.3s").
+func parseDuration(value string) (time.Duration, error) {
+	value = strings.TrimSpace(strings.ToLower(value))
+	if strings.HasSuffix(value, "ms") {
+		numStr := strings.TrimSuffix(value, "ms")
+		v, err := strconv.ParseFloat(numStr, 64)
+		if err != nil {
+			return 0, fmt.Errorf("style: invalid duration %q", value)
+		}
+		if v < 0 {
+			return 0, fmt.Errorf("style: negative duration %q", value)
+		}
+		return time.Duration(v * float64(time.Millisecond)), nil
+	}
+	if strings.HasSuffix(value, "s") {
+		numStr := strings.TrimSuffix(value, "s")
+		v, err := strconv.ParseFloat(numStr, 64)
+		if err != nil {
+			return 0, fmt.Errorf("style: invalid duration %q", value)
+		}
+		if v < 0 {
+			return 0, fmt.Errorf("style: negative duration %q", value)
+		}
+		return time.Duration(v * float64(time.Second)), nil
+	}
+	return 0, fmt.Errorf("style: duration must end with 'ms' or 's', got %q", value)
+}
+
+// parseEasing parses a CSS-like easing function name.
+func parseEasing(value string) (EasingFunc, error) {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "linear":
+		return EaseLinear, nil
+	case "ease-in":
+		return EaseIn, nil
+	case "ease-out":
+		return EaseOut, nil
+	case "ease-in-out":
+		return EaseInOut, nil
+	default:
+		return EaseLinear, fmt.Errorf("style: unknown easing function %q", value)
+	}
 }
