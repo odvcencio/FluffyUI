@@ -268,18 +268,14 @@ type Scrollbar struct {
 
 // ScrollbarChars defines characters used to render the scrollbar.
 type ScrollbarChars struct {
-	Track     rune
-	Thumb     rune
-	ArrowUp   rune
-	ArrowDown rune
+	Track rune
+	Thumb rune
 }
 
 // DefaultScrollbarChars returns ASCII defaults.
 func DefaultScrollbarChars() ScrollbarChars {
 	return ScrollbarChars{
-		Track:     '|',
-		Thumb:     '#',
-		ArrowUp:   '^',
-		ArrowDown: 'v',
+		Track: '|',
+		Thumb: '#',
 	}
 }

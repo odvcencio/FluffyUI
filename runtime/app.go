@@ -107,6 +107,7 @@ type App struct {
 	speaker           accessibility.Speaker
 	mcpOptions        *MCPOptions
 	mcpCloser         io.Closer
+	focusRestore      FocusRestore
 
 	running     atomic.Bool
 	dirty       bool
@@ -477,6 +478,11 @@ func (a *App) Run(ctx context.Context) error {
 		if sa, ok := a.announcer.(*accessibility.SimpleAnnouncer); ok {
 			sa.SetSpeaker(a.speaker)
 		}
+	}
+
+	// Propagate reduced motion to the animator.
+	if a.reducedMotion && a.animator != nil {
+		a.animator.SetReducedMotion(true)
 	}
 
 	a.running.Store(true)

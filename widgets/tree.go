@@ -307,18 +307,31 @@ func (t *Tree) HandleMessage(msg runtime.Message) runtime.HandleResult {
 		if row := t.selectedRow(rows); row != nil && row.node.Expanded {
 			row.node.Expanded = false
 			t.flatDirty = true
+			if announcer := t.services.Announcer(); announcer != nil {
+				announcer.Announce(fmt.Sprintf("%s collapsed", row.node.Label), accessibility.PriorityPolite)
+			}
 		}
 		return runtime.Handled()
 	case terminal.KeyRight:
 		if row := t.selectedRow(rows); row != nil && len(row.node.Children) > 0 {
 			row.node.Expanded = true
 			t.flatDirty = true
+			if announcer := t.services.Announcer(); announcer != nil {
+				announcer.Announce(fmt.Sprintf("%s expanded", row.node.Label), accessibility.PriorityPolite)
+			}
 		}
 		return runtime.Handled()
 	case terminal.KeyEnter:
 		if row := t.selectedRow(rows); row != nil && len(row.node.Children) > 0 {
 			row.node.Expanded = !row.node.Expanded
 			t.flatDirty = true
+			if announcer := t.services.Announcer(); announcer != nil {
+				if row.node.Expanded {
+					announcer.Announce(fmt.Sprintf("%s expanded", row.node.Label), accessibility.PriorityPolite)
+				} else {
+					announcer.Announce(fmt.Sprintf("%s collapsed", row.node.Label), accessibility.PriorityPolite)
+				}
+			}
 		}
 		return runtime.Handled()
 	}
@@ -371,8 +384,17 @@ func (t *Tree) setSelected(index int, count int) {
 	if index >= count {
 		index = count - 1
 	}
+	prev := t.selectedIndex
 	t.selectedIndex = index
 	t.syncA11y()
+	if prev != index {
+		if announcer := t.services.Announcer(); announcer != nil {
+			rows := t.flatten()
+			if row := t.selectedRow(rows); row != nil && row.node != nil {
+				announcer.Announce(row.node.Label, accessibility.PriorityPolite)
+			}
+		}
+	}
 }
 
 func (t *Tree) selectedRow(rows []treeRow) *treeRow {
@@ -465,6 +487,7 @@ func (t *Tree) syncA11y() {
 	t.Base.Description = fmt.Sprintf("%d items", len(rows))
 	if row := t.selectedRow(rows); row != nil && row.node != nil {
 		t.Base.Value = &accessibility.ValueInfo{Text: row.node.Label}
+		t.Base.Level = row.depth + 1 // aria-level is 1-based
 		if len(row.node.Children) > 0 {
 			t.Base.State.Expanded = accessibility.BoolPtr(row.node.Expanded)
 		} else {
@@ -473,6 +496,7 @@ func (t *Tree) syncA11y() {
 	} else {
 		t.Base.Value = nil
 		t.Base.State.Expanded = nil
+		t.Base.Level = 0
 	}
 }
 

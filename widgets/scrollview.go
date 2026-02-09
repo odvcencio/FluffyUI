@@ -237,18 +237,26 @@ func (s *ScrollView) Render(ctx runtime.RenderContext) {
 	}
 
 	offset := s.viewport.Offset()
-	for y := 0; y < contentBounds.Height; y++ {
-		srcY := y + offset.Y
-		if srcY < 0 || srcY >= contentSize.Height {
+	childCells := s.childBuf.Cells()
+	// Optimized cell copying: compute bounds once, use direct slice access
+	srcYStart := max(0, offset.Y)
+	srcYEnd := min(contentSize.Height, offset.Y+contentBounds.Height)
+	srcXStart := max(0, offset.X)
+	srcXEnd := min(contentSize.Width, offset.X+contentBounds.Width)
+
+	for srcY := srcYStart; srcY < srcYEnd; srcY++ {
+		dstY := contentBounds.Y + (srcY - offset.Y)
+		if dstY < contentBounds.Y || dstY >= contentBounds.Y+contentBounds.Height {
 			continue
 		}
-		for x := 0; x < contentBounds.Width; x++ {
-			srcX := x + offset.X
-			if srcX < 0 || srcX >= contentSize.Width {
+		srcRowStart := srcY*contentSize.Width + srcXStart
+		for srcX := srcXStart; srcX < srcXEnd; srcX++ {
+			dstX := contentBounds.X + (srcX - offset.X)
+			if dstX < contentBounds.X || dstX >= contentBounds.X+contentBounds.Width {
 				continue
 			}
-			cell := s.childBuf.Get(srcX, srcY)
-			ctx.Buffer.Set(contentBounds.X+x, contentBounds.Y+y, cell.Rune, cell.Style)
+			cell := childCells[srcRowStart+(srcX-srcXStart)]
+			ctx.Buffer.Set(dstX, dstY, cell.Rune, cell.Style)
 		}
 	}
 	s.drawScrollbars(ctx)
@@ -266,7 +274,16 @@ func (s *ScrollView) syncA11y() {
 		label = "Scroll View"
 	}
 	s.Base.Label = label
-	s.Base.Orientation = "vertical"
+	// Set orientation based on scroll behavior
+	vEnabled := s.behavior.Vertical != scroll.ScrollNever
+	hEnabled := s.behavior.Horizontal != scroll.ScrollNever
+	if vEnabled && hEnabled {
+		s.Base.Orientation = "vertical"
+	} else if hEnabled {
+		s.Base.Orientation = "horizontal"
+	} else {
+		s.Base.Orientation = "vertical"
+	}
 	s.Base.Description = "scrollable content"
 }
 

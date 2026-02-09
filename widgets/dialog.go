@@ -145,18 +145,23 @@ func (d *Dialog) Apply(opts ...DialogOption) *Dialog {
 }
 
 // Bind attaches app services and announces dialog content.
+// It saves the currently focused widget so focus can be restored on close.
 func (d *Dialog) Bind(services runtime.Services) {
 	if d == nil {
 		return
 	}
 	d.services = services
+	// Save the currently focused widget for restoration when the dialog closes.
+	services.SaveFocus()
 }
 
-// Unbind releases app services.
+// Unbind releases app services and restores focus to the widget
+// that was focused before the dialog opened.
 func (d *Dialog) Unbind() {
 	if d == nil {
 		return
 	}
+	d.services.RestoreFocus()
 	d.services = runtime.Services{}
 }
 

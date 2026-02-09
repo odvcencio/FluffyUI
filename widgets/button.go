@@ -1,6 +1,7 @@
 package widgets
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/odvcencio/fluffyui/accessibility"
@@ -416,6 +417,13 @@ func (b *Button) HandleMessage(msg runtime.Message) runtime.HandleResult {
 	if key.Key == terminal.KeyEnter || (key.Key == terminal.KeyRune && key.Rune == ' ') {
 		if b.onClick != nil {
 			b.onClick()
+		}
+		if announcer := b.services.Announcer(); announcer != nil {
+			label := ""
+			if b.label != nil {
+				label = b.label.Get()
+			}
+			announcer.Announce(fmt.Sprintf("%s pressed", label), accessibility.PriorityPolite)
 		}
 		return runtime.Handled()
 	}

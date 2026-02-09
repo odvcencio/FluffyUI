@@ -80,6 +80,10 @@ const (
 	RoleTooltip          Role = "tooltip"
 	RoleMeter            Role = "meter"
 
+	// WAI-ARIA landmark roles
+	RoleNavigation    Role = "navigation"
+	RoleComplementary Role = "complementary"
+
 	// WAI-ARIA 1.3 roles
 	RoleComment    Role = "comment"
 	RoleMark       Role = "mark"

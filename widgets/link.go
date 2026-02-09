@@ -1,6 +1,8 @@
 package widgets
 
 import (
+	"fmt"
+
 	"github.com/odvcencio/fluffyui/accessibility"
 	"github.com/odvcencio/fluffyui/backend"
 	"github.com/odvcencio/fluffyui/runtime"
@@ -122,6 +124,9 @@ func (l *Link) HandleMessage(msg runtime.Message) runtime.HandleResult {
 		if m.Key == terminal.KeyEnter {
 			if l.onActivate != nil {
 				l.onActivate(l.url)
+			}
+			if announcer := l.services.Announcer(); announcer != nil {
+				announcer.Announce(fmt.Sprintf("%s activated", l.label), accessibility.PriorityPolite)
 			}
 			return runtime.Handled()
 		}

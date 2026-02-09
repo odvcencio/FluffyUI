@@ -131,7 +131,7 @@ func (ps *ParticleSystem) Burst(position Vector2, count int, cfg ParticleConfig)
 			Position:      position,
 			Velocity:      Vector2{X: math.Cos(angle) * speed, Y: math.Sin(angle) * speed},
 			Gravity:       cfg.Gravity,
-			Color:         lerpColor(cfg.Color.Start, cfg.Color.End, rand.Float64()),
+			Color:         LerpColor(cfg.Color.Start, cfg.Color.End, rand.Float64()),
 			Size:          size,
 			Life:          life,
 			MaxLife:       life,
@@ -299,7 +299,7 @@ func (ps *ParticleSystem) emitFromEmitter(e *Emitter) {
 		Position:      e.Position,
 		Velocity:      Vector2{X: math.Cos(angle) * speed, Y: math.Sin(angle) * speed},
 		Gravity:       e.Gravity,
-		Color:         lerpColor(e.Color.Start, e.Color.End, rand.Float64()),
+		Color:         LerpColor(e.Color.Start, e.Color.End, rand.Float64()),
 		Size:          size,
 		Life:          life,
 		MaxLife:       life,
@@ -316,7 +316,9 @@ func randRange(r Range) float64 {
 	return r.Min + rand.Float64()*(r.Max-r.Min)
 }
 
-func lerpColor(a, b Color, t float64) Color {
+// LerpColor linearly interpolates between two colors.
+// Returns b if t >= 0.5 for non-RGB colors, otherwise performs RGB interpolation.
+func LerpColor(a, b Color, t float64) Color {
 	if !a.IsRGB() || !b.IsRGB() {
 		if t >= 0.5 {
 			return b

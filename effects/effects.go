@@ -95,7 +95,7 @@ func LinearGradient(canvas *graphics.Canvas, x, y, w, h int, startColor, endColo
 			if t > 1 {
 				t = 1
 			}
-			canvas.SetPixel(x+px, y+py, lerpColor(startColor, endColor, t))
+			canvas.SetPixel(x+px, y+py, animation.LerpColor(startColor, endColor, t))
 		}
 	}
 }
@@ -110,7 +110,7 @@ func RadialGradient(canvas *graphics.Canvas, cx, cy, radius int, centerColor, ed
 			dist := math.Sqrt(float64(dx*dx + dy*dy))
 			if dist <= float64(radius) {
 				t := dist / float64(radius)
-				canvas.SetPixel(cx+dx, cy+dy, lerpColor(centerColor, edgeColor, t))
+				canvas.SetPixel(cx+dx, cy+dy, animation.LerpColor(centerColor, edgeColor, t))
 			}
 		}
 	}
@@ -203,17 +203,3 @@ func Sparkle(ps *animation.ParticleSystem, x, y, w, h int, density float64) {
 	}
 }
 
-func lerpColor(a, b backend.Color, t float64) backend.Color {
-	if !a.IsRGB() || !b.IsRGB() {
-		if t >= 0.5 {
-			return b
-		}
-		return a
-	}
-	ar, ag, ab := a.RGB()
-	br, bg, bb := b.RGB()
-	r := uint8(float64(ar) + (float64(br)-float64(ar))*t)
-	g := uint8(float64(ag) + (float64(bg)-float64(ag))*t)
-	bval := uint8(float64(ab) + (float64(bb)-float64(ab))*t)
-	return backend.ColorRGB(r, g, bval)
-}

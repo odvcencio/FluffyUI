@@ -3,6 +3,7 @@ package markdown
 import (
 	"strings"
 
+	"github.com/mattn/go-runewidth"
 	"github.com/odvcencio/fluffyui/compositor"
 	"github.com/odvcencio/fluffyui/theme"
 	extast "github.com/yuin/goldmark/extension/ast"
@@ -226,7 +227,7 @@ func (t *EnhancedTable) CalculateWidths(config TableRendererConfig, maxWidth int
 			if i >= t.Columns {
 				break
 			}
-			cellWidth := len(cell.Text)
+			cellWidth := runewidth.StringWidth(cell.Text)
 			if cellWidth > t.ColWidths[i] {
 				t.ColWidths[i] = cellWidth
 			}
@@ -385,9 +386,9 @@ func (t *EnhancedTable) renderRow(row TableRow, config TableRendererConfig) Styl
 }
 
 func (t *EnhancedTable) alignText(text string, width int, align TableAlignment) string {
-	textLen := len(text)
+	textLen := runewidth.StringWidth(text)
 	if textLen >= width {
-		return text[:width]
+		return runewidth.Truncate(text, width, "")
 	}
 
 	switch align {

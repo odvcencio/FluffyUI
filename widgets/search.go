@@ -43,8 +43,9 @@ func NewSearchWidget() *SearchWidget {
 		textStyle:   backend.DefaultStyle(),
 		matchStyle:  backend.DefaultStyle().Foreground(backend.ColorYellow),
 	}
-	w.Base.Role = accessibility.RoleTextbox
+	w.Base.Role = accessibility.RoleSearchbox
 	w.Base.Landmark = accessibility.LandmarkSearch
+	w.Base.Autocomplete = "list"
 	w.syncA11y()
 	return w
 }
@@ -275,7 +276,7 @@ func (s *SearchWidget) syncA11y() {
 		return
 	}
 	if s.Base.Role == "" {
-		s.Base.Role = accessibility.RoleTextbox
+		s.Base.Role = accessibility.RoleSearchbox
 	}
 	label := strings.TrimSpace(s.label)
 	if label == "" {
@@ -283,6 +284,7 @@ func (s *SearchWidget) syncA11y() {
 	}
 	s.Base.Label = label
 	s.Base.Value = &accessibility.ValueInfo{Text: s.query}
+	s.Base.Autocomplete = "list"
 	if s.matchCount > 0 {
 		s.Base.Description = fmt.Sprintf("%d of %d", s.currentMatch+1, s.matchCount)
 	} else if s.query != "" {

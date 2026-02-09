@@ -172,6 +172,13 @@ func (c *Checkbox) HandleMessage(msg runtime.Message) runtime.HandleResult {
 	if key.Key == terminal.KeyEnter || (key.Key == terminal.KeyRune && key.Rune == ' ') {
 		next := c.toggleValue()
 		c.SetChecked(next)
+		if announcer := c.services.Announcer(); announcer != nil {
+			if next != nil && *next {
+				announcer.Announce("checked", accessibility.PriorityPolite)
+			} else {
+				announcer.Announce("unchecked", accessibility.PriorityPolite)
+			}
+		}
 		return runtime.Handled()
 	}
 	return runtime.Unhandled()

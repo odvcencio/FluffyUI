@@ -587,8 +587,14 @@ func (t *Table) setSelected(index int) {
 	if index >= rowCount {
 		index = rowCount - 1
 	}
+	prev := t.selected
 	t.selected = index
 	t.syncA11y()
+	if prev != index {
+		if announcer := t.services.Announcer(); announcer != nil {
+			announcer.Announce(fmt.Sprintf("row %d selected", index+1), accessibility.PriorityPolite)
+		}
+	}
 }
 
 func (t *Table) syncA11y() {
@@ -603,7 +609,30 @@ func (t *Table) syncA11y() {
 		label = "Table"
 	}
 	t.Base.Label = label
-	t.Base.Description = fmt.Sprintf("%d rows, %d columns", t.rowCount(), len(t.Columns))
+	// Build description with column header names
+	colHeaders := make([]string, 0, len(t.Columns))
+	for _, col := range t.Columns {
+		title := strings.TrimSpace(col.Title)
+		if title != "" {
+			colHeaders = append(colHeaders, title)
+		}
+	}
+	if len(colHeaders) > 0 {
+		t.Base.Description = fmt.Sprintf("%d rows, %d columns: %s", t.rowCount(), len(t.Columns), strings.Join(colHeaders, ", "))
+	} else {
+		t.Base.Description = fmt.Sprintf("%d rows, %d columns", t.rowCount(), len(t.Columns))
+	}
+	// Set sort direction on the sorted column
+	if t.sortState.Direction != SortNone && t.sortState.Column >= 0 && t.sortState.Column < len(t.Columns) {
+		switch t.sortState.Direction {
+		case SortAsc:
+			t.Base.Sort = "ascending"
+		case SortDesc:
+			t.Base.Sort = "descending"
+		}
+	} else {
+		t.Base.Sort = ""
+	}
 	if t.selected >= 0 && t.selected < t.rowCount() {
 		t.Base.Value = &accessibility.ValueInfo{Text: t.selectedRowSummary()}
 	} else {

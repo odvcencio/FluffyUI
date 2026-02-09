@@ -47,7 +47,7 @@ func NewAnimatedGauge(minValue, maxValue float64) *AnimatedGauge {
 	}
 	g.spring = animation.NewSpring(0, cfg)
 	g.CanvasWidget = *NewCanvasWidget(g.drawGauge)
-	g.Base.Role = accessibility.RoleMeter
+	g.Base.Role = accessibility.RoleProgressBar
 	g.Base.Label = "Gauge"
 	return g
 }
@@ -76,7 +76,8 @@ func (g *AnimatedGauge) Unbind() {
 	g.CanvasWidget.Unbind()
 }
 
-// SetValue updates the gauge target value.
+// SetValue updates the gauge target value. When reduced motion is enabled,
+// the gauge snaps to the target immediately without spring animation.
 func (g *AnimatedGauge) SetValue(value float64) {
 	if g == nil || g.spring == nil {
 		return
@@ -96,6 +97,14 @@ func (g *AnimatedGauge) SetValue(value float64) {
 	g.Base.Value = &accessibility.ValueInfo{
 		Min: g.min, Max: g.max, Current: value,
 		Text: fmt.Sprintf("%.0f%%", ratio*100),
+	}
+	// When reduced motion is active, snap to the target immediately.
+	if g.services.ReducedMotion() {
+		g.spring.Value = ratio
+		g.spring.Velocity = 0
+		g.spring.Target = ratio
+		g.Invalidate()
+		return
 	}
 	if animator := g.services.Animator(); animator != nil {
 		animator.AnimateSpring(g, "value", g.spring, ratio)

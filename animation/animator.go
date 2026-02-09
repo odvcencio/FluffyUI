@@ -13,9 +13,10 @@ type animationKey struct {
 
 // Animator manages active animations.
 type Animator struct {
-	tweens    map[animationKey]*Tween
-	springs   map[animationKey]*Spring
-	particles []*ParticleSystem
+	tweens        map[animationKey]*Tween
+	springs       map[animationKey]*Spring
+	particles     []*ParticleSystem
+	reducedMotion bool
 
 	mu sync.Mutex
 }
@@ -28,13 +29,42 @@ func NewAnimator() *Animator {
 	}
 }
 
-// Animate starts a tween animation.
+// SetReducedMotion enables or disables reduced motion mode.
+// When enabled, Animate instantly completes (sets the final value)
+// and AnimateSpring snaps to the target immediately.
+func (a *Animator) SetReducedMotion(reduced bool) {
+	if a == nil {
+		return
+	}
+	a.mu.Lock()
+	a.reducedMotion = reduced
+	a.mu.Unlock()
+}
+
+// ReducedMotion reports whether reduced motion is enabled.
+func (a *Animator) ReducedMotion() bool {
+	if a == nil {
+		return false
+	}
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.reducedMotion
+}
+
+// Animate starts a tween animation. If reduced motion is enabled, the
+// end value is applied immediately and no tween is created.
 func (a *Animator) Animate(target any, property string, getValue func() Animatable, setValue func(Animatable), endValue Animatable, cfg TweenConfig) *Tween {
 	if a == nil {
 		return nil
 	}
 	a.mu.Lock()
 	defer a.mu.Unlock()
+
+	// In reduced motion mode, skip animation and jump to final value.
+	if a.reducedMotion {
+		setValue(endValue)
+		return nil
+	}
 
 	key := animationKey{target: targetPointer(target), property: property}
 	if existing, ok := a.tweens[key]; ok {
@@ -46,13 +76,22 @@ func (a *Animator) Animate(target any, property string, getValue func() Animatab
 	return tween
 }
 
-// AnimateSpring starts a spring animation.
+// AnimateSpring starts a spring animation. If reduced motion is enabled,
+// the spring snaps to the target value immediately.
 func (a *Animator) AnimateSpring(target any, property string, spring *Spring, targetValue float64) *Spring {
 	if a == nil || spring == nil {
 		return spring
 	}
 	a.mu.Lock()
 	defer a.mu.Unlock()
+
+	// In reduced motion mode, snap to target immediately.
+	if a.reducedMotion {
+		spring.Value = targetValue
+		spring.Velocity = 0
+		spring.Target = targetValue
+		return spring
+	}
 
 	key := animationKey{target: targetPointer(target), property: property}
 	spring.SetTarget(targetValue)

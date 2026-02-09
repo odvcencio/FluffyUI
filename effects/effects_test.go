@@ -12,7 +12,7 @@ import (
 func TestLerpColorRGB(t *testing.T) {
 	start := backend.ColorRGB(10, 20, 30)
 	end := backend.ColorRGB(110, 120, 130)
-	got := lerpColor(start, end, 0.5)
+	got := animation.LerpColor(start, end, 0.5)
 	want := backend.ColorRGB(60, 70, 80)
 	if got != want {
 		t.Fatalf("unexpected lerp result: got %v want %v", got, want)
@@ -22,10 +22,10 @@ func TestLerpColorRGB(t *testing.T) {
 func TestLerpColorNonRGB(t *testing.T) {
 	start := backend.ColorRed
 	end := backend.ColorBlue
-	if got := lerpColor(start, end, 0.4); got != start {
+	if got := animation.LerpColor(start, end, 0.4); got != start {
 		t.Fatalf("expected start color for t<0.5, got %v", got)
 	}
-	if got := lerpColor(start, end, 0.5); got != end {
+	if got := animation.LerpColor(start, end, 0.5); got != end {
 		t.Fatalf("expected end color for t>=0.5, got %v", got)
 	}
 }
@@ -42,7 +42,7 @@ func TestLinearGradient(t *testing.T) {
 		t.Fatalf("expected start color at (0,0), got %+v", p0)
 	}
 	p3 := canvas.GetPixel(3, 0)
-	want := lerpColor(start, end, 0.75)
+	want := animation.LerpColor(start, end, 0.75)
 	if !p3.Set || p3.Color != want {
 		t.Fatalf("unexpected gradient color at (3,0): got %+v want %v", p3, want)
 	}

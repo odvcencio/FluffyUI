@@ -1,6 +1,7 @@
 package widgets
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/odvcencio/fluffyui/accessibility"
@@ -31,7 +32,8 @@ func NewBreadcrumb(items ...BreadcrumbItem) *Breadcrumb {
 		Items:     items,
 		separator: " > ",
 	}
-	crumb.Base.Role = accessibility.RoleList
+	crumb.Base.Role = accessibility.RoleNavigation
+	crumb.Base.Landmark = accessibility.LandmarkNavigation
 	crumb.Base.Label = "Breadcrumbs"
 	return crumb
 }
@@ -204,6 +206,9 @@ func (b *Breadcrumb) activateItem(index int) {
 	} else if b.onNavigate != nil {
 		b.onNavigate(index)
 	}
+	if announcer := b.services.Announcer(); announcer != nil {
+		announcer.Announce(fmt.Sprintf("navigated to %s", item.Label), accessibility.PriorityPolite)
+	}
 }
 
 // itemAtPosition returns the item index at the given screen position.
@@ -239,7 +244,10 @@ func (b *Breadcrumb) syncA11y() {
 		return
 	}
 	if b.Base.Role == "" {
-		b.Base.Role = accessibility.RoleList
+		b.Base.Role = accessibility.RoleNavigation
+	}
+	if b.Base.Landmark == "" {
+		b.Base.Landmark = accessibility.LandmarkNavigation
 	}
 	b.Base.Label = "Breadcrumbs"
 	path := b.pathString()

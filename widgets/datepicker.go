@@ -37,6 +37,7 @@ func NewDatePicker() *DatePicker {
 		picker.syncInput()
 	})
 	picker.Base.Role = accessibility.RoleGroup
+	picker.Base.HasPopup = "grid"
 	picker.syncA11y()
 	picker.syncInput()
 	return picker
@@ -54,6 +55,12 @@ func (d *DatePicker) Bind(services runtime.Services) {
 		d.subs.Observe(sig, func() {
 			d.syncInput()
 			d.services.Invalidate()
+			if announcer := d.services.Announcer(); announcer != nil {
+				date := sig.Get()
+				if !date.IsZero() {
+					announcer.Announce(date.Format("January 2, 2006"), accessibility.PriorityPolite)
+				}
+			}
 		})
 	}
 }
@@ -323,6 +330,12 @@ func (d *DatePicker) syncInput() {
 func (d *DatePicker) syncA11y() {
 	if d == nil {
 		return
+	}
+	if d.Base.Role == "" {
+		d.Base.Role = accessibility.RoleGroup
+	}
+	if d.Base.HasPopup == "" {
+		d.Base.HasPopup = "grid"
 	}
 	label := strings.TrimSpace(d.label)
 	if label == "" {

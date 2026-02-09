@@ -118,7 +118,7 @@ func NewCalendar(opts ...CalendarOption) *Calendar {
 	for _, opt := range opts {
 		opt(cal)
 	}
-	cal.Base.Role = accessibility.RoleTable
+	cal.Base.Role = accessibility.RoleGrid
 	cal.syncA11y()
 	return cal
 }
@@ -725,8 +725,15 @@ func (c *Calendar) selectDate(date time.Time) {
 	}
 	date = normalizeDate(date)
 	date = c.clampDate(date)
+	prev := time.Time{}
 	if c.selectedDate != nil {
+		prev = c.selectedDate.Get()
 		c.selectedDate.Set(date)
+	}
+	if !sameDay(prev, date) {
+		if announcer := c.services.Announcer(); announcer != nil {
+			announcer.Announce(date.Format("January 2, 2006"), accessibility.PriorityPolite)
+		}
 	}
 	if c.selectionMode == CalendarSelectionRange {
 		start := c.rangeStart.Get()
@@ -804,7 +811,7 @@ func (c *Calendar) syncA11y() {
 		return
 	}
 	if c.Base.Role == "" {
-		c.Base.Role = accessibility.RoleTable
+		c.Base.Role = accessibility.RoleGrid
 	}
 	label := strings.TrimSpace(c.label)
 	if label == "" {

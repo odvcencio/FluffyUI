@@ -50,7 +50,7 @@ func NewTimePicker() *TimePicker {
 		baseDate:    base,
 		now:         time.Now,
 	}
-	p.Base.Role = accessibility.RoleTextbox
+	p.Base.Role = accessibility.RoleSpinButton
 	p.syncA11y()
 	return p
 }
@@ -272,6 +272,9 @@ func (t *TimePicker) notifyChange() {
 		t.onChange(t.Time())
 	}
 	t.syncA11y()
+	if announcer := t.services.Announcer(); announcer != nil {
+		announcer.Announce(t.Time().Format(t.format()), accessibility.PriorityPolite)
+	}
 }
 
 func (t *TimePicker) syncA11y() {
@@ -279,7 +282,7 @@ func (t *TimePicker) syncA11y() {
 		return
 	}
 	if t.Base.Role == "" {
-		t.Base.Role = accessibility.RoleTextbox
+		t.Base.Role = accessibility.RoleSpinButton
 	}
 	label := strings.TrimSpace(t.label)
 	if label == "" {
@@ -287,6 +290,7 @@ func (t *TimePicker) syncA11y() {
 	}
 	t.Base.Label = label
 	t.Base.Value = &accessibility.ValueInfo{Text: t.Time().Format(t.format())}
+	t.Base.Orientation = "horizontal"
 }
 
 func (t *TimePicker) format() string {

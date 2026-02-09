@@ -29,6 +29,7 @@ type Menu struct {
 	selectedIndex int
 	offset        int
 	label         string
+	labelTrimmed  string
 	style         backend.Style
 	selectedStyle backend.Style
 	indentCache   []string
@@ -112,6 +113,7 @@ func (m *Menu) SetLabel(label string) {
 		return
 	}
 	m.label = label
+	m.labelTrimmed = strings.TrimSpace(label)
 	m.syncA11y()
 }
 
@@ -380,23 +382,30 @@ func (m *Menu) syncA11y() {
 	if m.Base.Role == "" {
 		m.Base.Role = accessibility.RoleMenu
 	}
-	label := strings.TrimSpace(m.label)
+	label := m.labelTrimmed
 	if label == "" {
 		label = "Menu"
 	}
 	m.Base.Label = label
-	rows := m.flatten()
-	m.Base.Description = fmt.Sprintf("%d items", len(rows))
-	if row := m.selectedRow(rows); row != nil && row.item != nil {
+	if m.flatDirty {
+		m.flatten()
+	}
+	m.Base.Description = fmt.Sprintf("%d items", len(m.flatCache))
+	if row := m.selectedRow(m.flatCache); row != nil && row.item != nil {
 		m.Base.Value = &accessibility.ValueInfo{Text: row.item.Title}
 		if len(row.item.Children) > 0 {
 			m.Base.State.Expanded = accessibility.BoolPtr(row.item.Expanded)
+			m.Base.HasPopup = "menu"
 		} else {
 			m.Base.State.Expanded = nil
+			m.Base.HasPopup = ""
 		}
+		m.Base.Level = row.depth + 1 // aria-level for nested menus
 	} else {
 		m.Base.Value = nil
 		m.Base.State.Expanded = nil
+		m.Base.HasPopup = ""
+		m.Base.Level = 0
 	}
 }
 

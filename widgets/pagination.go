@@ -39,7 +39,8 @@ func NewPagination(total, pageSize int) *Pagination {
 		pageSize: pageSize,
 		style:    backend.DefaultStyle(),
 	}
-	p.Base.Role = accessibility.RoleGroup
+	p.Base.Role = accessibility.RoleNavigation
+	p.Base.Landmark = accessibility.LandmarkNavigation
 	p.Base.Label = "Pagination"
 	p.syncA11y()
 	return p
@@ -243,12 +244,16 @@ func (p *Pagination) syncA11y() {
 		return
 	}
 	if p.Base.Role == "" {
-		p.Base.Role = accessibility.RoleGroup
+		p.Base.Role = accessibility.RoleNavigation
+	}
+	if p.Base.Landmark == "" {
+		p.Base.Landmark = accessibility.LandmarkNavigation
 	}
 	totalPages := p.totalPages()
 	p.Base.Label = fmt.Sprintf("Page %d of %d", p.current, totalPages)
 	p.Base.PosInSet = p.current
 	p.Base.SetSize = totalPages
+	p.Base.Current = "page"
 }
 
 var _ runtime.Widget = (*Pagination)(nil)

@@ -19,23 +19,28 @@ type Tab struct {
 // Tabs is a tabbed container widget.
 type Tabs struct {
 	FocusableBase
-	Tabs          []Tab
-	selected      int
-	label         string
-	style         backend.Style
-	selectedStyle backend.Style
-	services      runtime.Services
-	mounted       bool
+	Tabs            []Tab
+	selected        int
+	label           string
+	labelTrimmed    string
+	titlesJoined    string
+	style           backend.Style
+	selectedStyle   backend.Style
+	services        runtime.Services
+	mounted         bool
+	titlesCacheDirty bool
 }
 
 // NewTabs creates a tab container.
 func NewTabs(tabs ...Tab) *Tabs {
 	w := &Tabs{
-		Tabs:          tabs,
-		selected:      0,
-		label:         "Tabs",
-		style:         backend.DefaultStyle(),
-		selectedStyle: backend.DefaultStyle().Reverse(true),
+		Tabs:             tabs,
+		selected:         0,
+		label:            "Tabs",
+		labelTrimmed:     "Tabs",
+		style:            backend.DefaultStyle(),
+		selectedStyle:    backend.DefaultStyle().Reverse(true),
+		titlesCacheDirty: true,
 	}
 	w.Base.Role = accessibility.RoleTabList
 	w.Base.Landmark = accessibility.LandmarkNavigation
@@ -145,14 +150,13 @@ func (t *Tabs) Render(ctx runtime.RenderContext) {
 	}
 	x := content.X
 	for i, tab := range t.Tabs {
-		label := " " + tab.Title + " "
 		style := baseStyle
 		if i == t.selected {
 			style = mergeBackendStyles(baseStyle, t.selectedStyle)
 		}
 		if x < content.X+content.Width {
 			available := content.Width - (x - content.X)
-			label = truncateString(label, available)
+			label := truncateString(" "+tab.Title+" ", available)
 			ctx.Buffer.SetString(x, content.Y, label, style)
 			x += textWidth(label)
 		}
@@ -214,6 +218,7 @@ func (t *Tabs) SetLabel(label string) {
 		return
 	}
 	t.label = label
+	t.labelTrimmed = strings.TrimSpace(label)
 	t.syncA11y()
 }
 
@@ -277,6 +282,7 @@ func (t *Tabs) setSelected(index int) {
 		return
 	}
 	t.selected = index
+	t.titlesCacheDirty = true
 	t.layoutSelected()
 	t.syncA11y()
 	if announcer := t.services.Announcer(); announcer != nil {
@@ -341,7 +347,7 @@ func (t *Tabs) syncA11y() {
 	if t.Base.Role == "" {
 		t.Base.Role = accessibility.RoleTabList
 	}
-	label := strings.TrimSpace(t.label)
+	label := t.labelTrimmed
 	if label == "" {
 		label = "Tabs"
 	}
@@ -355,23 +361,29 @@ func (t *Tabs) syncA11y() {
 			Max:     float64(len(t.Tabs)),
 		}
 		t.Base.Current = "true"
+		t.Base.State.Selected = true
 		t.Base.PosInSet = t.selected + 1
 		t.Base.SetSize = len(t.Tabs)
 	} else {
 		t.Base.Value = nil
 		t.Base.Current = ""
+		t.Base.State.Selected = false
 		t.Base.PosInSet = 0
 		t.Base.SetSize = 0
 	}
 	if len(t.Tabs) > 0 {
-		titles := make([]string, 0, len(t.Tabs))
-		for _, tab := range t.Tabs {
-			if strings.TrimSpace(tab.Title) != "" {
-				titles = append(titles, tab.Title)
+		if t.titlesCacheDirty {
+			titles := make([]string, 0, len(t.Tabs))
+			for _, tab := range t.Tabs {
+				if strings.TrimSpace(tab.Title) != "" {
+					titles = append(titles, tab.Title)
+				}
 			}
+			t.titlesJoined = strings.Join(titles, ", ")
+			t.titlesCacheDirty = false
 		}
 		t.Base.Description = fmt.Sprintf("%d of %d, %s, use left right to switch",
-			t.selected+1, len(t.Tabs), strings.Join(titles, ", "))
+			t.selected+1, len(t.Tabs), t.titlesJoined)
 	} else {
 		t.Base.Description = ""
 	}

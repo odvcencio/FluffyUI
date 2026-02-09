@@ -23,6 +23,7 @@ func NewSpinner() *Spinner {
 		style:  backend.DefaultStyle(),
 	}
 	spinner.Base.Role = accessibility.RoleStatus
+	spinner.Base.Live = accessibility.LivePolite
 	spinner.Base.Label = "Loading"
 	return spinner
 }
@@ -56,7 +57,8 @@ func (s *Spinner) Measure(constraints runtime.Constraints) runtime.Size {
 	})
 }
 
-// Render draws the spinner frame.
+// Render draws the spinner frame, or a static indicator when reduced motion
+// is enabled.
 func (s *Spinner) Render(ctx runtime.RenderContext) {
 	if s == nil || len(s.Frames) == 0 {
 		return
@@ -66,19 +68,28 @@ func (s *Spinner) Render(ctx runtime.RenderContext) {
 	if bounds.Width <= 0 || bounds.Height <= 0 {
 		return
 	}
+	style := resolveBaseStyle(ctx, s, s.style, s.styleSet)
+	// When reduced motion is active, show a static indicator instead of animating.
+	if s.services.ReducedMotion() {
+		indicator := truncateString("...", bounds.Width)
+		ctx.Buffer.SetString(bounds.X, bounds.Y, indicator, style)
+		return
+	}
 	frame := s.Frames[s.index%len(s.Frames)]
 	frame = truncateString(frame, bounds.Width)
-	style := resolveBaseStyle(ctx, s, s.style, s.styleSet)
 	ctx.Buffer.SetString(bounds.X, bounds.Y, frame, style)
 }
 
-// HandleMessage advances on ticks.
+// HandleMessage advances on ticks. Skips frame advancement when reduced
+// motion is active.
 func (s *Spinner) HandleMessage(msg runtime.Message) runtime.HandleResult {
 	if s == nil {
 		return runtime.Unhandled()
 	}
 	if _, ok := msg.(runtime.TickMsg); ok {
-		s.Advance()
+		if !s.services.ReducedMotion() {
+			s.Advance()
+		}
 		return runtime.Handled()
 	}
 	return runtime.Unhandled()
@@ -91,9 +102,13 @@ func (s *Spinner) syncA11y() {
 	if s.Base.Role == "" {
 		s.Base.Role = accessibility.RoleStatus
 	}
+	if s.Base.Live == "" {
+		s.Base.Live = accessibility.LivePolite
+	}
 	if s.Base.Label == "" {
 		s.Base.Label = "Loading"
 	}
+	s.Base.State.Busy = true
 }
 
 // Bind attaches app services.

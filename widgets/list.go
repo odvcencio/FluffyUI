@@ -101,13 +101,17 @@ func (s *SignalAdapter[T]) Render(item T, index int, selected bool, ctx runtime.
 // List renders a list of items.
 type List[T any] struct {
 	FocusableBase
-	adapter       ListAdapter[T]
-	selected      int
-	offset        int
-	onSelect      func(index int, item T)
-	label         string
-	style         backend.Style
-	selectedStyle backend.Style
+	adapter         ListAdapter[T]
+	selected        int
+	offset          int
+	onSelect        func(index int, item T)
+	label           string
+	labelTrimmed    string
+	descriptionCache string
+	cachedCount     int
+	style           backend.Style
+	selectedStyle   backend.Style
+	services        runtime.Services
 }
 
 // NewList creates a list widget.
@@ -116,8 +120,10 @@ func NewList[T any](adapter ListAdapter[T]) *List[T] {
 		adapter:       adapter,
 		selected:      0,
 		label:         "List",
+		labelTrimmed:  "List",
 		style:         backend.DefaultStyle(),
 		selectedStyle: backend.DefaultStyle().Reverse(true),
+		cachedCount:   -1,
 	}
 	list.Base.Role = accessibility.RoleList
 	list.syncA11y()
@@ -164,6 +170,7 @@ func (l *List[T]) SetLabel(label string) {
 		return
 	}
 	l.label = label
+	l.labelTrimmed = strings.TrimSpace(label)
 	l.syncA11y()
 }
 
@@ -284,8 +291,15 @@ func (l *List[T]) setSelected(index int) {
 	if index >= count {
 		index = count - 1
 	}
+	prev := l.selected
 	l.selected = index
 	l.syncA11y()
+	if prev != index {
+		if announcer := l.services.Announcer(); announcer != nil {
+			item := l.adapter.Item(l.selected)
+			announcer.Announce(fmt.Sprintf("item %d, %v", index+1, item), accessibility.PriorityPolite)
+		}
+	}
 	if l.onSelect != nil {
 		l.onSelect(l.selected, l.adapter.Item(l.selected))
 	}
@@ -379,19 +393,39 @@ func (l *List[T]) syncA11y() {
 	if l.Base.Role == "" {
 		l.Base.Role = accessibility.RoleList
 	}
-	label := strings.TrimSpace(l.label)
+	label := l.labelTrimmed
 	if label == "" {
 		label = "List"
 	}
 	l.Base.Label = label
 	count := l.adapter.Count()
-	l.Base.Description = fmt.Sprintf("%d items", count)
+	if count != l.cachedCount {
+		l.descriptionCache = fmt.Sprintf("%d items", count)
+		l.cachedCount = count
+	}
+	l.Base.Description = l.descriptionCache
 	if count > 0 && l.selected >= 0 && l.selected < count {
 		item := l.adapter.Item(l.selected)
 		l.Base.Value = &accessibility.ValueInfo{Text: fmt.Sprint(item)}
 	} else {
 		l.Base.Value = nil
 	}
+}
+
+// Bind attaches app services.
+func (l *List[T]) Bind(services runtime.Services) {
+	if l == nil {
+		return
+	}
+	l.services = services
+}
+
+// Unbind releases app services.
+func (l *List[T]) Unbind() {
+	if l == nil {
+		return
+	}
+	l.services = runtime.Services{}
 }
 
 var _ scroll.Controller = (*List[any])(nil)

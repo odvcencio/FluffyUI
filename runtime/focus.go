@@ -1,5 +1,33 @@
 package runtime
 
+// FocusRestore saves focused widgets on a stack for later restoration.
+// This is used by modal dialogs, popovers, and dropdowns to return focus
+// to the element that triggered them when they close.
+type FocusRestore struct {
+	saved []Focusable
+}
+
+// Push saves a focusable widget onto the stack.
+func (fr *FocusRestore) Push(current Focusable) {
+	fr.saved = append(fr.saved, current)
+}
+
+// Pop removes and returns the most recently saved widget.
+// Returns nil if the stack is empty.
+func (fr *FocusRestore) Pop() Focusable {
+	if len(fr.saved) == 0 {
+		return nil
+	}
+	last := fr.saved[len(fr.saved)-1]
+	fr.saved = fr.saved[:len(fr.saved)-1]
+	return last
+}
+
+// Len returns the number of saved entries.
+func (fr *FocusRestore) Len() int {
+	return len(fr.saved)
+}
+
 // AutoFocusPolicy controls how FocusScope handles initial focus.
 type AutoFocusPolicy int
 

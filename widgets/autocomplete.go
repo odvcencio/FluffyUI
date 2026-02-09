@@ -14,15 +14,17 @@ import (
 type AutoComplete struct {
 	FocusableBase
 
-	input          *Input
-	options        []string
-	suggestions    []string
-	selected       int
-	maxSuggestions int
-	label          string
-	style          backend.Style
-	suggestionSty  backend.Style
-	selectedSty    backend.Style
+	input           *Input
+	options         []string
+	optionsLowered  []string
+	suggestions     []string
+	selected        int
+	maxSuggestions  int
+	label           string
+	labelTrimmed    string
+	style           backend.Style
+	suggestionSty   backend.Style
+	selectedSty     backend.Style
 
 	provider func(query string) []string
 	onSelect func(value string)
@@ -37,6 +39,7 @@ func NewAutoComplete() *AutoComplete {
 		input:          NewInput(),
 		maxSuggestions: 6,
 		label:          "Auto Complete",
+		labelTrimmed:   "Auto Complete",
 		style:          backend.DefaultStyle(),
 		suggestionSty:  backend.DefaultStyle(),
 		selectedSty:    backend.DefaultStyle().Reverse(true),
@@ -66,6 +69,10 @@ func (a *AutoComplete) SetOptions(options []string) {
 		return
 	}
 	a.options = options
+	a.optionsLowered = make([]string, len(options))
+	for i, opt := range options {
+		a.optionsLowered[i] = strings.ToLower(opt)
+	}
 	a.updateSuggestions(a.query())
 }
 
@@ -103,6 +110,7 @@ func (a *AutoComplete) SetLabel(label string) {
 		return
 	}
 	a.label = label
+	a.labelTrimmed = strings.TrimSpace(label)
 	a.syncA11y()
 	if a.input != nil {
 		a.input.SetLabel(label)
@@ -282,9 +290,9 @@ func (a *AutoComplete) updateSuggestions(query string) {
 	} else {
 		needle := strings.ToLower(query)
 		var matches []string
-		for _, opt := range a.options {
-			if strings.Contains(strings.ToLower(opt), needle) {
-				matches = append(matches, opt)
+		for i, optLower := range a.optionsLowered {
+			if strings.Contains(optLower, needle) {
+				matches = append(matches, a.options[i])
 			}
 		}
 		a.suggestions = matches
@@ -311,7 +319,7 @@ func (a *AutoComplete) syncA11y() {
 	if a.Base.Role == "" {
 		a.Base.Role = accessibility.RoleCombobox
 	}
-	label := strings.TrimSpace(a.label)
+	label := a.labelTrimmed
 	if label == "" {
 		label = "Auto Complete"
 	}

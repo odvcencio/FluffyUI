@@ -511,6 +511,17 @@ func (a *Accordion) setExpanded(index int, expanded bool) {
 		}
 	}
 	section.expanded.Set(expanded)
+	if announcer := a.services.Announcer(); announcer != nil {
+		title := ""
+		if section.title != nil {
+			title = section.title.Get()
+		}
+		if expanded {
+			announcer.Announce(fmt.Sprintf("%s expanded", title), accessibility.PriorityPolite)
+		} else {
+			announcer.Announce(fmt.Sprintf("%s collapsed", title), accessibility.PriorityPolite)
+		}
+	}
 	a.invalidate()
 }
 
@@ -655,8 +666,19 @@ func (a *Accordion) syncA11y() {
 		label = "Accordion"
 	}
 	a.Base.Label = label
+	a.Base.SetSize = len(a.sections)
 	if sel := a.sectionAt(a.selected); sel != nil && sel.title != nil {
 		a.Base.Value = &accessibility.ValueInfo{Text: sel.title.Get()}
+		a.Base.PosInSet = a.selected + 1 // 1-based
+		if sel.expanded != nil {
+			a.Base.State.Expanded = accessibility.BoolPtr(sel.expanded.Get())
+		} else {
+			a.Base.State.Expanded = nil
+		}
+	} else {
+		a.Base.Value = nil
+		a.Base.PosInSet = 0
+		a.Base.State.Expanded = nil
 	}
 }
 

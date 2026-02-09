@@ -24,6 +24,7 @@ func WithRichTextLabel(label string) RichTextOption {
 			return
 		}
 		r.label = label
+		r.labelTrimmed = strings.TrimSpace(label)
 	}
 }
 
@@ -79,6 +80,7 @@ type RichText struct {
 	width         int
 	offset        int
 	label         string
+	labelTrimmed  string
 	style         backend.Style
 	styleSet      bool
 	showBar       bool
@@ -93,10 +95,11 @@ type RichText struct {
 // NewRichText creates a new RichText widget.
 func NewRichText(content string, opts ...RichTextOption) *RichText {
 	view := &RichText{
-		content: content,
-		label:   "Rich Text",
-		style:   backend.DefaultStyle(),
-		showBar: true,
+		content:      content,
+		label:        "Rich Text",
+		labelTrimmed: "Rich Text",
+		style:        backend.DefaultStyle(),
+		showBar:      true,
 		scrollbar: scroll.Scrollbar{
 			Orientation:  scroll.Vertical,
 			Track:        backend.DefaultStyle(),
@@ -165,6 +168,7 @@ func (r *RichText) SetLabel(label string) {
 		return
 	}
 	r.label = label
+	r.labelTrimmed = strings.TrimSpace(label)
 	r.syncA11y()
 }
 
@@ -452,7 +456,7 @@ func (r *RichText) syncA11y() {
 	if r.Base.Role == "" {
 		r.Base.Role = accessibility.RoleText
 	}
-	label := strings.TrimSpace(r.label)
+	label := r.labelTrimmed
 	if label == "" {
 		label = "Rich Text"
 	}

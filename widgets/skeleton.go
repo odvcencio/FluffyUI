@@ -93,7 +93,8 @@ func (s *Skeleton) Measure(constraints runtime.Constraints) runtime.Size {
 	})
 }
 
-// Render draws the skeleton placeholder.
+// Render draws the skeleton placeholder. When reduced motion is enabled,
+// a uniform static pattern is shown instead of the shimmering animation.
 func (s *Skeleton) Render(ctx runtime.RenderContext) {
 	if s == nil {
 		return
@@ -104,6 +105,18 @@ func (s *Skeleton) Render(ctx runtime.RenderContext) {
 		return
 	}
 	style := resolveBaseStyle(ctx, s, s.style, s.styleSet)
+
+	// When reduced motion is active, render a uniform static placeholder.
+	if s.Services.ReducedMotion() {
+		for row := 0; row < bounds.Height; row++ {
+			var sb strings.Builder
+			for col := 0; col < bounds.Width; col++ {
+				sb.WriteRune(skeletonCharLight)
+			}
+			ctx.Buffer.SetString(bounds.X, bounds.Y+row, sb.String(), style)
+		}
+		return
+	}
 
 	for row := 0; row < bounds.Height; row++ {
 		var sb strings.Builder
@@ -118,13 +131,14 @@ func (s *Skeleton) Render(ctx runtime.RenderContext) {
 	}
 }
 
-// HandleMessage advances animation on ticks.
+// HandleMessage advances animation on ticks. Skips frame advancement when
+// reduced motion is active.
 func (s *Skeleton) HandleMessage(msg runtime.Message) runtime.HandleResult {
 	if s == nil {
 		return runtime.Unhandled()
 	}
 	if _, ok := msg.(runtime.TickMsg); ok {
-		if s.animate {
+		if s.animate && !s.Services.ReducedMotion() {
 			s.frame++
 			return runtime.Handled()
 		}

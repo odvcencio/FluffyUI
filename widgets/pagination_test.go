@@ -19,8 +19,8 @@ func TestPagination_NewPagination(t *testing.T) {
 	if p.TotalPages() != 10 {
 		t.Fatalf("expected 10 total pages, got %d", p.TotalPages())
 	}
-	if p.AccessibleRole() != "group" {
-		t.Fatalf("expected role group, got %q", p.AccessibleRole())
+	if p.AccessibleRole() != "navigation" {
+		t.Fatalf("expected role navigation, got %q", p.AccessibleRole())
 	}
 }
 

@@ -45,6 +45,7 @@ func NewPopover(anchor runtime.Rect, child runtime.Widget, opts ...PopoverOption
 		Placement: PopoverAuto,
 	}
 	p.Base.Role = accessibility.RoleGroup
+	p.Base.HasPopup = "true"
 	for _, opt := range opts {
 		if opt != nil {
 			opt(p)
@@ -285,18 +286,23 @@ func (p *Popover) close() {
 }
 
 // Bind attaches app services.
+// It saves the currently focused widget so focus can be restored on close.
 func (p *Popover) Bind(services runtime.Services) {
 	if p == nil {
 		return
 	}
 	p.services = services
+	// Save the currently focused widget for restoration when the popover closes.
+	services.SaveFocus()
 }
 
-// Unbind releases app services.
+// Unbind releases app services and restores focus to the widget
+// that was focused before the popover opened.
 func (p *Popover) Unbind() {
 	if p == nil {
 		return
 	}
+	p.services.RestoreFocus()
 	p.services = runtime.Services{}
 }
 

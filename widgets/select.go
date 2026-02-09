@@ -36,6 +36,7 @@ type Select struct {
 	selected     int
 	onChange     func(option SelectOption)
 	label        string
+	labelTrimmed string
 	style        backend.Style
 	focusStyle   backend.Style
 	styleSet     bool
@@ -48,12 +49,13 @@ type Select struct {
 // NewSelect creates a select widget.
 func NewSelect(options ...SelectOption) *Select {
 	s := &Select{
-		options:    options,
-		selected:   0,
-		label:      "Select",
-		style:      backend.DefaultStyle(),
-		focusStyle: backend.DefaultStyle().Reverse(true),
-		mode:       SelectInline,
+		options:      options,
+		selected:     0,
+		label:        "Select",
+		labelTrimmed: "Select",
+		style:        backend.DefaultStyle(),
+		focusStyle:   backend.DefaultStyle().Reverse(true),
+		mode:         SelectInline,
 	}
 	s.Base.Role = accessibility.RoleListbox
 	s.Base.HasPopup = "listbox"
@@ -129,6 +131,7 @@ func (s *Select) SetLabel(label string) {
 		return
 	}
 	s.label = label
+	s.labelTrimmed = strings.TrimSpace(label)
 	s.syncState()
 }
 
@@ -329,7 +332,7 @@ func (s *Select) syncState() {
 	if s == nil {
 		return
 	}
-	label := strings.TrimSpace(s.label)
+	label := s.labelTrimmed
 	if label == "" {
 		label = "Select"
 	}

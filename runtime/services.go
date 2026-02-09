@@ -99,6 +99,48 @@ func (s Services) ReducedMotion() bool {
 	return s.app.reducedMotion
 }
 
+// SaveFocus pushes the currently focused widget onto the focus restoration stack.
+// Call this before opening a modal dialog, popover, or dropdown so that focus
+// can be returned to the triggering element when the overlay closes.
+func (s Services) SaveFocus() {
+	if s.app == nil {
+		return
+	}
+	screen := s.app.Screen()
+	if screen == nil {
+		return
+	}
+	// Save the focused widget from the base layer, since overlay layers
+	// get their own focus scopes.
+	scope := screen.BaseFocusScope()
+	if scope == nil {
+		return
+	}
+	s.app.focusRestore.Push(scope.Current())
+}
+
+// RestoreFocus pops the most recently saved widget from the focus restoration
+// stack and refocuses it. Call this when a modal dialog, popover, or dropdown
+// closes to return focus to the element that triggered it.
+func (s Services) RestoreFocus() {
+	if s.app == nil {
+		return
+	}
+	saved := s.app.focusRestore.Pop()
+	if saved == nil {
+		return
+	}
+	screen := s.app.Screen()
+	if screen == nil {
+		return
+	}
+	scope := screen.BaseFocusScope()
+	if scope == nil {
+		return
+	}
+	scope.SetFocus(saved)
+}
+
 // Scheduler returns the app state scheduler.
 func (s Services) Scheduler() state.Scheduler {
 	if s.app == nil {

@@ -569,6 +569,42 @@ func WithSpeaker(s accessibility.Speaker) AppOption {
 	}
 }
 
+// WithHighContrast configures the app to use a high contrast theme with
+// maximum contrast ANSI colors for accessibility. All color combinations
+// target WCAG AAA (7:1) contrast ratios.
+func WithHighContrast() AppOption {
+	return func(b *appBuilder) {
+		if b == nil {
+			return
+		}
+		b.cfg.Theme = theme.HighContrastTheme()
+		b.cfg.Stylesheet = theme.Stylesheet(b.cfg.Theme)
+	}
+}
+
+// WithReducedMotion disables animations throughout the app. Spinners show
+// a static indicator, skeleton placeholders stop shimmering, gauges snap
+// to their target values, and the animator completes tweens instantly.
+func WithReducedMotion() AppOption {
+	return func(b *appBuilder) {
+		if b == nil {
+			return
+		}
+		b.cfg.ReducedMotion = true
+	}
+}
+
+// WithTheme overrides the app theme and rebuilds the stylesheet.
+func WithTheme(th *theme.Theme) AppOption {
+	return func(b *appBuilder) {
+		if b == nil || th == nil {
+			return
+		}
+		b.cfg.Theme = th
+		b.cfg.Stylesheet = theme.Stylesheet(th)
+	}
+}
+
 // WithToastLayer configures the bundle to push a ToastStack as a non-modal
 // overlay layer on startup, wired to the given ToastManager. The resulting
 // ToastStack is available via Bundle.ToastStack for styling.

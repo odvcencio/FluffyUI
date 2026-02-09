@@ -477,6 +477,9 @@ func (p *PaletteWidget) HandleMessage(msg runtime.Message) runtime.HandleResult 
 			if p.onSelect != nil {
 				p.onSelect(*item)
 			}
+			if announcer := p.services.Announcer(); announcer != nil {
+				announcer.Announce(fmt.Sprintf("%s selected", item.Label), accessibility.PriorityPolite)
+			}
 			return runtime.WithCommands(
 				runtime.PaletteSelected{ID: item.ID, Data: item.Data},
 				runtime.PopOverlay{},

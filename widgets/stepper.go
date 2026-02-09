@@ -28,11 +28,12 @@ type Step struct {
 // Stepper renders a sequence of steps.
 type Stepper struct {
 	Base
-	Steps    []Step
-	style    backend.Style
-	label    string
-	styleSet bool
-	services runtime.Services
+	Steps       []Step
+	style       backend.Style
+	label       string
+	styleSet    bool
+	services    runtime.Services
+	prevActive  string
 }
 
 // NewStepper creates a stepper.
@@ -128,11 +129,25 @@ func (s *Stepper) syncA11y() {
 	}
 	s.Base.Label = label
 	s.Base.Description = fmt.Sprintf("%d steps", len(s.Steps))
-	if active := s.activeStep(); active != "" {
+	s.Base.SetSize = len(s.Steps)
+	active := s.activeStep()
+	activeIndex := s.activeStepIndex()
+	if active != "" {
 		s.Base.Value = &accessibility.ValueInfo{Text: active}
+		s.Base.PosInSet = activeIndex + 1 // 1-based
+		s.Base.Current = "step"
 	} else {
 		s.Base.Value = nil
+		s.Base.PosInSet = 0
+		s.Base.Current = ""
 	}
+	// Announce step changes.
+	if active != "" && active != s.prevActive && s.prevActive != "" {
+		if announcer := s.services.Announcer(); announcer != nil {
+			announcer.Announce(fmt.Sprintf("step %d of %d: %s", activeIndex+1, len(s.Steps), active), accessibility.PriorityPolite)
+		}
+	}
+	s.prevActive = active
 }
 
 func (s *Stepper) activeStep() string {
@@ -142,6 +157,15 @@ func (s *Stepper) activeStep() string {
 		}
 	}
 	return ""
+}
+
+func (s *Stepper) activeStepIndex() int {
+	for i, step := range s.Steps {
+		if step.State == StepActive {
+			return i
+		}
+	}
+	return -1
 }
 
 // Bind attaches app services.

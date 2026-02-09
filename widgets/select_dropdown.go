@@ -140,12 +140,12 @@ func (d *selectDropdown) HandleMessage(msg runtime.Message) runtime.HandleResult
 			if d.moveSelection(-1) {
 				return runtime.Handled()
 			}
-			return runtime.Handled()
+			return runtime.Unhandled()
 		case terminal.KeyDown:
 			if d.moveSelection(1) {
 				return runtime.Handled()
 			}
-			return runtime.Handled()
+			return runtime.Unhandled()
 		case terminal.KeyEnter:
 			if d.selected >= 0 && d.selected < len(d.options) && !d.options[d.selected].Disabled {
 				if d.onSelect != nil {
@@ -268,18 +268,23 @@ func (d *selectDropdown) StyleType() string {
 }
 
 // Bind attaches app services.
+// It saves the currently focused widget so focus can be restored on close.
 func (d *selectDropdown) Bind(services runtime.Services) {
 	if d == nil {
 		return
 	}
 	d.services = services
+	// Save the currently focused widget for restoration when the dropdown closes.
+	services.SaveFocus()
 }
 
-// Unbind releases app services.
+// Unbind releases app services and restores focus to the widget
+// that was focused before the dropdown opened.
 func (d *selectDropdown) Unbind() {
 	if d == nil {
 		return
 	}
+	d.services.RestoreFocus()
 	d.services = runtime.Services{}
 }
 

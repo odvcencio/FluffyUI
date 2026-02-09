@@ -231,8 +231,8 @@ func (tm *ToastManager) SetMaxCount(max int) {
 	if overflow := len(tm.toasts) - max; overflow > 0 {
 		for i := 0; i < overflow; i++ {
 			removed := tm.toasts[0]
-			tm.toasts = tm.toasts[1:]
 			tm.stopTimerLocked(removed.ID)
+			tm.toasts = tm.toasts[1:]
 		}
 	}
 	snapshot := tm.snapshotLocked()

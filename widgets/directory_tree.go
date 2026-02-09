@@ -295,6 +295,9 @@ func (d *DirectoryTree) ExpandSelected() {
 		d.flatDirty = true
 		d.syncA11y()
 		d.Invalidate()
+		if announcer := d.services.Announcer(); announcer != nil {
+			announcer.Announce(fmt.Sprintf("%s expanded", entry.Name), accessibility.PriorityPolite)
+		}
 	}
 }
 
@@ -309,6 +312,9 @@ func (d *DirectoryTree) CollapseSelected() {
 		d.flatDirty = true
 		d.syncA11y()
 		d.Invalidate()
+		if announcer := d.services.Announcer(); announcer != nil {
+			announcer.Announce(fmt.Sprintf("%s collapsed", entry.Name), accessibility.PriorityPolite)
+		}
 	}
 }
 
@@ -327,6 +333,13 @@ func (d *DirectoryTree) ToggleSelected() {
 		d.flatDirty = true
 		d.syncA11y()
 		d.Invalidate()
+		if announcer := d.services.Announcer(); announcer != nil {
+			if entry.Expanded {
+				announcer.Announce(fmt.Sprintf("%s expanded", entry.Name), accessibility.PriorityPolite)
+			} else {
+				announcer.Announce(fmt.Sprintf("%s collapsed", entry.Name), accessibility.PriorityPolite)
+			}
+		}
 	}
 }
 
@@ -681,8 +694,16 @@ func (d *DirectoryTree) setSelected(index int, count int) {
 	if index >= count {
 		index = count - 1
 	}
+	prev := d.selectedIndex
 	d.selectedIndex = index
 	d.syncA11y()
+	if prev != index {
+		if announcer := d.services.Announcer(); announcer != nil {
+			if entry := d.SelectedEntry(); entry != nil {
+				announcer.Announce(entry.Name, accessibility.PriorityPolite)
+			}
+		}
+	}
 }
 
 func (d *DirectoryTree) syncA11y() {

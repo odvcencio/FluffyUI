@@ -189,7 +189,61 @@ func (f *FieldBase) UpdateDirty(value any) {
 	if f == nil || f.dirty == nil {
 		return
 	}
-	f.dirty.Set(!reflect.DeepEqual(f.initial, value))
+	f.dirty.Set(!fieldDeepEqual(f.initial, value))
+}
+
+// fieldDeepEqual uses fast path for common types before falling back to reflect.DeepEqual.
+func fieldDeepEqual(a, b any) bool {
+	// Fast path: try direct comparison for common types.
+	switch av := a.(type) {
+	case int:
+		if bv, ok := b.(int); ok {
+			return av == bv
+		}
+		return false
+	case string:
+		if bv, ok := b.(string); ok {
+			return av == bv
+		}
+		return false
+	case bool:
+		if bv, ok := b.(bool); ok {
+			return av == bv
+		}
+		return false
+	case float64:
+		if bv, ok := b.(float64); ok {
+			return av == bv
+		}
+		return false
+	case int64:
+		if bv, ok := b.(int64); ok {
+			return av == bv
+		}
+		return false
+	case int32:
+		if bv, ok := b.(int32); ok {
+			return av == bv
+		}
+		return false
+	case uint:
+		if bv, ok := b.(uint); ok {
+			return av == bv
+		}
+		return false
+	case uint64:
+		if bv, ok := b.(uint64); ok {
+			return av == bv
+		}
+		return false
+	case uint32:
+		if bv, ok := b.(uint32); ok {
+			return av == bv
+		}
+		return false
+	}
+	// Fall back to reflect.DeepEqual for complex types
+	return reflect.DeepEqual(a, b)
 }
 
 // SetErrors updates the error list.

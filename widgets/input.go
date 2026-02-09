@@ -513,6 +513,14 @@ func (i *Input) HandleMessage(msg runtime.Message) runtime.HandleResult {
 			return runtime.Handled()
 		}
 	case terminal.KeyEnter:
+		if len(i.validators) > 0 {
+			errs := i.Errors()
+			if len(errs) > 0 {
+				if announcer := i.services.Announcer(); announcer != nil {
+					announcer.Announce(strings.Join(errs, ", "), accessibility.PriorityAssertive)
+				}
+			}
+		}
 		if i.onSubmit != nil {
 			text := i.text.String()
 			i.onSubmit(text)
