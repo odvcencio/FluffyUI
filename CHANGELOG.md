@@ -1,5 +1,72 @@
 # Changelog
 
+## v0.4.1 - 2026-02-09
+
+### Highlights
+- New widgets: Image (multi-protocol terminal rendering), HeatMap (2D data visualization), Form (validated input collection).
+- A11y testing framework (`testing/a11ytest`) for asserting widget accessibility compliance in unit tests.
+- Benchmark suite covering all hot paths: signals, style resolution, compositor, virtual scroll, and widget lifecycles.
+- 20+ new widgets and features since v0.4.0 including Combobox, SegmentedControl, Disclosure, StatusBar, NotificationCenter, Inspector, and more.
+
+### New Widgets
+- **Image**: terminal image display with Kitty, Sixel, iTerm2, and half-block fallback protocols; fit modes (Contain, Cover, Fill, ScaleDown); `NewImageFromFile` helper.
+- **HeatMap**: 2D data grid visualization with configurable color scales (GreenRed, BlueRed, Grayscale); row/column labels; optional numeric value overlay; ARIA grid role with live region announcements.
+- **Form**: labeled input fields with built-in validation, Tab/Shift+Tab navigation, Enter submit, Escape cancel; duck-typed `validatable`/`textProvider` interfaces; error announcements; `fluffy.Form()`/`fluffy.FormField()` convenience API.
+- **Combobox**: searchable dropdown with keyboard navigation.
+- **SegmentedControl**: mutually exclusive option bar.
+- **Disclosure**: collapsible content sections.
+- **StatusBar**: application status display with sections.
+- **NotificationCenter**: stacked notification management.
+- **Inspector**: widget tree debugger.
+- **Badge**, **Card**, **Link**, **Pagination**, **Rating**, **Skeleton**, **TagInput**, **MarkdownViewer**: additional UI components following standard widget patterns.
+
+### Performance
+- Benchmark suite: 56 benchmarks across 5 packages (`state`, `style`, `compositor`, `scroll`, `widgets`).
+- `Makefile` with `bench` and `bench-save` targets for CI regression tracking.
+- Zero-alloc optimizations: `runtime/flex.go` buffer reuse, `state/track.go` atomic fast path, `style/selector.go` specificity caching (3x faster), `compositor/ansi.go` string builder pooling.
+- Widget-level caches: Input rune cache, TextArea line metadata, Dialog body lines.
+
+### Accessibility
+- `testing/a11ytest` package: 18 check functions (`HasRole`, `HasLabel`, `IsFocusable`, `IsDisabled`, `HandlesKey`, etc.) plus tree-level assertions (`AllFocusableHaveLabels`, `NoDuplicateIDs`).
+- `accessibility.RoleForm` added for Form widget.
+- `RoleImage` wired for Image widget with configurable alt text.
+- HeatMap: ARIA grid role with live region announcements for data changes.
+- 67+ announcement sites across all widgets.
+
+### Styling
+- Hot reload: `runtime.WatchStylesheetFile()` for live FSS changes.
+- Easing functions for style transitions.
+- Themes: `style.Theme` with built-in light/dark, `fluffy theme` CLI.
+- Color scheme media queries for automatic dark/light switching.
+- Layout properties: min/max width/height, content-align, dock, offset-x/y, z-index.
+- Style transitions: color, opacity, and spacing interpolation via `TransitionManager`.
+
+### Runtime & Backend
+- Synchronized output (CSI ?2026h) for flicker-free rendering.
+- Responsive layouts with breakpoint system.
+- Drag-and-drop support.
+- Chord keybindings (e.g., `Ctrl+K Ctrl+C`).
+- Snapshot testing framework with golden file management.
+- `terminal/caps.go`: added `ITermInlineImages` detection for iTerm2 terminals.
+
+### Clipboard
+- `clipboard/` package: `OSC52Clipboard`, `PlatformClipboard`, `AutoClipboard` with auto-detection chain (OSC-52 → platform tools → memory fallback).
+
+### Convenience API
+- `fluffy.Form()`, `fluffy.FormField()` for quick form creation.
+- `fluffy.SelectFromStrings()`, `fluffy.ReactiveText()`, `fluffy.Checkbox()`.
+- Layout helpers: `VStack`, `HStack`, `Spacer`, `Divider`, `Center`, `Padding`.
+- Text helpers: `Bold`, `Italic`, `DangerText`, `SuccessText`, `WarningText`.
+
+### Agent & MCP
+- 145+ tools (52 read, 56+ write) across 3 transports (stdio, SSE, Unix socket).
+- Mutation tools: `set_widget_value`, `focus_widget`, `send_key`, `batch_execute`.
+- Agent cookbook as `fluffy://instructions` resource (~600 lines).
+
+### Forms
+- `forms/` package: 20+ validators (required, min/max length, email, URL, regex, numeric range, etc.).
+- Async validation, dependency revalidation, fluent builder API.
+
 ## v0.4.0 - 2026-02-08
 
 ### Highlights
