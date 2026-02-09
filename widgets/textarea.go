@@ -77,6 +77,22 @@ func (t *TextArea) Unbind() {
 	t.services = runtime.Services{}
 }
 
+// Blur removes focus and announces validation errors if any.
+func (t *TextArea) Blur() {
+	if t == nil {
+		return
+	}
+	t.FocusableBase.Blur()
+	if len(t.validators) > 0 {
+		errs := t.Validate()
+		if len(errs) > 0 && len(t.valMessages) > 0 {
+			if announcer := t.services.Announcer(); announcer != nil {
+				announcer.Announce(strings.Join(t.valMessages, ", "), accessibility.PriorityAssertive)
+			}
+		}
+	}
+}
+
 // SetText sets the text and moves the cursor to the end.
 func (t *TextArea) SetText(text string) {
 	if t == nil {
@@ -694,6 +710,11 @@ func (t *TextArea) ClipboardCut() (string, bool) {
 	t.scrollY = 0
 	t.lineMetaDirty = true
 	t.syncValue()
+	if text != "" {
+		if announcer := t.services.Announcer(); announcer != nil {
+			announcer.Announce("Text cleared", accessibility.PriorityPolite)
+		}
+	}
 	return text, true
 }
 

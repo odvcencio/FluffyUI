@@ -23,11 +23,12 @@ type GaugeColors struct {
 type AnimatedGauge struct {
 	CanvasWidget
 
-	value    float64
-	min, max float64
-	spring   *animation.Spring
-	colors   GaugeColors
-	services runtime.Services
+	value         float64
+	min, max      float64
+	spring        *animation.Spring
+	colors        GaugeColors
+	services      runtime.Services
+	lastMilestone int // last announced milestone percentage (0, 25, 50, 75, 100)
 }
 
 // NewAnimatedGauge creates a new animated gauge.
@@ -97,6 +98,17 @@ func (g *AnimatedGauge) SetValue(value float64) {
 	g.Base.Value = &accessibility.ValueInfo{
 		Min: g.min, Max: g.max, Current: value,
 		Text: fmt.Sprintf("%.0f%%", ratio*100),
+	}
+	// Announce at milestones: 25%, 50%, 75%, 100%.
+	pct := int(ratio * 100)
+	milestone := (pct / 25) * 25
+	if milestone > g.lastMilestone && milestone > 0 {
+		g.lastMilestone = milestone
+		if announcer := g.services.Announcer(); announcer != nil {
+			announcer.Announce(fmt.Sprintf("Gauge %d%%", milestone), accessibility.PriorityPolite)
+		}
+	} else if pct == 0 && g.lastMilestone > 0 {
+		g.lastMilestone = 0 // reset on loop
 	}
 	// When reduced motion is active, snap to the target immediately.
 	if g.services.ReducedMotion() {

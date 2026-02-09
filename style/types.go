@@ -120,6 +120,75 @@ const (
 	BorderRounded
 )
 
+// TextAlign defines text alignment.
+type TextAlign uint8
+
+const (
+	TextAlignNone   TextAlign = iota // unset
+	TextAlignLeft                    // left-aligned
+	TextAlignCenter                  // centered
+	TextAlignRight                   // right-aligned
+)
+
+// Display defines display behavior.
+type Display uint8
+
+const (
+	DisplayNone  Display = iota // unset
+	DisplayBlock                // block layout
+	DisplayFlex                 // flex layout
+	DisplayHidden               // hidden (display: none)
+)
+
+// Visibility defines element visibility.
+type Visibility uint8
+
+const (
+	VisibilityNone    Visibility = iota // unset
+	VisibilityVisible                   // visible (default)
+	VisibilityHidden                    // hidden (reserves space)
+)
+
+// Overflow defines overflow behavior.
+type Overflow uint8
+
+const (
+	OverflowNone    Overflow = iota // unset
+	OverflowVisible                 // content overflows
+	OverflowHidden                  // content clipped
+	OverflowScroll                  // scrollable
+)
+
+// CursorStyle defines cursor appearance.
+type CursorStyle uint8
+
+const (
+	CursorNone    CursorStyle = iota // unset
+	CursorDefault                    // default cursor
+	CursorPointer                    // pointer (interactive)
+	CursorText                       // text selection
+)
+
+// TextDecorationStyle defines text decoration.
+type TextDecorationStyle uint8
+
+const (
+	TextDecorationNone          TextDecorationStyle = iota // unset
+	TextDecorationOff                                      // explicitly no decoration
+	TextDecorationUnderline                                // underline
+	TextDecorationStrikethrough                            // strikethrough
+)
+
+// WhiteSpace defines white-space handling.
+type WhiteSpace uint8
+
+const (
+	WhiteSpaceNone   WhiteSpace = iota // unset
+	WhiteSpaceNormal                   // normal wrapping
+	WhiteSpaceNowrap                   // no wrapping
+	WhiteSpacePre                      // preserve whitespace
+)
+
 // BorderChars defines custom border glyphs.
 type BorderChars struct {
 	TopLeft, TopRight       rune
@@ -161,6 +230,20 @@ type Style struct {
 	// Borders
 	Border       *Border
 	BorderRadius *bool
+
+	// Text layout
+	TextAlign      TextAlign
+	TextDecoration TextDecorationStyle
+	WhiteSpace     WhiteSpace
+
+	// Display and visibility
+	Display    Display
+	Visibility Visibility
+	Overflow   Overflow
+	Opacity    *float64
+
+	// Cursor
+	Cursor CursorStyle
 }
 
 // IsZero reports whether no style fields are set.
@@ -179,7 +262,15 @@ func (s Style) IsZero() bool {
 		s.Width == nil &&
 		s.Height == nil &&
 		s.Border == nil &&
-		s.BorderRadius == nil
+		s.BorderRadius == nil &&
+		s.TextAlign == TextAlignNone &&
+		s.TextDecoration == TextDecorationNone &&
+		s.WhiteSpace == WhiteSpaceNone &&
+		s.Display == DisplayNone &&
+		s.Visibility == VisibilityNone &&
+		s.Overflow == OverflowNone &&
+		s.Opacity == nil &&
+		s.Cursor == CursorNone
 }
 
 // AffectsLayout reports whether the style includes layout-affecting fields.
@@ -189,7 +280,12 @@ func (s Style) AffectsLayout() bool {
 		s.Width != nil ||
 		s.Height != nil ||
 		s.Border != nil ||
-		s.BorderRadius != nil
+		s.BorderRadius != nil ||
+		s.Display != DisplayNone ||
+		s.Visibility != VisibilityNone ||
+		s.Overflow != OverflowNone ||
+		s.WhiteSpace != WhiteSpaceNone ||
+		s.TextAlign != TextAlignNone
 }
 
 // Merge overlays the provided style on top of the current one.
@@ -239,6 +335,30 @@ func (s Style) Merge(override Style) Style {
 	if override.BorderRadius != nil {
 		s.BorderRadius = override.BorderRadius
 	}
+	if override.TextAlign != TextAlignNone {
+		s.TextAlign = override.TextAlign
+	}
+	if override.TextDecoration != TextDecorationNone {
+		s.TextDecoration = override.TextDecoration
+	}
+	if override.WhiteSpace != WhiteSpaceNone {
+		s.WhiteSpace = override.WhiteSpace
+	}
+	if override.Display != DisplayNone {
+		s.Display = override.Display
+	}
+	if override.Visibility != VisibilityNone {
+		s.Visibility = override.Visibility
+	}
+	if override.Overflow != OverflowNone {
+		s.Overflow = override.Overflow
+	}
+	if override.Opacity != nil {
+		s.Opacity = override.Opacity
+	}
+	if override.Cursor != CursorNone {
+		s.Cursor = override.Cursor
+	}
 	return s
 }
 
@@ -270,6 +390,22 @@ func (s Style) Inherit(parent Style) Style {
 	}
 	if s.Strikethrough == nil {
 		s.Strikethrough = parent.Strikethrough
+	}
+	// Inheritable layout properties
+	if s.TextAlign == TextAlignNone {
+		s.TextAlign = parent.TextAlign
+	}
+	if s.TextDecoration == TextDecorationNone {
+		s.TextDecoration = parent.TextDecoration
+	}
+	if s.WhiteSpace == WhiteSpaceNone {
+		s.WhiteSpace = parent.WhiteSpace
+	}
+	if s.Visibility == VisibilityNone {
+		s.Visibility = parent.Visibility
+	}
+	if s.Cursor == CursorNone {
+		s.Cursor = parent.Cursor
 	}
 	return s
 }

@@ -60,6 +60,7 @@ type DataGrid struct {
 	cachedTotal    int
 	cachedSig      uint32
 	editorHasFocus bool
+	services       runtime.Services
 
 	// Virtual scrolling fields
 	virtualScroll bool
@@ -90,6 +91,7 @@ func (g *DataGrid) Bind(services runtime.Services) {
 	if g == nil {
 		return
 	}
+	g.services = services
 	if g.editor != nil {
 		g.editor.Bind(services)
 	}
@@ -100,6 +102,7 @@ func (g *DataGrid) Unbind() {
 	if g == nil {
 		return
 	}
+	g.services = runtime.Services{}
 	if g.editor != nil {
 		g.editor.Unbind()
 	}
@@ -289,12 +292,26 @@ func (g *DataGrid) SetSelected(row, col int) {
 	if g == nil {
 		return
 	}
+	prevRow, prevCol := g.selectedRow, g.selectedCol
 	g.selectedRow = row
 	g.selectedCol = col
 	g.ensureSelectionInRange()
 	g.ensureSelectionVisible()
 	g.syncA11y()
 	g.Invalidate()
+	if g.selectedRow != prevRow || g.selectedCol != prevCol {
+		if announcer := g.services.Announcer(); announcer != nil {
+			colName := ""
+			if g.selectedCol >= 0 && g.selectedCol < len(g.Columns) {
+				colName = g.Columns[g.selectedCol].Title
+			}
+			if colName != "" {
+				announcer.Announce(fmt.Sprintf("Row %d, %s", g.selectedRow+1, colName), accessibility.PriorityPolite)
+			} else {
+				announcer.Announce(fmt.Sprintf("Row %d, Column %d", g.selectedRow+1, g.selectedCol+1), accessibility.PriorityPolite)
+			}
+		}
+	}
 	if g.onSelect != nil {
 		g.onSelect(g.selectedRow, g.selectedCol)
 	}
@@ -322,6 +339,9 @@ func (g *DataGrid) StartEditing() {
 	g.editor.Focus()
 	g.editorHasFocus = true
 	g.Invalidate()
+	if announcer := g.services.Announcer(); announcer != nil {
+		announcer.Announce("Editing cell", accessibility.PriorityPolite)
+	}
 }
 
 // CancelEditing discards edits.
@@ -359,6 +379,9 @@ func (g *DataGrid) CommitEditing() {
 	g.editorHasFocus = false
 	g.syncA11y()
 	g.Invalidate()
+	if announcer := g.services.Announcer(); announcer != nil {
+		announcer.Announce("Cell updated", accessibility.PriorityPolite)
+	}
 }
 
 // RowCount returns the number of rows.

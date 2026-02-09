@@ -112,6 +112,34 @@ func (m *MaskedInput) Unbind() {
 	m.services = runtime.Services{}
 }
 
+// Blur removes focus and announces validation errors if any.
+func (m *MaskedInput) Blur() {
+	if m == nil {
+		return
+	}
+	m.FocusableBase.Blur()
+	if len(m.validators) > 0 {
+		errs := m.Validate()
+		if len(errs) > 0 && len(m.valMessages) > 0 {
+			if announcer := m.services.Announcer(); announcer != nil {
+				announcer.Announce(strings.Join(m.valMessages, ", "), accessibility.PriorityAssertive)
+			}
+		}
+	}
+}
+
+// isMaskComplete reports whether all editable slots are filled.
+func (m *MaskedInput) isMaskComplete() bool {
+	slots := m.parseMask()
+	editableCount := 0
+	for _, slot := range slots {
+		if !slot.literal {
+			editableCount++
+		}
+	}
+	return len([]rune(m.value)) >= editableCount
+}
+
 // SetMask updates the mask pattern.
 func (m *MaskedInput) SetMask(mask string) {
 	if m == nil {
@@ -508,6 +536,11 @@ func (m *MaskedInput) notifyChange() {
 	m.syncA11y()
 	if m.onChange != nil {
 		m.onChange(m.value)
+	}
+	if m.isMaskComplete() {
+		if announcer := m.services.Announcer(); announcer != nil {
+			announcer.Announce("Input complete", accessibility.PriorityPolite)
+		}
 	}
 }
 

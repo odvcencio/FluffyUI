@@ -363,6 +363,62 @@ func parseStyleBlock(block string, sheet *Stylesheet) (Style, Style, []error) {
 				continue
 			}
 			target.BorderRadius = Bool(value)
+		case "text-align":
+			align, err := parseTextAlign(value)
+			if err != nil {
+				errs = append(errs, err)
+				continue
+			}
+			target.TextAlign = align
+		case "display":
+			display, err := parseDisplay(value)
+			if err != nil {
+				errs = append(errs, err)
+				continue
+			}
+			target.Display = display
+		case "visibility":
+			vis, err := parseVisibility(value)
+			if err != nil {
+				errs = append(errs, err)
+				continue
+			}
+			target.Visibility = vis
+		case "overflow":
+			overflow, err := parseOverflow(value)
+			if err != nil {
+				errs = append(errs, err)
+				continue
+			}
+			target.Overflow = overflow
+		case "opacity":
+			opacity, err := parseOpacity(value)
+			if err != nil {
+				errs = append(errs, err)
+				continue
+			}
+			target.Opacity = &opacity
+		case "cursor":
+			cursor, err := parseCursor(value)
+			if err != nil {
+				errs = append(errs, err)
+				continue
+			}
+			target.Cursor = cursor
+		case "text-decoration":
+			decoration, err := parseTextDecoration(value)
+			if err != nil {
+				errs = append(errs, err)
+				continue
+			}
+			target.TextDecoration = decoration
+		case "white-space":
+			ws, err := parseWhiteSpace(value)
+			if err != nil {
+				errs = append(errs, err)
+				continue
+			}
+			target.WhiteSpace = ws
 		default:
 			errs = append(errs, fmt.Errorf("style: unknown property %q", name))
 		}
@@ -783,6 +839,107 @@ func parseBorderStyle(value string) (BorderStyle, error) {
 		return BorderRounded, nil
 	default:
 		return BorderNone, fmt.Errorf("style: invalid border style %q", value)
+	}
+}
+
+func parseTextAlign(value string) (TextAlign, error) {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "left":
+		return TextAlignLeft, nil
+	case "center":
+		return TextAlignCenter, nil
+	case "right":
+		return TextAlignRight, nil
+	default:
+		return TextAlignNone, fmt.Errorf("style: invalid text-align %q", value)
+	}
+}
+
+func parseDisplay(value string) (Display, error) {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "block":
+		return DisplayBlock, nil
+	case "flex":
+		return DisplayFlex, nil
+	case "none":
+		return DisplayHidden, nil
+	default:
+		return DisplayNone, fmt.Errorf("style: invalid display %q", value)
+	}
+}
+
+func parseVisibility(value string) (Visibility, error) {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "visible":
+		return VisibilityVisible, nil
+	case "hidden":
+		return VisibilityHidden, nil
+	default:
+		return VisibilityNone, fmt.Errorf("style: invalid visibility %q", value)
+	}
+}
+
+func parseOverflow(value string) (Overflow, error) {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "visible":
+		return OverflowVisible, nil
+	case "hidden":
+		return OverflowHidden, nil
+	case "scroll":
+		return OverflowScroll, nil
+	default:
+		return OverflowNone, fmt.Errorf("style: invalid overflow %q", value)
+	}
+}
+
+func parseOpacity(value string) (float64, error) {
+	value = strings.TrimSpace(value)
+	v, err := strconv.ParseFloat(value, 64)
+	if err != nil {
+		return 0, fmt.Errorf("style: invalid opacity %q", value)
+	}
+	if v < 0 || v > 1 {
+		return 0, fmt.Errorf("style: opacity out of range %q (must be 0.0-1.0)", value)
+	}
+	return v, nil
+}
+
+func parseCursor(value string) (CursorStyle, error) {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "default":
+		return CursorDefault, nil
+	case "pointer":
+		return CursorPointer, nil
+	case "text":
+		return CursorText, nil
+	default:
+		return CursorNone, fmt.Errorf("style: invalid cursor %q", value)
+	}
+}
+
+func parseTextDecoration(value string) (TextDecorationStyle, error) {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "none":
+		return TextDecorationOff, nil
+	case "underline":
+		return TextDecorationUnderline, nil
+	case "strikethrough", "line-through":
+		return TextDecorationStrikethrough, nil
+	default:
+		return TextDecorationNone, fmt.Errorf("style: invalid text-decoration %q", value)
+	}
+}
+
+func parseWhiteSpace(value string) (WhiteSpace, error) {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "normal":
+		return WhiteSpaceNormal, nil
+	case "nowrap":
+		return WhiteSpaceNowrap, nil
+	case "pre":
+		return WhiteSpacePre, nil
+	default:
+		return WhiteSpaceNone, fmt.Errorf("style: invalid white-space %q", value)
 	}
 }
 

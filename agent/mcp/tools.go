@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -432,6 +433,24 @@ func registerTools(s *Server) {
 	addTool(s, mcp.NewTool("get_capabilities", mcp.WithDescription("Get server capabilities.")), s.handleGetCapabilities)
 	addTool(s, mcp.NewTool("get_app_info", mcp.WithDescription("Get app info.")), s.handleGetAppInfo)
 	addTool(s, mcp.NewTool("ping", mcp.WithDescription("Ping server.")), s.handlePing)
+
+	// Mutation tools for direct widget state control
+	addTool(s, mcp.NewTool("set_widget_value",
+		mcp.WithDescription("Set the value of an interactive widget directly (input text, checkbox state, slider value, select index, toggle state)."),
+		mcp.WithInputSchema[setWidgetValueArgs](),
+	), s.handleSetWidgetValue)
+	addTool(s, mcp.NewTool("focus_widget",
+		mcp.WithDescription("Move focus to a specific widget by ID."),
+		mcp.WithInputSchema[idArgs](),
+	), s.handleFocusWidget)
+	addTool(s, mcp.NewTool("send_key",
+		mcp.WithDescription("Send a key event to the focused widget, or to a specific widget by ID."),
+		mcp.WithInputSchema[sendKeyArgs](),
+	), s.handleSendKey)
+	addTool(s, mcp.NewTool("batch_execute",
+		mcp.WithDescription("Execute multiple tool calls in sequence and return all results."),
+		mcp.WithInputSchema[batchExecuteArgs](),
+	), s.handleBatchExecute)
 }
 
 func addTool(s *Server, tool mcp.Tool, handler mcpserver.ToolHandlerFunc) {
@@ -618,6 +637,25 @@ type diffArgs struct {
 
 type snapshotArg struct {
 	Since Snapshot `json:"since"`
+}
+
+type setWidgetValueArgs struct {
+	ID    string `json:"widget_id"`
+	Value any    `json:"value"`
+}
+
+type sendKeyArgs struct {
+	Key      string `json:"key"`
+	WidgetID string `json:"widget_id,omitempty"`
+}
+
+type batchOperation struct {
+	Tool   string         `json:"tool"`
+	Params map[string]any `json:"params"`
+}
+
+type batchExecuteArgs struct {
+	Operations []batchOperation `json:"operations"`
 }
 
 func (s *Server) handleSnapshot(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -2102,6 +2140,485 @@ func (s *Server) handleGetAppInfo(ctx context.Context, req mcp.CallToolRequest) 
 
 func (s *Server) handlePing(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	return s.toolResult("ping", true), nil
+}
+
+func (s *Server) handleSetWidgetValue(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	args := setWidgetValueArgs{}
+	if err := req.BindArguments(&args); err != nil {
+		return nil, newMCPError(mcp.INVALID_PARAMS, err.Error(), nil)
+	}
+	if strings.TrimSpace(args.ID) == "" {
+		return s.toolError("set_widget_value", errors.New("widget_id is required")), nil
+	}
+
+	var resultInfo *WidgetInfo
+	err := s.agent.WithWidgetByID(ctx, args.ID, func(w runtime.Widget, acc accessibility.Accessible) error {
+		return s.applyWidgetValue(w, acc, args.Value)
+	})
+	if err != nil {
+		return s.toolError("set_widget_value", err), nil
+	}
+
+	// Re-snapshot to get the updated widget state
+	s.agent.Tick()
+	snap, err := s.currentSnapshot(ctx, false)
+	if err != nil {
+		return s.toolError("set_widget_value", err), nil
+	}
+	resultInfo = findWidgetByID(snap.Widgets, args.ID, false)
+	return s.toolResult("set_widget_value", map[string]any{
+		"status":    "ok",
+		"widget_id": args.ID,
+		"widget":    resultInfo,
+	}), nil
+}
+
+func (s *Server) applyWidgetValue(w runtime.Widget, acc accessibility.Accessible, value any) error {
+	if w == nil {
+		return errors.New("widget is nil")
+	}
+
+	// Try SetText (Input, TextArea)
+	if setter, ok := w.(interface{ SetText(string) }); ok {
+		text, err := coerceToString(value)
+		if err != nil {
+			return fmt.Errorf("cannot coerce value to string: %w", err)
+		}
+		setter.SetText(text)
+		return nil
+	}
+
+	// Try SetChecked (Checkbox)
+	if setter, ok := w.(interface{ SetChecked(bool) }); ok {
+		checked, err := coerceToBool(value)
+		if err != nil {
+			return fmt.Errorf("cannot coerce value to bool: %w", err)
+		}
+		setter.SetChecked(checked)
+		return nil
+	}
+
+	// Try SetOn (Toggle)
+	if setter, ok := w.(interface{ SetOn(bool) }); ok {
+		on, err := coerceToBool(value)
+		if err != nil {
+			return fmt.Errorf("cannot coerce value to bool: %w", err)
+		}
+		setter.SetOn(on)
+		return nil
+	}
+
+	// Try SetValue for float64 (Slider)
+	if setter, ok := w.(interface{ SetValue(float64) }); ok {
+		floatVal, err := coerceToFloat64(value)
+		if err != nil {
+			return fmt.Errorf("cannot coerce value to float64: %w", err)
+		}
+		setter.SetValue(floatVal)
+		return nil
+	}
+
+	// Try SetSelected for int (Select)
+	if setter, ok := w.(interface{ SetSelected(int) }); ok {
+		intVal, err := coerceToInt(value)
+		if err != nil {
+			return fmt.Errorf("cannot coerce value to int: %w", err)
+		}
+		setter.SetSelected(intVal)
+		return nil
+	}
+
+	return errors.New("widget does not support value mutation")
+}
+
+func coerceToString(value any) (string, error) {
+	switch v := value.(type) {
+	case string:
+		return v, nil
+	case float64:
+		return fmt.Sprintf("%g", v), nil
+	case bool:
+		if v {
+			return "true", nil
+		}
+		return "false", nil
+	case nil:
+		return "", nil
+	default:
+		return fmt.Sprintf("%v", v), nil
+	}
+}
+
+func coerceToBool(value any) (bool, error) {
+	switch v := value.(type) {
+	case bool:
+		return v, nil
+	case float64:
+		return v != 0, nil
+	case string:
+		switch strings.ToLower(v) {
+		case "true", "1", "yes", "on":
+			return true, nil
+		case "false", "0", "no", "off", "":
+			return false, nil
+		default:
+			return false, fmt.Errorf("cannot convert string %q to bool", v)
+		}
+	case nil:
+		return false, nil
+	default:
+		return false, fmt.Errorf("cannot convert %T to bool", v)
+	}
+}
+
+func coerceToFloat64(value any) (float64, error) {
+	switch v := value.(type) {
+	case float64:
+		return v, nil
+	case string:
+		f, err := strconv.ParseFloat(v, 64)
+		if err != nil {
+			return 0, fmt.Errorf("cannot convert string %q to float64: %w", v, err)
+		}
+		return f, nil
+	case bool:
+		if v {
+			return 1, nil
+		}
+		return 0, nil
+	case nil:
+		return 0, nil
+	default:
+		return 0, fmt.Errorf("cannot convert %T to float64", v)
+	}
+}
+
+func coerceToInt(value any) (int, error) {
+	switch v := value.(type) {
+	case float64:
+		return int(v), nil
+	case string:
+		i, err := strconv.Atoi(v)
+		if err != nil {
+			return 0, fmt.Errorf("cannot convert string %q to int: %w", v, err)
+		}
+		return i, nil
+	case bool:
+		if v {
+			return 1, nil
+		}
+		return 0, nil
+	case nil:
+		return 0, nil
+	default:
+		return 0, fmt.Errorf("cannot convert %T to int", v)
+	}
+}
+
+func (s *Server) handleFocusWidget(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	args := idArgs{}
+	if err := req.BindArguments(&args); err != nil {
+		return nil, newMCPError(mcp.INVALID_PARAMS, err.Error(), nil)
+	}
+	if strings.TrimSpace(args.ID) == "" {
+		return s.toolError("focus_widget", errors.New("id is required")), nil
+	}
+	if err := s.agent.FocusByID(args.ID); err != nil {
+		return s.toolError("focus_widget", err), nil
+	}
+	s.agent.Tick()
+
+	// Return the focused widget state
+	snap, err := s.currentSnapshot(ctx, false)
+	if err != nil {
+		return s.toolError("focus_widget", err), nil
+	}
+	info := findWidgetByID(snap.Widgets, args.ID, false)
+	return s.toolResult("focus_widget", map[string]any{
+		"status":    "ok",
+		"widget_id": args.ID,
+		"focused":   info != nil && info.State.Focused,
+		"widget":    info,
+	}), nil
+}
+
+func (s *Server) handleSendKey(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	args := sendKeyArgs{}
+	if err := req.BindArguments(&args); err != nil {
+		return nil, newMCPError(mcp.INVALID_PARAMS, err.Error(), nil)
+	}
+	if strings.TrimSpace(args.Key) == "" {
+		return s.toolError("send_key", errors.New("key is required")), nil
+	}
+
+	// Optionally focus a target widget first
+	if strings.TrimSpace(args.WidgetID) != "" {
+		if err := s.agent.FocusByID(args.WidgetID); err != nil {
+			return s.toolError("send_key", fmt.Errorf("failed to focus widget %s: %w", args.WidgetID, err)), nil
+		}
+		s.agent.Tick()
+	}
+
+	// Send the key using the existing key sequence parser
+	if err := s.sendKeySequence(args.Key); err != nil {
+		return s.toolError("send_key", err), nil
+	}
+	return s.toolResult("send_key", map[string]any{
+		"status":    "ok",
+		"key":       args.Key,
+		"widget_id": args.WidgetID,
+	}), nil
+}
+
+func (s *Server) handleBatchExecute(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	args := batchExecuteArgs{}
+	if err := req.BindArguments(&args); err != nil {
+		return nil, newMCPError(mcp.INVALID_PARAMS, err.Error(), nil)
+	}
+	if len(args.Operations) == 0 {
+		return s.toolError("batch_execute", errors.New("operations array is required and must not be empty")), nil
+	}
+	if len(args.Operations) > 50 {
+		return s.toolError("batch_execute", errors.New("batch limited to 50 operations")), nil
+	}
+
+	results := make([]map[string]any, 0, len(args.Operations))
+	for i, op := range args.Operations {
+		toolName := strings.TrimSpace(op.Tool)
+		if toolName == "" {
+			results = append(results, map[string]any{
+				"index": i,
+				"error": "tool name is required",
+			})
+			continue
+		}
+		// Prevent recursive batch calls
+		if toolName == "batch_execute" {
+			results = append(results, map[string]any{
+				"index": i,
+				"tool":  toolName,
+				"error": "recursive batch_execute is not allowed",
+			})
+			continue
+		}
+
+		// Build a synthetic CallToolRequest with the operation's params.
+		// BindArguments will marshal then unmarshal, so map[string]any works.
+		innerReq := mcp.CallToolRequest{}
+		innerReq.Params.Name = toolName
+		innerReq.Params.Arguments = op.Params
+
+		handler := s.findToolHandler(toolName)
+		if handler == nil {
+			results = append(results, map[string]any{
+				"index": i,
+				"tool":  toolName,
+				"error": fmt.Sprintf("unknown tool %q", toolName),
+			})
+			continue
+		}
+
+		result, err := handler(ctx, innerReq)
+		if err != nil {
+			results = append(results, map[string]any{
+				"index": i,
+				"tool":  toolName,
+				"error": err.Error(),
+			})
+			continue
+		}
+
+		// Extract the structured result
+		entry := map[string]any{
+			"index": i,
+			"tool":  toolName,
+		}
+		if result != nil && result.StructuredContent != nil {
+			entry["result"] = result.StructuredContent
+		} else if result != nil && len(result.Content) > 0 {
+			if textContent, ok := result.Content[0].(mcp.TextContent); ok {
+				entry["result"] = textContent.Text
+			}
+		}
+		if result != nil && result.IsError {
+			entry["is_error"] = true
+		}
+		results = append(results, entry)
+	}
+
+	return s.toolResult("batch_execute", map[string]any{
+		"status":  "ok",
+		"count":   len(results),
+		"results": results,
+	}), nil
+}
+
+func (s *Server) findToolHandler(name string) mcpserver.ToolHandlerFunc {
+	// Map tool names to their handlers. This avoids needing to use
+	// reflection or modify the MCP server library.
+	handlers := map[string]mcpserver.ToolHandlerFunc{
+		// Snapshot & screen tools
+		"snapshot":        s.handleSnapshot,
+		"snapshot_text":   s.handleSnapshotText,
+		"snapshot_region": s.handleSnapshotRegion,
+		"get_dimensions":  s.handleGetDimensions,
+		"get_layer_count": s.handleGetLayerCount,
+		"get_cell":        s.handleGetCell,
+
+		// Find tools
+		"find_by_label":   s.handleFindByLabel,
+		"find_by_role":    s.handleFindByRole,
+		"find_by_id":      s.handleFindByID,
+		"find_by_value":   s.handleFindByValue,
+		"find_by_state":   s.handleFindByState,
+		"find_at_position": s.handleFindAtPosition,
+		"find_focused":    s.handleFindFocused,
+		"find_all":        s.handleFindAll,
+		"find_focusable":  s.handleFindFocusable,
+		"find_actionable": s.handleFindActionable,
+
+		// Tree traversal tools
+		"get_children":       s.handleGetChildren,
+		"get_parent":         s.handleGetParent,
+		"get_siblings":       s.handleGetSiblings,
+		"get_descendants":    s.handleGetDescendants,
+		"get_ancestors":      s.handleGetAncestors,
+		"get_next_focusable": s.handleGetNextFocusable,
+		"get_prev_focusable": s.handleGetPrevFocusable,
+
+		// Property tools
+		"get_label":       s.handleGetLabel,
+		"get_role":        s.handleGetRole,
+		"get_value":       s.handleGetValue,
+		"get_description": s.handleGetDescription,
+		"get_bounds":      s.handleGetBounds,
+		"get_state":       s.handleGetState,
+		"get_actions":     s.handleGetActions,
+		"is_focused":      s.handleIsFocused,
+		"is_enabled":      s.handleIsEnabled,
+		"is_visible":      s.handleIsVisible,
+		"is_checked":      s.handleIsChecked,
+		"is_expanded":     s.handleIsExpanded,
+		"is_selected":     s.handleIsSelected,
+		"has_focus":       s.handleHasFocus,
+
+		// Action tools
+		"activate":      s.handleActivate,
+		"focus":         s.handleFocus,
+		"blur":          s.handleBlur,
+		"type_into":     s.handleTypeInto,
+		"clear":         s.handleClear,
+		"select_option": s.handleSelectOption,
+		"select_index":  s.handleSelectIndex,
+		"toggle":        s.handleToggle,
+		"check":         s.handleCheck,
+		"uncheck":       s.handleUncheck,
+		"expand":        s.handleExpand,
+		"collapse":      s.handleCollapse,
+		"scroll_to":     s.handleScrollTo,
+		"scroll_by":     s.handleScrollBy,
+		"scroll_to_top": s.handleScrollToTop,
+		"scroll_to_bottom": s.handleScrollToBottom,
+
+		// Key tools
+		"press_key":       s.handlePressKey,
+		"press_keys":      s.handlePressKeys,
+		"press_chord":     s.handlePressChord,
+		"press_rune":      s.handlePressRune,
+		"type_string":     s.handleTypeString,
+		"press_enter":     s.handlePressEnter,
+		"press_escape":    s.handlePressEscape,
+		"press_tab":       s.handlePressTab,
+		"press_shift_tab": s.handlePressShiftTab,
+		"press_space":     s.handlePressSpace,
+		"press_backspace": s.handlePressBackspace,
+		"press_delete":    s.handlePressDelete,
+		"press_up":        s.handlePressUp,
+		"press_down":      s.handlePressDown,
+		"press_left":      s.handlePressLeft,
+		"press_right":     s.handlePressRight,
+		"press_home":      s.handlePressHome,
+		"press_end":       s.handlePressEnd,
+		"press_page_up":   s.handlePressPageUp,
+		"press_page_down": s.handlePressPageDown,
+
+		// Mouse tools
+		"mouse_click":        s.handleMouseClick,
+		"mouse_double_click": s.handleMouseDoubleClick,
+		"mouse_right_click":  s.handleMouseRightClick,
+		"mouse_press":        s.handleMousePress,
+		"mouse_release":      s.handleMouseRelease,
+		"mouse_move":         s.handleMouseMove,
+		"mouse_drag":         s.handleMouseDrag,
+		"mouse_scroll_up":    s.handleMouseScrollUp,
+		"mouse_scroll_down":  s.handleMouseScrollDown,
+		"click_widget":       s.handleClickWidget,
+
+		// Clipboard tools
+		"clipboard_read":          s.handleClipboardRead,
+		"clipboard_write":         s.handleClipboardWrite,
+		"clipboard_clear":         s.handleClipboardClear,
+		"clipboard_has_text":      s.handleClipboardHasText,
+		"clipboard_read_primary":  s.handleClipboardReadPrimary,
+		"clipboard_write_primary": s.handleClipboardWritePrimary,
+
+		// Selection tools
+		"select_all":          s.handleSelectAll,
+		"select_range":        s.handleSelectRange,
+		"select_word":         s.handleSelectWord,
+		"select_line":         s.handleSelectLine,
+		"select_none":         s.handleSelectNone,
+		"get_selection":       s.handleGetSelection,
+		"get_selection_bounds": s.handleGetSelectionBounds,
+		"has_selection":       s.handleHasSelection,
+		"copy":                s.handleCopy,
+		"cut":                 s.handleCut,
+		"paste":               s.handlePaste,
+		"paste_text":          s.handlePasteText,
+
+		// Cursor tools
+		"get_cursor_position": s.handleGetCursorPosition,
+		"set_cursor_position": s.handleSetCursorPosition,
+		"get_cursor_offset":   s.handleGetCursorOffset,
+		"set_cursor_offset":   s.handleSetCursorOffset,
+		"cursor_to_start":     s.handleCursorToStart,
+		"cursor_to_end":       s.handleCursorToEnd,
+		"cursor_word_left":    s.handleCursorWordLeft,
+		"cursor_word_right":   s.handleCursorWordRight,
+
+		// Wait tools
+		"tick":                s.handleTick,
+		"wait_ms":             s.handleWaitMS,
+		"wait_for_widget":     s.handleWaitForWidget,
+		"wait_for_widget_gone": s.handleWaitForWidgetGone,
+		"wait_for_text":       s.handleWaitForText,
+		"wait_for_text_gone":  s.handleWaitForTextGone,
+		"wait_for_focus":      s.handleWaitForFocus,
+		"wait_for_value":      s.handleWaitForValue,
+		"wait_for_enabled":    s.handleWaitForEnabled,
+		"wait_for_idle":       s.handleWaitForIdle,
+
+		// Resize tools
+		"resize":        s.handleResize,
+		"resize_width":  s.handleResizeWidth,
+		"resize_height": s.handleResizeHeight,
+
+		// Diff tools
+		"diff_snapshots":  s.handleDiffSnapshots,
+		"widgets_changed": s.handleWidgetsChanged,
+		"text_changed":    s.handleTextChanged,
+
+		// Info tools
+		"get_capabilities": s.handleGetCapabilities,
+		"get_app_info":     s.handleGetAppInfo,
+		"ping":             s.handlePing,
+
+		// Mutation tools
+		"set_widget_value": s.handleSetWidgetValue,
+		"focus_widget":     s.handleFocusWidget,
+		"send_key":         s.handleSendKey,
+	}
+	return handlers[name]
 }
 
 func (s *Server) toolResult(tool string, data any) *mcp.CallToolResult {

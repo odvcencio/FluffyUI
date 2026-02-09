@@ -233,6 +233,17 @@ func (t *Tooltip) openTooltip(dismissOnMoveOutside bool) runtime.HandleResult {
 	}
 	popover := NewPopover(anchor, t.content, options...)
 	t.open = true
+	if announcer := t.services.Announcer(); announcer != nil {
+		label := ""
+		if acc, ok := t.content.(accessibility.Accessible); ok {
+			label = acc.AccessibleLabel()
+		}
+		if label != "" {
+			announcer.Announce("Tooltip: "+label, accessibility.PriorityPolite)
+		} else {
+			announcer.Announce("Tooltip shown", accessibility.PriorityPolite)
+		}
+	}
 	return commandResult(runtime.PushOverlay{Widget: popover, Modal: false})
 }
 
