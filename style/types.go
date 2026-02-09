@@ -13,12 +13,62 @@ type EasingFunc int
 const (
 	// EaseLinear applies no acceleration.
 	EaseLinear EasingFunc = iota
-	// EaseIn starts slow and accelerates.
+	// EaseIn starts slow and accelerates (alias for EaseInQuad).
 	EaseIn
-	// EaseOut starts fast and decelerates.
+	// EaseOut starts fast and decelerates (alias for EaseOutQuad).
 	EaseOut
-	// EaseInOut starts slow, speeds up, then decelerates.
+	// EaseInOut starts slow, speeds up, then decelerates (alias for EaseInOutQuad).
 	EaseInOut
+
+	// Quadratic easing
+	EaseInQuad
+	EaseOutQuad
+	EaseInOutQuad
+
+	// Cubic easing
+	EaseInCubic
+	EaseOutCubic
+	EaseInOutCubic
+
+	// Quartic easing
+	EaseInQuart
+	EaseOutQuart
+	EaseInOutQuart
+
+	// Quintic easing
+	EaseInQuint
+	EaseOutQuint
+	EaseInOutQuint
+
+	// Sinusoidal easing
+	EaseInSine
+	EaseOutSine
+	EaseInOutSine
+
+	// Exponential easing
+	EaseInExpo
+	EaseOutExpo
+	EaseInOutExpo
+
+	// Circular easing
+	EaseInCirc
+	EaseOutCirc
+	EaseInOutCirc
+
+	// Elastic easing (spring-like)
+	EaseInElastic
+	EaseOutElastic
+	EaseInOutElastic
+
+	// Back easing (overshoot)
+	EaseInBack
+	EaseOutBack
+	EaseInOutBack
+
+	// Bounce easing (bouncing ball)
+	EaseInBounce
+	EaseOutBounce
+	EaseInOutBounce
 )
 
 // Transition defines a CSS-like property transition.

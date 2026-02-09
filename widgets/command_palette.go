@@ -14,55 +14,87 @@ import (
 // CommandPaletteOption configures a CommandPalette widget.
 type CommandPaletteOption = Option[CommandPalette]
 
-// Command describes an executable action in the command palette.
-type Command struct {
-	Name        string
+// PaletteCommand describes an executable action in the command palette.
+type PaletteCommand struct {
+	ID          string
+	Label       string
 	Description string
-	Action      func()
 	Shortcut    string // display only, e.g. "Ctrl+S"
+	Category    string // for grouping
+	OnExecute   func()
 }
 
-// CommandPalette is a focusable fuzzy-search command launcher.
+// CommandPalette is a focusable fuzzy-search command launcher (VS Code-style Ctrl+K/Ctrl+P).
 // It displays a filterable list of commands with keyboard navigation.
 type CommandPalette struct {
 	FocusableBase
 
-	commands []Command
-	filtered []int // indices into commands
-	query    string
-	selected int
-	open     bool
-	services runtime.Services
+	commands   []PaletteCommand
+	filtered   []PaletteCommand
+	query      string
+	selected   int
+	visible    bool
+	maxResults int // default 10
+	services   runtime.Services
+	onExecute  func(cmd PaletteCommand) // called after command executes
 
 	style    backend.Style
 	styleSet bool
 }
 
 // NewCommandPalette creates a command palette with the given commands.
-func NewCommandPalette(commands []Command, opts ...CommandPaletteOption) *CommandPalette {
+func NewCommandPalette(commands ...PaletteCommand) *CommandPalette {
 	cp := &CommandPalette{
-		commands: commands,
-		style:    backend.DefaultStyle(),
+		commands:   commands,
+		maxResults: 10,
+		style:      backend.DefaultStyle(),
 	}
 	cp.filterCommands()
-	for _, opt := range opts {
-		if opt == nil {
-			continue
-		}
-		opt(cp)
-	}
 	cp.Base.Role = accessibility.RoleCombobox
 	cp.syncA11y()
 	return cp
 }
 
-// WithCommandPaletteOpen sets the initial open state.
+// WithCommandPaletteOpen sets the initial open/visible state.
 func WithCommandPaletteOpen(open bool) CommandPaletteOption {
 	return func(cp *CommandPalette) {
 		if cp == nil {
 			return
 		}
-		cp.open = open
+		cp.visible = open
+	}
+}
+
+// Show makes the palette visible, resetting the query and selection.
+func (cp *CommandPalette) Show() {
+	if cp == nil {
+		return
+	}
+	cp.visible = true
+	cp.query = ""
+	cp.selected = 0
+	cp.filterCommands()
+	cp.syncA11y()
+}
+
+// Hide closes the palette.
+func (cp *CommandPalette) Hide() {
+	if cp == nil {
+		return
+	}
+	cp.visible = false
+	cp.syncA11y()
+}
+
+// Toggle switches the palette between visible and hidden.
+func (cp *CommandPalette) Toggle() {
+	if cp == nil {
+		return
+	}
+	if cp.visible {
+		cp.Hide()
+	} else {
+		cp.Show()
 	}
 }
 
@@ -71,7 +103,7 @@ func (cp *CommandPalette) Open() bool {
 	if cp == nil {
 		return false
 	}
-	return cp.open
+	return cp.visible
 }
 
 // SetOpen sets the visibility of the palette.
@@ -79,13 +111,11 @@ func (cp *CommandPalette) SetOpen(open bool) {
 	if cp == nil {
 		return
 	}
-	cp.open = open
 	if open {
-		cp.query = ""
-		cp.selected = 0
-		cp.filterCommands()
+		cp.Show()
+	} else {
+		cp.Hide()
 	}
-	cp.syncA11y()
 }
 
 // Query returns the current search query.
@@ -112,14 +142,43 @@ func (cp *CommandPalette) FilteredCount() int {
 	return len(cp.filtered)
 }
 
-// SetCommands replaces the command list.
-func (cp *CommandPalette) SetCommands(commands []Command) {
+// SetCommands replaces the command list and refilters.
+func (cp *CommandPalette) SetCommands(cmds []PaletteCommand) {
 	if cp == nil {
 		return
 	}
-	cp.commands = commands
+	cp.commands = cmds
 	cp.filterCommands()
 	cp.syncA11y()
+}
+
+// AddCommand appends a single command and refilters.
+func (cp *CommandPalette) AddCommand(cmd PaletteCommand) {
+	if cp == nil {
+		return
+	}
+	cp.commands = append(cp.commands, cmd)
+	cp.filterCommands()
+	cp.syncA11y()
+}
+
+// SetMaxResults sets the maximum number of results to display.
+func (cp *CommandPalette) SetMaxResults(n int) {
+	if cp == nil {
+		return
+	}
+	if n < 1 {
+		n = 1
+	}
+	cp.maxResults = n
+}
+
+// SetOnExecute sets a callback invoked after a command is executed.
+func (cp *CommandPalette) SetOnExecute(fn func(cmd PaletteCommand)) {
+	if cp == nil {
+		return
+	}
+	cp.onExecute = fn
 }
 
 // SetStyle sets the widget style.
@@ -155,17 +214,17 @@ func (cp *CommandPalette) Unbind() {
 // Measure returns the desired size.
 func (cp *CommandPalette) Measure(constraints runtime.Constraints) runtime.Size {
 	return cp.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {
-		if !cp.open {
+		if !cp.visible {
 			return runtime.Size{}
 		}
 		width := 30
 		if contentConstraints.MaxWidth < width {
 			width = contentConstraints.MaxWidth
 		}
-		// header + search + separator + visible commands (max 10) + footer
+		// header + search + separator + visible commands (max maxResults) + footer
 		visibleItems := len(cp.filtered)
-		if visibleItems > 10 {
-			visibleItems = 10
+		if visibleItems > cp.maxResults {
+			visibleItems = cp.maxResults
 		}
 		height := 3 + visibleItems + 1 // top border + query + separator + items + bottom border
 		return contentConstraints.Constrain(runtime.Size{Width: width, Height: height})
@@ -174,7 +233,7 @@ func (cp *CommandPalette) Measure(constraints runtime.Constraints) runtime.Size 
 
 // Render draws the command palette.
 func (cp *CommandPalette) Render(ctx runtime.RenderContext) {
-	if cp == nil || !cp.open {
+	if cp == nil || !cp.visible {
 		return
 	}
 	cp.syncA11y()
@@ -185,6 +244,7 @@ func (cp *CommandPalette) Render(ctx runtime.RenderContext) {
 	baseStyle := resolveBaseStyle(ctx, cp, cp.style, cp.styleSet)
 	borderStyle := baseStyle.Foreground(backend.ColorCyan)
 	highlightStyle := baseStyle.Reverse(true)
+	dimStyle := baseStyle.Foreground(backend.ColorDefault)
 
 	row := 0
 
@@ -211,34 +271,63 @@ func (cp *CommandPalette) Render(ctx runtime.RenderContext) {
 	}
 
 	// Command list
-	for i, cmdIdx := range cp.filtered {
+	for i, cmd := range cp.filtered {
 		if row >= bounds.Height-1 {
 			break
 		}
-		if i >= 10 {
+		if i >= cp.maxResults {
 			break
 		}
-		cmd := cp.commands[cmdIdx]
 		indicator := "  "
 		lineStyle := baseStyle
 		if i == cp.selected {
 			indicator = "> "
 			lineStyle = highlightStyle
 		}
-		name := cmd.Name
+		label := cmd.Label
 		shortcut := cmd.Shortcut
 		inner := bounds.Width - 4 // subtract border chars and padding
 		if inner < 1 {
 			inner = 1
 		}
-		nameWidth := inner
+		labelWidth := inner
 		if shortcut != "" {
-			nameWidth = inner - textWidth(shortcut) - 1
-			if nameWidth < 1 {
-				nameWidth = 1
+			labelWidth = inner - textWidth(shortcut) - 1
+			if labelWidth < 1 {
+				labelWidth = 1
 			}
 		}
-		line := indicator + padRight(truncateString(name, nameWidth), nameWidth)
+
+		// Build the label portion, optionally with dimmed description
+		labelText := truncateString(label, labelWidth)
+		if cmd.Description != "" {
+			descAvail := labelWidth - textWidth(labelText) - 1
+			if descAvail > 3 {
+				desc := truncateString(cmd.Description, descAvail)
+				// Write label and description separately for styling
+				line := indicator + labelText
+				full := "\u2502 " + padRight(line, bounds.Width-4) + " \u2502"
+				writePadded(ctx.Buffer, bounds.X, bounds.Y+row, bounds.Width, truncateString(full, bounds.Width), lineStyle)
+				// Overlay the description in dim style (if not selected)
+				descX := bounds.X + 2 + textWidth(indicator) + textWidth(labelText) + 1
+				descStyle := dimStyle
+				if i == cp.selected {
+					descStyle = highlightStyle
+				}
+				if descX+textWidth(desc) < bounds.X+bounds.Width-2 {
+					ctx.Buffer.SetString(descX, bounds.Y+row, desc, descStyle)
+				}
+				// Overlay shortcut right-aligned
+				if shortcut != "" {
+					shortcutX := bounds.X + bounds.Width - 2 - textWidth(shortcut)
+					ctx.Buffer.SetString(shortcutX, bounds.Y+row, shortcut, lineStyle)
+				}
+				row++
+				continue
+			}
+		}
+
+		line := indicator + padRight(labelText, labelWidth)
 		if shortcut != "" {
 			line += " " + shortcut
 		}
@@ -271,13 +360,13 @@ func (cp *CommandPalette) HandleMessage(msg runtime.Message) runtime.HandleResul
 		return runtime.Unhandled()
 	}
 
-	if !cp.open {
+	if !cp.visible {
 		return runtime.Unhandled()
 	}
 
 	switch key.Key {
 	case terminal.KeyEscape:
-		cp.SetOpen(false)
+		cp.Hide()
 		if announcer := cp.services.Announcer(); announcer != nil {
 			announcer.Announce("Command palette closed", accessibility.PriorityPolite)
 		}
@@ -301,14 +390,16 @@ func (cp *CommandPalette) HandleMessage(msg runtime.Message) runtime.HandleResul
 
 	case terminal.KeyEnter:
 		if cp.selected >= 0 && cp.selected < len(cp.filtered) {
-			cmdIdx := cp.filtered[cp.selected]
-			cmd := cp.commands[cmdIdx]
-			cp.SetOpen(false)
+			cmd := cp.filtered[cp.selected]
+			cp.Hide()
 			if announcer := cp.services.Announcer(); announcer != nil {
-				announcer.Announce(fmt.Sprintf("Executed %s", cmd.Name), accessibility.PriorityPolite)
+				announcer.Announce(fmt.Sprintf("Executed %s", cmd.Label), accessibility.PriorityPolite)
 			}
-			if cmd.Action != nil {
-				cmd.Action()
+			if cmd.OnExecute != nil {
+				cmd.OnExecute()
+			}
+			if cp.onExecute != nil {
+				cp.onExecute(cmd)
 			}
 		}
 		return runtime.Handled()
@@ -332,14 +423,54 @@ func (cp *CommandPalette) HandleMessage(msg runtime.Message) runtime.HandleResul
 	return runtime.Unhandled()
 }
 
+// filterCommands updates the filtered list based on the current query.
+// When the query is empty, all commands are shown (up to maxResults in rendering).
+// When a query is provided, commands are matched against Label and Description
+// using case-insensitive substring matching, then sorted by relevance:
+// exact prefix matches on Label first, then contains matches.
 func (cp *CommandPalette) filterCommands() {
 	cp.filtered = cp.filtered[:0]
 	query := strings.ToLower(cp.query)
-	for i, cmd := range cp.commands {
-		if query == "" || strings.Contains(strings.ToLower(cmd.Name), query) {
-			cp.filtered = append(cp.filtered, i)
+
+	if query == "" {
+		// Show all commands when query is empty
+		cp.filtered = append(cp.filtered, cp.commands...)
+	} else {
+		type scored struct {
+			cmd   PaletteCommand
+			score int
+		}
+		var matches []scored
+		for _, cmd := range cp.commands {
+			labelLower := strings.ToLower(cmd.Label)
+			descLower := strings.ToLower(cmd.Description)
+
+			if strings.Contains(labelLower, query) || strings.Contains(descLower, query) {
+				s := 0
+				// Exact prefix match on label scores highest
+				if strings.HasPrefix(labelLower, query) {
+					s = 3
+				} else if strings.Contains(labelLower, query) {
+					// Contains in label
+					s = 2
+				} else {
+					// Contains in description only
+					s = 1
+				}
+				matches = append(matches, scored{cmd: cmd, score: s})
+			}
+		}
+		// Sort: higher score first, preserve original order for ties
+		for i := 1; i < len(matches); i++ {
+			for j := i; j > 0 && matches[j].score > matches[j-1].score; j-- {
+				matches[j], matches[j-1] = matches[j-1], matches[j]
+			}
+		}
+		for _, m := range matches {
+			cp.filtered = append(cp.filtered, m.cmd)
 		}
 	}
+
 	if cp.selected >= len(cp.filtered) {
 		cp.selected = max(0, len(cp.filtered)-1)
 	}
@@ -349,10 +480,9 @@ func (cp *CommandPalette) announceSelected() {
 	if cp.selected < 0 || cp.selected >= len(cp.filtered) {
 		return
 	}
-	cmdIdx := cp.filtered[cp.selected]
-	cmd := cp.commands[cmdIdx]
+	cmd := cp.filtered[cp.selected]
 	if announcer := cp.services.Announcer(); announcer != nil {
-		msg := cmd.Name
+		msg := cmd.Label
 		if cmd.Shortcut != "" {
 			msg += ", " + cmd.Shortcut
 		}
@@ -374,7 +504,7 @@ func (cp *CommandPalette) syncA11y() {
 	cp.Base.HasPopup = "listbox"
 	cp.Base.Autocomplete = "list"
 	cp.Base.Placeholder = "Type a command..."
-	if cp.open {
+	if cp.visible {
 		expanded := true
 		cp.Base.State.Expanded = &expanded
 	} else {
@@ -382,8 +512,8 @@ func (cp *CommandPalette) syncA11y() {
 		cp.Base.State.Expanded = &expanded
 	}
 	if len(cp.filtered) > 0 && cp.selected < len(cp.filtered) {
-		cmdIdx := cp.filtered[cp.selected]
-		cp.Base.Description = cp.commands[cmdIdx].Name
+		cmd := cp.filtered[cp.selected]
+		cp.Base.Description = cmd.Label
 		cp.Base.PosInSet = cp.selected + 1
 		cp.Base.SetSize = len(cp.filtered)
 	} else {

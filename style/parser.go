@@ -1308,17 +1308,13 @@ func parseDuration(value string) (time.Duration, error) {
 }
 
 // parseEasing parses a CSS-like easing function name.
+// Supports standard CSS names ("linear", "ease-in", "ease-out", "ease-in-out")
+// and extended names ("ease-in-quad", "ease-out-cubic", "ease-in-elastic",
+// "ease-out-bounce", etc.).
 func parseEasing(value string) (EasingFunc, error) {
-	switch strings.ToLower(strings.TrimSpace(value)) {
-	case "linear":
-		return EaseLinear, nil
-	case "ease-in":
-		return EaseIn, nil
-	case "ease-out":
-		return EaseOut, nil
-	case "ease-in-out":
-		return EaseInOut, nil
-	default:
-		return EaseLinear, fmt.Errorf("style: unknown easing function %q", value)
+	name := strings.ToLower(strings.TrimSpace(value))
+	if ef, ok := easingNameMap[name]; ok {
+		return ef, nil
 	}
+	return EaseLinear, fmt.Errorf("style: unknown easing function %q", value)
 }

@@ -249,19 +249,10 @@ func (tm *TransitionManager) interpolatedSpacing(at *activeTransition, now time.
 // --- easing application ---
 
 func applyEasing(fn EasingFunc, t float64) float64 {
-	switch fn {
-	case EaseIn:
-		return t * t
-	case EaseOut:
-		return t * (2 - t)
-	case EaseInOut:
-		if t < 0.5 {
-			return 2 * t * t
-		}
-		return -1 + (4-2*t)*t
-	default: // EaseLinear
-		return t
+	if impl, ok := easingFuncTable[fn]; ok {
+		return impl(t)
 	}
+	return t // fallback to linear
 }
 
 // --- lerp functions ---
