@@ -109,6 +109,9 @@ type App struct {
 	mcpCloser         io.Closer
 	focusRestore      FocusRestore
 
+	dragActive bool
+	dragData   *DragData
+
 	running     atomic.Bool
 	dirty       bool
 	renderMu    sync.Mutex
@@ -421,6 +424,12 @@ func (a *App) Run(ctx context.Context) error {
 	if inlineHeightSetter, ok := a.backend.(backend.InlineHeightSetter); ok {
 		inlineHeightSetter.SetInlineHeight(a.inlineHeight)
 	}
+	// Detect synchronized output capability and enable it on the backend.
+	// DEC mode 2026 eliminates screen tearing by buffering frame updates.
+	if sw, ok := a.backend.(backend.SyncOutputWriter); ok {
+		caps := terminal.DetectCaps()
+		sw.SetSyncOutput(caps.SynchronizedOut)
+	}
 	taskCtx, taskCancel := context.WithCancel(ctx)
 	a.stateMu.Lock()
 	a.taskCtx = taskCtx
@@ -667,6 +676,29 @@ func (a *App) handleCommand(cmd Command) bool {
 	case Effect:
 		a.runEffect(c)
 		return false
+	case DragStartMsg:
+		a.dragActive = true
+		data := c.Data
+		a.dragData = &data
+		if a.announcer != nil {
+			label := data.Label
+			if label == "" {
+				label = data.Kind
+			}
+			a.announcer.Announce("Dragging: "+label, accessibility.PriorityAssertive)
+		}
+		return true
+	case DragEndMsg:
+		a.dragActive = false
+		a.dragData = nil
+		if a.announcer != nil {
+			if c.Cancelled {
+				a.announcer.Announce("Drag cancelled", accessibility.PriorityPolite)
+			} else {
+				a.announcer.Announce("Dropped", accessibility.PriorityPolite)
+			}
+		}
+		return true
 	default:
 		if a.commandHandler != nil {
 			return a.commandHandler(cmd)
@@ -681,6 +713,22 @@ func (a *App) ExecuteCommand(cmd Command) bool {
 		return false
 	}
 	return a.handleCommand(cmd)
+}
+
+// DragActive reports whether a drag operation is in progress.
+func (a *App) DragActive() bool {
+	if a == nil {
+		return false
+	}
+	return a.dragActive
+}
+
+// DragData returns the data for the active drag, or nil if no drag is active.
+func (a *App) DragData() *DragData {
+	if a == nil {
+		return nil
+	}
+	return a.dragData
 }
 
 func (a *App) pollEvents() {
@@ -751,6 +799,14 @@ func (a *App) render() {
 	var imageOps []imageOp
 	if buf != nil {
 		imageOps = buf.ImageOps()
+	}
+
+	// Begin synchronized output if the backend supports DEC mode 2026.
+	// This wraps the entire frame update (cell writes + Show) so the
+	// terminal can buffer and apply changes atomically, eliminating tearing.
+	if sw, ok := a.backend.(backend.SyncOutputWriter); ok && sw.SyncOutputSupported() {
+		sw.BeginSync()
+		defer sw.EndSync()
 	}
 
 	if buf != nil && buf.IsDirty() {

@@ -98,6 +98,55 @@ func (s *SignalAdapter[T]) Render(item T, index int, selected bool, ctx runtime.
 	s.render(item, index, selected, ctx)
 }
 
+// MutableListAdapter extends ListAdapter with mutation support for drag-and-drop reordering.
+type MutableListAdapter[T any] interface {
+	ListAdapter[T]
+	// Move moves the item at fromIndex to toIndex, shifting other items as needed.
+	Move(fromIndex, toIndex int)
+}
+
+// MutableSliceAdapter adapts a mutable slice to a MutableListAdapter.
+type MutableSliceAdapter[T any] struct {
+	SliceAdapter[T]
+}
+
+// NewMutableSliceAdapter creates a mutable slice adapter.
+func NewMutableSliceAdapter[T any](items []T, render RenderFunc[T]) *MutableSliceAdapter[T] {
+	return &MutableSliceAdapter[T]{
+		SliceAdapter: SliceAdapter[T]{items: items, render: render},
+	}
+}
+
+// Move moves an item from one index to another.
+func (m *MutableSliceAdapter[T]) Move(fromIndex, toIndex int) {
+	if m == nil || fromIndex < 0 || toIndex < 0 {
+		return
+	}
+	if fromIndex >= len(m.items) || toIndex >= len(m.items) {
+		return
+	}
+	if fromIndex == toIndex {
+		return
+	}
+	item := m.items[fromIndex]
+	// Remove from old position.
+	m.items = append(m.items[:fromIndex], m.items[fromIndex+1:]...)
+	// Insert at new position.
+	m.items = append(m.items[:toIndex], append([]T{item}, m.items[toIndex:]...)...)
+}
+
+// Items returns the current slice (useful for reading back after reorder).
+func (m *MutableSliceAdapter[T]) Items() []T {
+	if m == nil {
+		return nil
+	}
+	return m.items
+}
+
+// ListOnDrop is called when a drop completes on a list.
+// It receives the source index, destination index, and the item that was moved.
+type ListOnDrop[T any] func(fromIndex, toIndex int, item T)
+
 // List renders a list of items.
 type List[T any] struct {
 	FocusableBase
@@ -105,13 +154,21 @@ type List[T any] struct {
 	selected        int
 	offset          int
 	onSelect        func(index int, item T)
+	onDrop          ListOnDrop[T]
 	label           string
 	labelTrimmed    string
 	descriptionCache string
 	cachedCount     int
 	style           backend.Style
 	selectedStyle   backend.Style
+	dragStyle       backend.Style
 	services        runtime.Services
+
+	// Drag-and-drop state
+	draggable  bool
+	dragging   bool
+	dragOrigin int // original index of the dragged item
+	dropIndex  int // current drop target index
 }
 
 // NewList creates a list widget.
@@ -123,7 +180,10 @@ func NewList[T any](adapter ListAdapter[T]) *List[T] {
 		labelTrimmed:  "List",
 		style:         backend.DefaultStyle(),
 		selectedStyle: backend.DefaultStyle().Reverse(true),
+		dragStyle:     backend.DefaultStyle().Reverse(true).Bold(true),
 		cachedCount:   -1,
+		dragOrigin:    -1,
+		dropIndex:     -1,
 	}
 	list.Base.Role = accessibility.RoleList
 	list.syncA11y()
@@ -176,6 +236,65 @@ func (l *List[T]) SetLabel(label string) {
 	l.syncA11y()
 }
 
+// SetDraggable enables or disables drag-and-drop reordering.
+// When enabled, the user can press Ctrl+G to grab a selected item,
+// use arrow keys to move the drop indicator, Enter to drop (reorder),
+// or Escape to cancel.
+func (l *List[T]) SetDraggable(enabled bool) {
+	if l == nil {
+		return
+	}
+	l.draggable = enabled
+}
+
+// IsDraggable reports whether drag-and-drop reordering is enabled.
+func (l *List[T]) IsDraggable() bool {
+	if l == nil {
+		return false
+	}
+	return l.draggable
+}
+
+// IsDragging reports whether a drag operation is currently in progress.
+func (l *List[T]) IsDragging() bool {
+	if l == nil {
+		return false
+	}
+	return l.dragging
+}
+
+// DragOrigin returns the index of the item being dragged, or -1 if no drag is active.
+func (l *List[T]) DragOrigin() int {
+	if l == nil || !l.dragging {
+		return -1
+	}
+	return l.dragOrigin
+}
+
+// DropIndex returns the current drop target index, or -1 if no drag is active.
+func (l *List[T]) DropIndex() int {
+	if l == nil || !l.dragging {
+		return -1
+	}
+	return l.dropIndex
+}
+
+// SetOnDrop registers a handler called when a drop completes.
+func (l *List[T]) SetOnDrop(fn ListOnDrop[T]) {
+	if l == nil {
+		return
+	}
+	l.onDrop = fn
+}
+
+// SetDragStyle updates the style used for the item being dragged.
+func (l *List[T]) SetDragStyle(style backend.Style) {
+	if l == nil {
+		return
+	}
+	l.dragStyle = style
+}
+
 // Measure returns the desired size.
 func (l *List[T]) Measure(constraints runtime.Constraints) runtime.Size {
 	return l.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {
@@ -221,6 +340,7 @@ func (l *List[T]) Render(ctx runtime.RenderContext) {
 	if l.selected >= l.offset+content.Height {
 		l.offset = l.selected - content.Height + 1
 	}
+	dragIndicatorStyle := mergeBackendStyles(baseStyle, l.dragStyle)
 	for i := 0; i < content.Height; i++ {
 		index := l.offset + i
 		if index < 0 || index >= count {
@@ -229,14 +349,24 @@ func (l *List[T]) Render(ctx runtime.RenderContext) {
 		item := l.adapter.Item(index)
 		rowBounds := runtime.Rect{X: content.X, Y: content.Y + i, Width: content.Width, Height: 1}
 		rowCtx := ctx.Sub(rowBounds)
-		if index == l.selected {
+		if l.dragging && index == l.dragOrigin {
+			// The item being dragged gets the drag style.
+			ctx.Buffer.Fill(rowBounds, ' ', dragIndicatorStyle)
+			l.adapter.Render(item, index, true, rowCtx)
+		} else if l.dragging && index == l.dropIndex {
+			// The drop target position gets highlighted.
 			ctx.Buffer.Fill(rowBounds, ' ', selectedStyle)
+			l.adapter.Render(item, index, true, rowCtx)
+		} else if index == l.selected && !l.dragging {
+			ctx.Buffer.Fill(rowBounds, ' ', selectedStyle)
+			l.adapter.Render(item, index, true, rowCtx)
+		} else {
+			l.adapter.Render(item, index, false, rowCtx)
 		}
-		l.adapter.Render(item, index, index == l.selected, rowCtx)
 	}
 }
 
-// HandleMessage handles navigation.
+// HandleMessage handles navigation and drag-and-drop.
 func (l *List[T]) HandleMessage(msg runtime.Message) runtime.HandleResult {
 	if l == nil || !l.focused || l.adapter == nil {
 		return runtime.Unhandled()
@@ -249,6 +379,12 @@ func (l *List[T]) HandleMessage(msg runtime.Message) runtime.HandleResult {
 	if count == 0 {
 		return runtime.Unhandled()
 	}
+
+	// Handle drag-in-progress keys first.
+	if l.dragging {
+		return l.handleDragKey(key, count)
+	}
+
 	switch key.Key {
 	case terminal.KeyUp:
 		l.setSelected(l.selected - 1)
@@ -274,8 +410,147 @@ func (l *List[T]) HandleMessage(msg runtime.Message) runtime.HandleResult {
 			l.onSelect(l.selected, item)
 		}
 		return runtime.Handled()
+	case terminal.KeyCtrlG:
+		if l.draggable {
+			return l.startDrag()
+		}
 	}
 	return runtime.Unhandled()
+}
+
+// startDrag begins a drag operation on the currently selected item.
+func (l *List[T]) startDrag() runtime.HandleResult {
+	count := l.adapter.Count()
+	if count == 0 || l.selected < 0 || l.selected >= count {
+		return runtime.Unhandled()
+	}
+	l.dragging = true
+	l.dragOrigin = l.selected
+	l.dropIndex = l.selected
+	item := l.adapter.Item(l.selected)
+	label := fmt.Sprint(item)
+	data := runtime.DragData{
+		Source: l,
+		Kind:   "list-item",
+		Value:  item,
+		Label:  label,
+	}
+	if announcer := l.services.Announcer(); announcer != nil {
+		announcer.Announce(fmt.Sprintf("Grabbed item %d: %s", l.selected+1, label), accessibility.PriorityAssertive)
+	}
+	return runtime.WithCommand(runtime.DragStartMsg{Data: data})
+}
+
+// handleDragKey processes keys while a drag operation is in progress.
+func (l *List[T]) handleDragKey(key runtime.KeyMsg, count int) runtime.HandleResult {
+	switch key.Key {
+	case terminal.KeyUp:
+		if l.dropIndex > 0 {
+			l.dropIndex--
+			l.announceDropPosition()
+		}
+		return runtime.Handled()
+	case terminal.KeyDown:
+		if l.dropIndex < count-1 {
+			l.dropIndex++
+			l.announceDropPosition()
+		}
+		return runtime.Handled()
+	case terminal.KeyHome:
+		l.dropIndex = 0
+		l.announceDropPosition()
+		return runtime.Handled()
+	case terminal.KeyEnd:
+		l.dropIndex = count - 1
+		l.announceDropPosition()
+		return runtime.Handled()
+	case terminal.KeyEnter, terminal.KeyCtrlD:
+		return l.completeDrop()
+	case terminal.KeyEscape:
+		return l.cancelDrag()
+	}
+	return runtime.Handled() // Swallow other keys during drag.
+}
+
+// completeDrop finishes the drag by reordering the list.
+func (l *List[T]) completeDrop() runtime.HandleResult {
+	from := l.dragOrigin
+	to := l.dropIndex
+	l.dragging = false
+	dragOrigin := l.dragOrigin
+	l.dragOrigin = -1
+	l.dropIndex = -1
+
+	item := l.adapter.Item(from)
+
+	// Perform the reorder if the adapter supports it.
+	if mutable, ok := l.adapter.(MutableListAdapter[T]); ok && from != to {
+		mutable.Move(from, to)
+	}
+
+	l.selected = to
+	l.syncA11y()
+
+	if l.onDrop != nil {
+		l.onDrop(dragOrigin, to, item)
+	}
+
+	data := runtime.DragData{
+		Source: l,
+		Kind:   "list-item",
+		Value:  item,
+		Label:  fmt.Sprint(item),
+	}
+	return runtime.WithCommand(runtime.DragEndMsg{
+		Data:      data,
+		Target:    l,
+		Cancelled: false,
+	})
+}
+
+// cancelDrag cancels the current drag operation.
+func (l *List[T]) cancelDrag() runtime.HandleResult {
+	item := l.adapter.Item(l.dragOrigin)
+	l.selected = l.dragOrigin
+	l.dragging = false
+	l.dragOrigin = -1
+	l.dropIndex = -1
+	l.syncA11y()
+
+	data := runtime.DragData{
+		Source: l,
+		Kind:   "list-item",
+		Value:  item,
+		Label:  fmt.Sprint(item),
+	}
+	return runtime.WithCommand(runtime.DragEndMsg{
+		Data:      data,
+		Target:    nil,
+		Cancelled: true,
+	})
+}
+
+func (l *List[T]) announceDropPosition() {
+	if announcer := l.services.Announcer(); announcer != nil {
+		item := l.adapter.Item(l.dropIndex)
+		announcer.Announce(fmt.Sprintf("Drop position %d: %v", l.dropIndex+1, item), accessibility.PriorityPolite)
+	}
+}
+
+// CanDrop returns true if this list accepts the given drag data.
+func (l *List[T]) CanDrop(data runtime.DragData) bool {
+	if l == nil || !l.draggable {
+		return false
+	}
+	return data.Kind == "list-item"
+}
+
+// OnDrop handles an external drop onto this list.
+func (l *List[T]) OnDrop(data runtime.DragData) bool {
+	if l == nil || !l.draggable {
+		return false
+	}
+	return data.Kind == "list-item"
 }
 
 func (l *List[T]) setSelected(index int) {
@@ -437,3 +712,5 @@ var _ runtime.Widget = (*List[any])(nil)
 var _ runtime.Focusable = (*List[any])(nil)
 var _ runtime.Bindable = (*List[any])(nil)
 var _ runtime.Unbindable = (*List[any])(nil)
+var _ runtime.DragSource = (*List[any])(nil)
+var _ runtime.DropTarget = (*List[any])(nil)

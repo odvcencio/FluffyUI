@@ -27,6 +27,9 @@ type Backend struct {
 
 	styleCache    map[backend.Style]tcell.Style
 	styleCacheCap int
+
+	// syncOutput indicates whether the terminal supports DEC mode 2026.
+	syncOutput bool
 }
 
 // New creates a new tcell backend.
@@ -733,6 +736,49 @@ func (b *Backend) SetCursorShape(shape backend.CursorShape) {
 	}
 }
 
+// SetSyncOutput enables or disables synchronized output support.
+// Call this after detecting terminal capabilities (see terminal.TerminalCaps).
+func (b *Backend) SetSyncOutput(enabled bool) {
+	if b == nil {
+		return
+	}
+	b.syncOutput = enabled
+}
+
+// SyncOutputSupported reports whether synchronized output (DEC mode 2026)
+// is enabled for this backend.
+func (b *Backend) SyncOutputSupported() bool {
+	if b == nil {
+		return false
+	}
+	return b.syncOutput
+}
+
+// BeginSync writes the DEC mode 2026 enable sequence to the terminal.
+func (b *Backend) BeginSync() {
+	if b == nil || !b.syncOutput {
+		return
+	}
+	if b.raw != nil {
+		_ = b.raw.WriteRaw([]byte("\x1b[?2026h"))
+	} else {
+		fmt.Fprint(os.Stdout, "\x1b[?2026h")
+	}
+}
+
+// EndSync writes the DEC mode 2026 disable sequence to the terminal.
+func (b *Backend) EndSync() {
+	if b == nil || !b.syncOutput {
+		return
+	}
+	if b.raw != nil {
+		_ = b.raw.WriteRaw([]byte("\x1b[?2026l"))
+	} else {
+		fmt.Fprint(os.Stdout, "\x1b[?2026l")
+	}
+}
+
 // Ensure Backend implements backend.Backend and optional interfaces.
 var _ backend.Backend = (*Backend)(nil)
 var _ backend.CursorShapeSetter = (*Backend)(nil)
+var _ backend.SyncOutputWriter = (*Backend)(nil)

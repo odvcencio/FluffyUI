@@ -6,16 +6,32 @@ import (
 
 // Renderer computes minimal ANSI output from screen buffer changes.
 type Renderer struct {
-	screen *Screen
-	writer *ANSIWriter
+	screen     *Screen
+	writer     *ANSIWriter
+	syncOutput bool // Whether to wrap frames in DEC mode 2026 markers.
 }
 
 // NewRenderer creates a renderer for the given screen.
+// Synchronized output is enabled by default.
 func NewRenderer(screen *Screen) *Renderer {
 	return &Renderer{
-		screen: screen,
-		writer: NewANSIWriter(),
+		screen:     screen,
+		writer:     NewANSIWriter(),
+		syncOutput: true,
 	}
+}
+
+// SetSyncOutput enables or disables DEC mode 2026 synchronized output
+// wrapping around rendered frames. When enabled (the default), frames
+// are wrapped in SyncBegin/SyncEnd markers so the terminal can apply
+// changes atomically, eliminating screen tearing.
+func (r *Renderer) SetSyncOutput(enabled bool) {
+	r.syncOutput = enabled
+}
+
+// SyncOutput reports whether synchronized output is enabled.
+func (r *Renderer) SyncOutput() bool {
+	return r.syncOutput
 }
 
 // Render computes the diff between current and previous buffers,
@@ -27,7 +43,9 @@ func (r *Renderer) Render() string {
 	r.writer.Reset()
 	r.writer.Grow(r.screen.width * r.screen.height / 4) // ~25% change estimate
 
-	r.writer.buf.WriteString(ANSISyncStart)
+	if r.syncOutput {
+		r.writer.buf.WriteString(ANSISyncStart)
+	}
 	r.writer.HideCursor()
 
 	lastX, lastY := -1, -1
@@ -93,7 +111,9 @@ func (r *Renderer) Render() string {
 		}
 	}
 
-	r.writer.buf.WriteString(ANSISyncEnd)
+	if r.syncOutput {
+		r.writer.buf.WriteString(ANSISyncEnd)
+	}
 	return r.writer.String()
 }
 
@@ -105,7 +125,9 @@ func (r *Renderer) RenderFull() string {
 	r.writer.Reset()
 	r.writer.Grow(r.screen.width * r.screen.height * 2)
 
-	r.writer.buf.WriteString(ANSISyncStart)
+	if r.syncOutput {
+		r.writer.buf.WriteString(ANSISyncStart)
+	}
 
 	// Clear screen and home cursor
 	r.writer.buf.WriteString(ANSIClearScreen)
@@ -158,7 +180,9 @@ func (r *Renderer) RenderFull() string {
 		copy(r.screen.previous[y], r.screen.current[y])
 	}
 
-	r.writer.buf.WriteString(ANSISyncEnd)
+	if r.syncOutput {
+		r.writer.buf.WriteString(ANSISyncEnd)
+	}
 	return r.writer.String()
 }
 
@@ -358,6 +382,12 @@ func (c *Compositor) compositeLayer(layer *Screen) {
 			}
 		}
 	}
+}
+
+// SetSyncOutput enables or disables synchronized output on the compositor's
+// underlying renderer. See Renderer.SetSyncOutput for details.
+func (c *Compositor) SetSyncOutput(enabled bool) {
+	c.renderer.SetSyncOutput(enabled)
 }
 
 // Render computes diff and returns ANSI output.
