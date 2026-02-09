@@ -14,6 +14,7 @@ type Badge struct {
 	text     string
 	style    backend.Style
 	styleSet bool
+	services runtime.Services
 }
 
 // NewBadge creates a badge with the given text.
@@ -115,6 +116,7 @@ func (b *Badge) Bind(services runtime.Services) {
 	if b == nil {
 		return
 	}
+	b.services = services
 }
 
 // Unbind releases app services.
@@ -122,6 +124,7 @@ func (b *Badge) Unbind() {
 	if b == nil {
 		return
 	}
+	b.services = runtime.Services{}
 }
 
 var _ runtime.Widget = (*Badge)(nil)

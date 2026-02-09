@@ -1,76 +1,70 @@
 package main
 
 import (
-	"context"
-	"fmt"
-	"os"
+	"log"
 
 	"github.com/odvcencio/fluffyui/backend"
 	"github.com/odvcencio/fluffyui/fluffy"
-	"github.com/odvcencio/fluffyui/runtime"
 	"github.com/odvcencio/fluffyui/state"
 	"github.com/odvcencio/fluffyui/widgets"
 )
 
 func main() {
-	app, err := fluffy.NewApp()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "app init failed: %v\n", err)
-		os.Exit(1)
-	}
-	app.SetRoot(buildShowcase())
-
-	if err := app.Run(context.Background()); err != nil && err != context.Canceled {
-		fmt.Fprintf(os.Stderr, "app run failed: %v\n", err)
-		os.Exit(1)
+	if err := fluffy.Run(buildShowcase()); err != nil {
+		log.Fatal(err)
 	}
 }
 
-func buildShowcase() runtime.Widget {
-	overview := widgets.VBox(
-		widgets.FlexFixed(widgets.NewLabel("FluffyUI Showcase", widgets.WithLabelStyle(backend.DefaultStyle().Bold(true)))),
-		widgets.FlexFixed(widgets.NewAlert("All systems nominal", widgets.AlertSuccess)),
-		widgets.FlexFixed(progressWidget()),
-		widgets.FlexFixed(widgets.NewSpinner()),
+func buildShowcase() *widgets.Tabs {
+	overview := fluffy.VFlex(
+		fluffy.Fixed(fluffy.Label("FluffyUI Showcase",
+			widgets.WithLabelStyle(backend.DefaultStyle().Bold(true)))),
+		fluffy.FixedSpace(1),
+		fluffy.Fixed(widgets.NewAlert("All systems nominal", widgets.AlertSuccess)),
+		fluffy.FixedSpace(1),
+		fluffy.Fixed(progressWidget()),
+		fluffy.FixedSpace(1),
+		fluffy.Fixed(widgets.NewSpinner()),
 	)
-	overview.Gap = 1
 
-	inputs := widgets.VBox(
-		widgets.FlexFixed(widgets.NewLabel("Inputs", widgets.WithLabelStyle(backend.DefaultStyle().Bold(true)))),
-		widgets.FlexFixed(widgets.NewInput()),
-		widgets.FlexFixed(widgets.NewCheckbox("Enable alerts")),
-		widgets.FlexFixed(widgets.NewSelect(
-			widgets.SelectOption{Label: "Low", Value: "low"},
-			widgets.SelectOption{Label: "Medium", Value: "med"},
-			widgets.SelectOption{Label: "High", Value: "high"},
-		)),
-		widgets.FlexFixed(widgets.NewSlider(state.NewSignal(0.5))),
+	inputs := fluffy.VFlex(
+		fluffy.Fixed(fluffy.Label("Inputs",
+			widgets.WithLabelStyle(backend.DefaultStyle().Bold(true)))),
+		fluffy.FixedSpace(1),
+		fluffy.Fixed(widgets.NewInput()),
+		fluffy.FixedSpace(1),
+		fluffy.Fixed(widgets.NewCheckbox("Enable alerts")),
+		fluffy.FixedSpace(1),
+		fluffy.Fixed(fluffy.SelectFromStrings(
+			[]string{"Low", "Medium", "High"}, nil)),
+		fluffy.FixedSpace(1),
+		fluffy.Fixed(widgets.NewSlider(state.NewSignal(0.5))),
 	)
-	inputs.Gap = 1
 
-	data := widgets.VBox(
-		widgets.FlexFixed(widgets.NewLabel("Data", widgets.WithLabelStyle(backend.DefaultStyle().Bold(true)))),
-		widgets.FlexFixed(dataTable()),
-		widgets.FlexFixed(sparklineWidget()),
+	data := fluffy.VFlex(
+		fluffy.Fixed(fluffy.Label("Data",
+			widgets.WithLabelStyle(backend.DefaultStyle().Bold(true)))),
+		fluffy.FixedSpace(1),
+		fluffy.Fixed(dataTable()),
+		fluffy.FixedSpace(1),
+		fluffy.Fixed(sparklineWidget()),
 	)
-	data.Gap = 1
 
-	tabs := widgets.NewTabs(
+	return widgets.NewTabs(
 		widgets.Tab{Title: "Overview", Content: overview},
 		widgets.Tab{Title: "Inputs", Content: inputs},
 		widgets.Tab{Title: "Data", Content: data},
 	)
-	return tabs
 }
 
-func progressWidget() runtime.Widget {
+func progressWidget() *widgets.Progress {
 	progress := widgets.NewProgress()
 	progress.Label = "Capacity"
 	progress.Value = 70
 	return progress
 }
 
-func dataTable() runtime.Widget {
+func dataTable() *widgets.Panel {
 	table := widgets.NewTable(
 		widgets.TableColumn{Title: "Service"},
 		widgets.TableColumn{Title: "Latency"},
@@ -85,7 +79,7 @@ func dataTable() runtime.Widget {
 	return panel
 }
 
-func sparklineWidget() runtime.Widget {
+func sparklineWidget() *widgets.Panel {
 	data := state.NewSignal([]float64{12, 18, 14, 22, 16, 24, 19})
 	spark := widgets.NewSparkline(data)
 	panel := widgets.NewPanel(spark, widgets.WithPanelBorder(backend.DefaultStyle()))

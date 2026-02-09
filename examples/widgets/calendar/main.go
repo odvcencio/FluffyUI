@@ -44,12 +44,12 @@ func NewCalendarView() *CalendarView {
 	view.datePicker = widgets.NewDatePicker()
 	view.status = widgets.NewLabel("Select a date")
 
-	view.calendar.OnSelect(func(date time.Time) {
+	view.calendar.SetOnSelect(func(date time.Time) {
 		view.status.SetText("Selected: " + date.Format("2006-01-02"))
 		view.Invalidate()
 	})
 
-	view.datePicker.Calendar().OnSelect(func(date time.Time) {
+	view.datePicker.Calendar().SetOnSelect(func(date time.Time) {
 		view.status.SetText("Picked: " + date.Format("2006-01-02"))
 		view.Invalidate()
 	})

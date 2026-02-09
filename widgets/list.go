@@ -395,6 +395,7 @@ func (l *List[T]) syncA11y() {
 	if l.Base.Role == "" {
 		l.Base.Role = accessibility.RoleList
 	}
+	l.Base.Orientation = "vertical"
 	label := l.labelTrimmed
 	if label == "" {
 		label = "List"
@@ -434,3 +435,5 @@ var _ scroll.Controller = (*List[any])(nil)
 
 var _ runtime.Widget = (*List[any])(nil)
 var _ runtime.Focusable = (*List[any])(nil)
+var _ runtime.Bindable = (*List[any])(nil)
+var _ runtime.Unbindable = (*List[any])(nil)

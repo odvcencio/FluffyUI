@@ -19,6 +19,7 @@ func TestSearchWidget_New(t *testing.T) {
 
 func TestSearchWidget_Typing(t *testing.T) {
 	s := NewSearchWidget()
+	s.Focus()
 
 	var lastQuery string
 	s.SetOnSearch(func(query string) {
@@ -40,6 +41,7 @@ func TestSearchWidget_Typing(t *testing.T) {
 
 func TestSearchWidget_Backspace(t *testing.T) {
 	s := NewSearchWidget()
+	s.Focus()
 
 	// Type "test"
 	for _, r := range "test" {
@@ -57,6 +59,7 @@ func TestSearchWidget_Backspace(t *testing.T) {
 
 func TestSearchWidget_Escape(t *testing.T) {
 	s := NewSearchWidget()
+	s.Focus()
 
 	// Type something
 	s.HandleMessage(runtime.KeyMsg{Key: terminal.KeyRune, Rune: 'a'})
@@ -74,6 +77,7 @@ func TestSearchWidget_Escape(t *testing.T) {
 
 func TestSearchWidget_Enter(t *testing.T) {
 	s := NewSearchWidget()
+	s.Focus()
 
 	// Type something
 	s.HandleMessage(runtime.KeyMsg{Key: terminal.KeyRune, Rune: 'a'})
@@ -104,6 +108,7 @@ func TestSearchWidget_MatchInfo(t *testing.T) {
 
 func TestSearchWidget_Navigate(t *testing.T) {
 	s := NewSearchWidget()
+	s.Focus()
 
 	var nextCount, prevCount int
 	s.SetOnNavigate(func() { nextCount++ }, func() { prevCount++ })

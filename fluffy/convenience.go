@@ -94,7 +94,7 @@ func SelectFromStrings(options []string, onChange func(string)) *widgets.Select 
 //
 // Example:
 //
-//	count := fluffy.NewSignal(0)
+//	count := fluffy.Signal(0)
 //	label := fluffy.ReactiveText(func() string {
 //	    return fmt.Sprintf("Count: %d", count.Get())
 //	}, count)

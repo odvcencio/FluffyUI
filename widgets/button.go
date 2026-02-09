@@ -440,3 +440,5 @@ func (b *Button) HandleMessage(msg runtime.Message) runtime.HandleResult {
 
 var _ runtime.Widget = (*Button)(nil)
 var _ runtime.Focusable = (*Button)(nil)
+var _ runtime.Bindable = (*Button)(nil)
+var _ runtime.Unbindable = (*Button)(nil)

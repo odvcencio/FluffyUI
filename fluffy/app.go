@@ -4,9 +4,9 @@
 //
 //	fluffy.Run(fluffy.Label("Hello, world!"))
 //
-// For interactive apps, use NewSignal for state and ReactiveText for display:
+// For interactive apps, use Signal for state and ReactiveText for display:
 //
-//	count := fluffy.NewSignal(0)
+//	count := fluffy.Signal(0)
 //	fluffy.Run(fluffy.VStack(
 //	    fluffy.ReactiveText(func() string {
 //	        return fmt.Sprintf("Count: %d", count.Get())

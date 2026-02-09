@@ -147,3 +147,5 @@ func (g *AnimatedGauge) drawGauge(canvas *graphics.Canvas) {
 }
 
 var _ runtime.Widget = (*AnimatedGauge)(nil)
+var _ runtime.Bindable = (*AnimatedGauge)(nil)
+var _ runtime.Unbindable = (*AnimatedGauge)(nil)

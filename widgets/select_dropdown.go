@@ -244,6 +244,7 @@ func (d *selectDropdown) syncA11y() {
 	if d.Base.Role == "" {
 		d.Base.Role = accessibility.RoleListbox
 	}
+	d.Base.Orientation = "vertical"
 	label := strings.TrimSpace(d.label)
 	if label == "" {
 		label = "Select"

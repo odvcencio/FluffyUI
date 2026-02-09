@@ -401,7 +401,7 @@ func (ins *Inspector) adjustScroll(visibleHeight int) {
 
 // HandleMessage processes keyboard input.
 func (ins *Inspector) HandleMessage(msg runtime.Message) runtime.HandleResult {
-	if ins == nil {
+	if ins == nil || !ins.focused {
 		return runtime.Unhandled()
 	}
 	key, ok := msg.(runtime.KeyMsg)

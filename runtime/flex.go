@@ -287,7 +287,9 @@ func (f *Flex) Layout(bounds Rect) {
 		}
 
 		f.childBounds[i] = childBounds
-		child.Widget.Layout(childBounds)
+		if child.Widget != nil {
+			child.Widget.Layout(childBounds)
+		}
 
 		offset += mainSize + f.Gap
 	}
@@ -387,6 +389,7 @@ func distributeFlexShrink(need int, weights []float64, sizes []int) []int {
 				break
 			}
 			out[idx]++
+			fractions[idx] = 0
 			remaining--
 			progress = true
 		}
@@ -452,6 +455,9 @@ func (f *Flex) Render(ctx RenderContext) {
 // Messages go to all children; first handler wins.
 func (f *Flex) HandleMessage(msg Message) HandleResult {
 	for _, child := range f.Children {
+		if child.Widget == nil {
+			continue
+		}
 		result := child.Widget.HandleMessage(msg)
 		if result.Handled {
 			return result
@@ -464,6 +470,9 @@ func (f *Flex) HandleMessage(msg Message) HandleResult {
 // If the cache is nil or the entry misses, it falls back to a direct
 // Measure call and stores the result for future lookups.
 func (f *Flex) cachedMeasure(w Widget, constraints Constraints) Size {
+	if w == nil {
+		return Size{}
+	}
 	if f.MeasureCache == nil {
 		return w.Measure(constraints)
 	}

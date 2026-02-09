@@ -72,11 +72,17 @@ func NewInput() *Input {
 
 // Bind attaches app services.
 func (i *Input) Bind(services runtime.Services) {
+	if i == nil {
+		return
+	}
 	i.services = services
 }
 
 // Unbind releases app services.
 func (i *Input) Unbind() {
+	if i == nil {
+		return
+	}
 	i.services = runtime.Services{}
 }
 
@@ -1075,11 +1081,17 @@ func (m *MultilineInput) StyleType() string {
 
 // Bind attaches app services.
 func (m *MultilineInput) Bind(services runtime.Services) {
+	if m == nil {
+		return
+	}
 	m.services = services
 }
 
 // Unbind releases app services.
 func (m *MultilineInput) Unbind() {
+	if m == nil {
+		return
+	}
 	m.services = runtime.Services{}
 }
 
@@ -1878,7 +1890,11 @@ var _ Selectable = (*MultilineInput)(nil)
 
 var _ runtime.Widget = (*Input)(nil)
 var _ runtime.Focusable = (*Input)(nil)
+var _ runtime.Bindable = (*Input)(nil)
+var _ runtime.Unbindable = (*Input)(nil)
 var _ Validatable = (*Input)(nil)
 var _ runtime.Widget = (*MultilineInput)(nil)
 var _ runtime.Focusable = (*MultilineInput)(nil)
+var _ runtime.Bindable = (*MultilineInput)(nil)
+var _ runtime.Unbindable = (*MultilineInput)(nil)
 var _ Validatable = (*MultilineInput)(nil)

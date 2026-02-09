@@ -3,6 +3,7 @@ package widgets
 import (
 	"math"
 
+	"github.com/odvcencio/fluffyui/accessibility"
 	"github.com/odvcencio/fluffyui/backend"
 	"github.com/odvcencio/fluffyui/graphics"
 	"github.com/odvcencio/fluffyui/runtime"
@@ -39,6 +40,8 @@ func NewLineChart() *LineChart {
 		label: "Line Chart",
 	}
 	chart.CanvasWidget = *NewCanvasWidget(chart.drawChart)
+	chart.Base.Role = accessibility.RoleImage
+	chart.Base.Label = "Line Chart"
 	return chart
 }
 

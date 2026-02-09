@@ -713,6 +713,7 @@ func (d *DirectoryTree) syncA11y() {
 	if d.Base.Role == "" {
 		d.Base.Role = accessibility.RoleTree
 	}
+	d.Base.Orientation = "vertical"
 	label := strings.TrimSpace(d.label)
 	if label == "" {
 		label = "Directory Tree"
@@ -738,3 +739,5 @@ func (d *DirectoryTree) syncA11y() {
 var _ scroll.Controller = (*DirectoryTree)(nil)
 var _ runtime.Widget = (*DirectoryTree)(nil)
 var _ runtime.Focusable = (*DirectoryTree)(nil)
+var _ runtime.Bindable = (*DirectoryTree)(nil)
+var _ runtime.Unbindable = (*DirectoryTree)(nil)

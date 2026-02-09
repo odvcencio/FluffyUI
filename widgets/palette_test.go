@@ -38,6 +38,7 @@ func TestPaletteWidget_SetItems(t *testing.T) {
 
 func TestPaletteWidget_Filter(t *testing.T) {
 	p := NewPaletteWidget("Test")
+	p.Focus()
 
 	items := []PaletteItem{
 		{ID: "1", Label: "Apple"},
@@ -59,6 +60,7 @@ func TestPaletteWidget_Filter(t *testing.T) {
 
 func TestPaletteWidget_CaseInsensitiveFilter(t *testing.T) {
 	p := NewPaletteWidget("Test")
+	p.Focus()
 
 	items := []PaletteItem{
 		{ID: "1", Label: "UPPER"},
@@ -82,6 +84,7 @@ func TestPaletteWidget_CaseInsensitiveFilter(t *testing.T) {
 
 func TestPaletteWidget_Navigation(t *testing.T) {
 	p := NewPaletteWidget("Test")
+	p.Focus()
 
 	items := []PaletteItem{
 		{ID: "1", Label: "First"},
@@ -122,6 +125,7 @@ func TestPaletteWidget_Navigation(t *testing.T) {
 
 func TestPaletteWidget_HandleEnter(t *testing.T) {
 	p := NewPaletteWidget("Test")
+	p.Focus()
 
 	var selectedItem *PaletteItem
 	p.SetOnSelect(func(item PaletteItem) {
@@ -153,6 +157,7 @@ func TestPaletteWidget_HandleEnter(t *testing.T) {
 
 func TestPaletteWidget_HandleEscape(t *testing.T) {
 	p := NewPaletteWidget("Test")
+	p.Focus()
 
 	result := p.HandleMessage(runtime.KeyMsg{Key: terminal.KeyEscape})
 
@@ -173,6 +178,7 @@ func TestPaletteWidget_HandleEscape(t *testing.T) {
 
 func TestPaletteWidget_HandleBackspace(t *testing.T) {
 	p := NewPaletteWidget("Test")
+	p.Focus()
 
 	// Type some characters
 	p.HandleMessage(runtime.KeyMsg{Key: terminal.KeyRune, Rune: 'a'})
@@ -263,6 +269,7 @@ func TestPaletteWidget_Render(t *testing.T) {
 
 func TestPaletteWidget_SelectedItem(t *testing.T) {
 	p := NewPaletteWidget("Test")
+	p.Focus()
 
 	// No items
 	if p.SelectedItem() != nil {
@@ -296,6 +303,7 @@ func TestPaletteWidget_SelectedItem(t *testing.T) {
 
 func TestPaletteWidget_CustomFilter(t *testing.T) {
 	p := NewPaletteWidget("Test")
+	p.Focus()
 
 	// Custom filter that only matches exact prefix
 	p.SetFilterFn(func(item PaletteItem, query string) bool {

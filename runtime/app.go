@@ -753,7 +753,7 @@ func (a *App) render() {
 		imageOps = buf.ImageOps()
 	}
 
-	if buf.IsDirty() {
+	if buf != nil && buf.IsDirty() {
 		dirtyCount := buf.DirtyCount()
 		w, h := buf.Size()
 		totalCells := w * h

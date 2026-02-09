@@ -112,12 +112,12 @@ func NewShowcaseTabContent() *ShowcaseTabContent {
 	// Pickers.
 	datePicker := widgets.NewDatePicker()
 	if cal := datePicker.Calendar(); cal != nil {
-		cal.OnSelect(func(date time.Time) {
+		cal.SetOnSelect(func(date time.Time) {
 			s.setStatus("Date: " + date.Format("Jan 2"))
 		})
 	}
 	dateRange := widgets.NewDateRangePicker()
-	dateRange.OnRangeSelect(func(start, end time.Time) {
+	dateRange.SetOnRangeSelect(func(start, end time.Time) {
 		s.setStatus(fmt.Sprintf("Range: %s - %s", start.Format("Jan 2"), end.Format("Jan 2")))
 	})
 	timePick := widgets.NewTimePicker()
@@ -136,7 +136,7 @@ func NewShowcaseTabContent() *ShowcaseTabContent {
 		widgets.BreadcrumbItem{Label: "Examples"},
 		widgets.BreadcrumbItem{Label: "Candy Wars"},
 	)
-	crumbs.OnNavigate(func(index int) {
+	crumbs.SetOnNavigate(func(index int) {
 		if index >= 0 && index < len(crumbs.Items) {
 			s.setStatus("Breadcrumb: " + crumbs.Items[index].Label)
 		}

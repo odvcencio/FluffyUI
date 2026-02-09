@@ -382,6 +382,7 @@ func (m *Menu) syncA11y() {
 	if m.Base.Role == "" {
 		m.Base.Role = accessibility.RoleMenu
 	}
+	m.Base.Orientation = "vertical"
 	label := m.labelTrimmed
 	if label == "" {
 		label = "Menu"

@@ -249,6 +249,9 @@ func (s *Section) Render(ctx runtime.RenderContext) {
 
 // HandleMessage processes input.
 func (s *Section) HandleMessage(msg runtime.Message) runtime.HandleResult {
+	if s == nil || !s.focused {
+		return runtime.Unhandled()
+	}
 	key, ok := msg.(runtime.KeyMsg)
 	if !ok {
 		return runtime.Unhandled()

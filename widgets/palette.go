@@ -463,6 +463,9 @@ func (p *PaletteWidget) drawBorder(buf *runtime.Buffer, b runtime.Rect, style ba
 
 // HandleMessage processes keyboard input.
 func (p *PaletteWidget) HandleMessage(msg runtime.Message) runtime.HandleResult {
+	if p == nil || !p.focused {
+		return runtime.Unhandled()
+	}
 	key, ok := msg.(runtime.KeyMsg)
 	if !ok {
 		return runtime.Unhandled()

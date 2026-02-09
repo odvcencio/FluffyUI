@@ -478,6 +478,7 @@ func (t *Tree) syncA11y() {
 	if t.Base.Role == "" {
 		t.Base.Role = accessibility.RoleTree
 	}
+	t.Base.Orientation = "vertical"
 	label := strings.TrimSpace(t.label)
 	if label == "" {
 		label = "Tree"

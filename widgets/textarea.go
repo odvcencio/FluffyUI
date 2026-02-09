@@ -62,11 +62,17 @@ func NewTextArea() *TextArea {
 
 // Bind attaches app services.
 func (t *TextArea) Bind(services runtime.Services) {
+	if t == nil {
+		return
+	}
 	t.services = services
 }
 
 // Unbind releases app services.
 func (t *TextArea) Unbind() {
+	if t == nil {
+		return
+	}
 	t.services = runtime.Services{}
 }
 
@@ -662,6 +668,7 @@ func (t *TextArea) syncA11y() {
 	if t.Base.Role == "" {
 		t.Base.Role = accessibility.RoleTextbox
 	}
+	t.Base.State.Multiline = true
 	t.Base.Label = label
 	t.Base.Value = &accessibility.ValueInfo{Text: t.Text()}
 }
@@ -743,4 +750,6 @@ var _ clipboard.Target = (*TextArea)(nil)
 
 var _ runtime.Widget = (*TextArea)(nil)
 var _ runtime.Focusable = (*TextArea)(nil)
+var _ runtime.Bindable = (*TextArea)(nil)
+var _ runtime.Unbindable = (*TextArea)(nil)
 var _ Validatable = (*TextArea)(nil)

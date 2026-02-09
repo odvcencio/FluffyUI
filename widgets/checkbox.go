@@ -169,7 +169,7 @@ func (c *Checkbox) HandleMessage(msg runtime.Message) runtime.HandleResult {
 	if !ok {
 		return runtime.Unhandled()
 	}
-	if key.Key == terminal.KeyEnter || (key.Key == terminal.KeyRune && key.Rune == ' ') {
+	if key.Key == terminal.KeyRune && key.Rune == ' ' {
 		next := c.toggleValue()
 		c.SetChecked(next)
 		if announcer := c.services.Announcer(); announcer != nil {

@@ -263,6 +263,7 @@ func (m *MultiSelect) syncA11y() {
 		m.Base.Role = accessibility.RoleListbox
 	}
 	m.Base.State.Multiselectable = true
+	m.Base.Orientation = "vertical"
 	label := strings.TrimSpace(m.label)
 	if label == "" {
 		label = "Multi Select"

@@ -714,6 +714,7 @@ func (v *VirtualList[T]) syncA11y() {
 	if v.Base.Role == "" {
 		v.Base.Role = accessibility.RoleList
 	}
+	v.Base.Orientation = "vertical"
 	label := strings.TrimSpace(v.label)
 	if label == "" {
 		label = "Virtual List"
@@ -743,6 +744,8 @@ func (v *VirtualList[T]) StyleType() string {
 }
 
 var _ scroll.Controller = (*VirtualList[any])(nil)
+var _ runtime.Bindable = (*VirtualList[any])(nil)
+var _ runtime.Unbindable = (*VirtualList[any])(nil)
 var _ runtime.Widget = (*VirtualList[any])(nil)
 
 var _ runtime.Focusable = (*VirtualList[any])(nil)

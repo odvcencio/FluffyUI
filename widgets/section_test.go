@@ -106,6 +106,7 @@ func TestSection_Measure_MaxItems(t *testing.T) {
 
 func TestSection_HandleMessage_Toggle(t *testing.T) {
 	s := NewSection("Test")
+	s.Focus()
 
 	// Space toggles
 	result := s.HandleMessage(runtime.KeyMsg{Key: terminal.KeyRune, Rune: ' '})

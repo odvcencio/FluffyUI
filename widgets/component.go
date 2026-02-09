@@ -14,12 +14,18 @@ type Component struct {
 
 // Bind attaches app services to the component.
 func (c *Component) Bind(services runtime.Services) {
+	if c == nil {
+		return
+	}
 	c.Services = services
 	c.Subs.SetScheduler(services.Scheduler())
 }
 
 // Unbind releases app services and subscriptions.
 func (c *Component) Unbind() {
+	if c == nil {
+		return
+	}
 	c.Subs.Clear()
 	c.Services = runtime.Services{}
 }

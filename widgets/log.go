@@ -765,3 +765,5 @@ func (l *Log) syncA11y() {
 var _ scroll.Controller = (*Log)(nil)
 var _ runtime.Widget = (*Log)(nil)
 var _ runtime.Focusable = (*Log)(nil)
+var _ runtime.Bindable = (*Log)(nil)
+var _ runtime.Unbindable = (*Log)(nil)

@@ -255,6 +255,7 @@ func TestInspector_Navigate(t *testing.T) {
 
 func TestInspector_Toggle(t *testing.T) {
 	ins := NewInspector(nil)
+	ins.Focus()
 
 	if !ins.Visible() {
 		t.Error("should start visible")
@@ -476,6 +477,7 @@ func TestInspector_NilSafety(t *testing.T) {
 
 func TestInspector_UnhandledMessages(t *testing.T) {
 	ins := NewInspector(nil)
+	ins.Focus()
 
 	// Non-key messages should be unhandled
 	result := ins.HandleMessage(runtime.ResizeMsg{Width: 80, Height: 24})

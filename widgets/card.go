@@ -18,6 +18,7 @@ type Card struct {
 
 	style    backend.Style
 	styleSet bool
+	services runtime.Services
 }
 
 // NewCard creates a card with a title and body widget.
@@ -333,6 +334,7 @@ func (c *Card) Bind(services runtime.Services) {
 	if c == nil {
 		return
 	}
+	c.services = services
 }
 
 // Unbind releases app services.
@@ -340,6 +342,7 @@ func (c *Card) Unbind() {
 	if c == nil {
 		return
 	}
+	c.services = runtime.Services{}
 }
 
 var _ runtime.Widget = (*Card)(nil)

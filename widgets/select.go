@@ -339,6 +339,7 @@ func (s *Select) syncState() {
 	if s.Base.Role == "" {
 		s.Base.Role = accessibility.RoleListbox
 	}
+	s.Base.Orientation = "vertical"
 	s.Base.Label = label
 	s.Base.State.Expanded = accessibility.BoolPtr(s.dropdownOpen)
 	if s.selected >= 0 && s.selected < len(s.options) {

@@ -96,6 +96,7 @@ func TestTabsRender(t *testing.T) {
 
 func TestSearchWidgetQuery(t *testing.T) {
 	search := NewSearchWidget()
+	search.Focus()
 	search.HandleMessage(runtime.KeyMsg{Key: terminal.KeyRune, Rune: 'f'})
 	search.HandleMessage(runtime.KeyMsg{Key: terminal.KeyRune, Rune: 'o'})
 	search.HandleMessage(runtime.KeyMsg{Key: terminal.KeyRune, Rune: 'o'})

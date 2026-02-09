@@ -839,3 +839,5 @@ func (g *DataGrid) columnsSignature() uint32 {
 
 var _ runtime.Widget = (*DataGrid)(nil)
 var _ runtime.Focusable = (*DataGrid)(nil)
+var _ runtime.Bindable = (*DataGrid)(nil)
+var _ runtime.Unbindable = (*DataGrid)(nil)

@@ -20,20 +20,51 @@ func NewErrorBoundary(child Widget) *ErrorBoundary {
 	return &ErrorBoundary{child: child}
 }
 
-// Measure delegates to the child widget.
+// Measure delegates to the child widget, catching any panics.
+// Returns zero if the child is nil, or the minimum constraint size
+// if in an error state.
 func (eb *ErrorBoundary) Measure(constraints Constraints) Size {
 	if eb.child == nil {
 		return Size{}
 	}
-	return eb.child.Measure(constraints)
+	if eb.err != nil {
+		return constraints.MinSize()
+	}
+
+	var result Size
+	var caught error
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				caught = fmt.Errorf("panic: %v", r)
+			}
+		}()
+		result = eb.child.Measure(constraints)
+	}()
+
+	if caught != nil {
+		eb.err = caught
+		return constraints.MinSize()
+	}
+	return result
 }
 
-// Layout stores the bounds and delegates to the child widget.
+// Layout stores the bounds and delegates to the child widget, catching
+// any panics. If in an error state, only stores the bounds without delegating.
 func (eb *ErrorBoundary) Layout(bounds Rect) {
 	eb.bounds = bounds
-	if eb.child != nil {
-		eb.child.Layout(bounds)
+	if eb.err != nil || eb.child == nil {
+		return
 	}
+
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				eb.err = fmt.Errorf("panic: %v", r)
+			}
+		}()
+		eb.child.Layout(bounds)
+	}()
 }
 
 // Render draws the child widget, catching any panics. If the boundary is in an

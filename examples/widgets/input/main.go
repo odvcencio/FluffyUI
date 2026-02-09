@@ -118,7 +118,7 @@ func NewInputView() *InputView {
 		view.Invalidate()
 	})
 
-	view.dateRange.OnRangeSelect(func(start, end time.Time) {
+	view.dateRange.SetOnRangeSelect(func(start, end time.Time) {
 		view.status.SetText(fmt.Sprintf("Range: %s - %s", start.Format("Jan 2"), end.Format("Jan 2")))
 		view.Invalidate()
 	})

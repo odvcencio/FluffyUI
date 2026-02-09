@@ -191,8 +191,11 @@ func (h *History[T]) Undo() (T, bool) {
 	// Reset grouping on undo
 	h.lastPush = time.Time{}
 
+	// Capture return value before notifyLocked, which temporarily releases
+	// the lock to call subscribers and could allow concurrent modification.
+	result := h.current.state
 	h.notifyLocked()
-	return h.current.state, true
+	return result, true
 }
 
 // Redo moves forward one state and returns the new current state.
@@ -219,8 +222,11 @@ func (h *History[T]) Redo() (T, bool) {
 	// Reset grouping on redo
 	h.lastPush = time.Time{}
 
+	// Capture return value before notifyLocked, which temporarily releases
+	// the lock to call subscribers and could allow concurrent modification.
+	result := h.current.state
 	h.notifyLocked()
-	return h.current.state, true
+	return result, true
 }
 
 // CanUndo returns true if undo is possible.

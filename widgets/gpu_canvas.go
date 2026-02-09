@@ -379,3 +379,5 @@ func encoderCellSize(encoder graphics.TerminalEncoder) (int, int) {
 }
 
 var _ runtime.Widget = (*GPUCanvasWidget)(nil)
+var _ runtime.Bindable = (*GPUCanvasWidget)(nil)
+var _ runtime.Unbindable = (*GPUCanvasWidget)(nil)

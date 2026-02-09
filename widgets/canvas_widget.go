@@ -107,3 +107,5 @@ func (w *CanvasWidget) Render(ctx runtime.RenderContext) {
 }
 
 var _ runtime.Widget = (*CanvasWidget)(nil)
+var _ runtime.Bindable = (*CanvasWidget)(nil)
+var _ runtime.Unbindable = (*CanvasWidget)(nil)

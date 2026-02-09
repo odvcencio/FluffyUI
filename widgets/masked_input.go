@@ -844,5 +844,7 @@ func (m *MaskedInput) deleteAtCursor(backward bool) bool {
 
 var _ runtime.Widget = (*MaskedInput)(nil)
 var _ runtime.Focusable = (*MaskedInput)(nil)
+var _ runtime.Bindable = (*MaskedInput)(nil)
+var _ runtime.Unbindable = (*MaskedInput)(nil)
 var _ Validatable = (*MaskedInput)(nil)
 var _ clipboard.Target = (*MaskedInput)(nil)

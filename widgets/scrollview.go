@@ -108,12 +108,18 @@ func (s *ScrollView) ContentSize() runtime.Size {
 
 // Bind attaches app services.
 func (s *ScrollView) Bind(services runtime.Services) {
+	if s == nil {
+		return
+	}
 	s.services = services
 	s.setViewportCallbacks()
 }
 
 // Unbind releases app services.
 func (s *ScrollView) Unbind() {
+	if s == nil {
+		return
+	}
 	s.services = runtime.Services{}
 }
 
@@ -722,3 +728,5 @@ var _ scroll.Controller = (*ScrollView)(nil)
 
 var _ runtime.Widget = (*ScrollView)(nil)
 var _ runtime.Focusable = (*ScrollView)(nil)
+var _ runtime.Bindable = (*ScrollView)(nil)
+var _ runtime.Unbindable = (*ScrollView)(nil)

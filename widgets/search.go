@@ -219,6 +219,9 @@ func (s *SearchWidget) Render(ctx runtime.RenderContext) {
 
 // HandleMessage processes keyboard input.
 func (s *SearchWidget) HandleMessage(msg runtime.Message) runtime.HandleResult {
+	if s == nil || !s.focused {
+		return runtime.Unhandled()
+	}
 	key, ok := msg.(runtime.KeyMsg)
 	if !ok {
 		return runtime.Unhandled()

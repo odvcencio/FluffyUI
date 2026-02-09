@@ -287,3 +287,5 @@ func formatDuration(d time.Duration) string {
 }
 
 var _ runtime.Widget = (*PerformanceDashboard)(nil)
+var _ runtime.Bindable = (*PerformanceDashboard)(nil)
+var _ runtime.Unbindable = (*PerformanceDashboard)(nil)

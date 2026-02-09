@@ -164,3 +164,4 @@ func (s *Skeleton) syncA11y() {
 
 var _ runtime.Widget = (*Skeleton)(nil)
 var _ runtime.Bindable = (*Skeleton)(nil)
+var _ runtime.Unbindable = (*Skeleton)(nil)

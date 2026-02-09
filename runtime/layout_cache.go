@@ -64,12 +64,22 @@ func (c *MeasureCache) Invalidate(w Widget) {
 	delete(c.entries, w)
 }
 
-// BumpGeneration increments the generation counter and returns the new value.
+// BumpGeneration increments the generation counter, evicts stale entries,
+// and returns the new value.
 func (c *MeasureCache) BumpGeneration() int64 {
 	if c == nil {
 		return 0
 	}
 	c.generation++
+	// Evict entries that are older than the previous generation.
+	// Entries from gen-1 are still valid (see Get), so evict anything
+	// older than gen-1, i.e., entries where entry.generation < gen-1.
+	minGen := c.generation - 1
+	for w, entry := range c.entries {
+		if entry.generation < minGen {
+			delete(c.entries, w)
+		}
+	}
 	return c.generation
 }
 

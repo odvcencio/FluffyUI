@@ -123,6 +123,7 @@ func (s *Stepper) syncA11y() {
 	if s.Base.Role == "" {
 		s.Base.Role = accessibility.RoleList
 	}
+	s.Base.Orientation = "horizontal"
 	label := strings.TrimSpace(s.label)
 	if label == "" {
 		label = "Steps"

@@ -358,3 +358,5 @@ func (v *VideoPlayer) drawFrame(frame image.Image) {
 }
 
 var _ runtime.Widget = (*VideoPlayer)(nil)
+var _ runtime.Bindable = (*VideoPlayer)(nil)
+var _ runtime.Unbindable = (*VideoPlayer)(nil)
