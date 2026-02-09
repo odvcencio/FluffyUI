@@ -327,6 +327,57 @@ func When(cond func() bool, v Validator) Validator {
 	})
 }
 
+// MatchField validates that this field's value matches another field's current value.
+// It reads the other field's value at validation time via other.Value().
+func MatchField(other Field, msg string) Validator {
+	message := fallbackMessage(msg, "Fields do not match.")
+	return validatorFunc(func(value any) *ValidationError {
+		if other == nil {
+			return nil
+		}
+		otherVal := other.Value()
+		if !fieldDeepEqual(value, otherVal) {
+			return &ValidationError{Message: message}
+		}
+		return nil
+	})
+}
+
+// ConditionalRequired requires a non-empty value only when the condition returns true.
+func ConditionalRequired(condition func() bool, msg string) Validator {
+	message := fallbackMessage(msg, "This field is required.")
+	return validatorFunc(func(value any) *ValidationError {
+		if condition == nil || !condition() {
+			return nil
+		}
+		return Required(message).Validate(value)
+	})
+}
+
+// And requires all validators to pass. It is an alias for All.
+func And(validators ...Validator) Validator {
+	return All(validators...)
+}
+
+// Or passes if at least one validator passes. It is an alias for Any.
+func Or(validators ...Validator) Validator {
+	return Any(validators...)
+}
+
+// Not inverts a validator: it fails when the wrapped validator passes and vice versa.
+func Not(v Validator, msg string) Validator {
+	message := fallbackMessage(msg, "Validation constraint violated.")
+	return validatorFunc(func(value any) *ValidationError {
+		if v == nil {
+			return nil
+		}
+		if err := v.Validate(value); err == nil {
+			return &ValidationError{Message: message}
+		}
+		return nil
+	})
+}
+
 func fallbackMessage(msg string, fallback string) string {
 	if strings.TrimSpace(msg) == "" {
 		return fallback

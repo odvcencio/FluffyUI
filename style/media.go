@@ -2,6 +2,7 @@ package style
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 )
@@ -10,6 +11,7 @@ import (
 type MediaContext struct {
 	Width, Height int
 	ReducedMotion bool
+	ColorScheme   string // "light" or "dark" (empty treated as "dark")
 }
 
 // Orientation represents screen orientation.
@@ -28,6 +30,7 @@ type MediaQuery struct {
 	MaxHeight     int
 	Orientation   Orientation
 	ReducedMotion *bool
+	ColorScheme   *string // "light" or "dark"
 	Invalid       bool
 }
 
@@ -58,6 +61,15 @@ func (q MediaQuery) Matches(ctx MediaContext) bool {
 	}
 	if q.ReducedMotion != nil && ctx.ReducedMotion != *q.ReducedMotion {
 		return false
+	}
+	if q.ColorScheme != nil {
+		ctxScheme := ctx.ColorScheme
+		if ctxScheme == "" {
+			ctxScheme = "dark"
+		}
+		if ctxScheme != *q.ColorScheme {
+			return false
+		}
 	}
 	return true
 }
@@ -185,6 +197,17 @@ func parseMediaQuery(input string) (MediaQuery, error) {
 			default:
 				return MediaQuery{}, errMedia("invalid prefers-reduced-motion %q", value)
 			}
+		case "prefers-color-scheme":
+			switch value {
+			case "dark":
+				v := "dark"
+				q.ColorScheme = &v
+			case "light":
+				v := "light"
+				q.ColorScheme = &v
+			default:
+				return MediaQuery{}, errMedia("invalid prefers-color-scheme %q", value)
+			}
 		default:
 			return MediaQuery{}, errMedia("unknown media feature %q", name)
 		}
@@ -240,4 +263,38 @@ func parseMediaInt(value string) (int, error) {
 
 func errMedia(format string, args ...any) error {
 	return fmt.Errorf("style: media: "+format, args...)
+}
+
+// DetectColorScheme returns "light" or "dark" based on terminal environment.
+// It checks COLORFGBG (format "fg;bg" — bg < 8 means dark, >= 8 means light)
+// and NO_COLOR (presence implies a simple/light terminal). Defaults to "dark".
+func DetectColorScheme() string {
+	return detectColorSchemeFromEnv(os.Getenv("COLORFGBG"), os.Getenv("NO_COLOR"))
+}
+
+// detectColorSchemeFromEnv is the testable core of DetectColorScheme.
+func detectColorSchemeFromEnv(colorfgbg, nocolor string) string {
+	// COLORFGBG is the most reliable signal. Format: "foreground;background"
+	// Background color index < 8 → dark theme, >= 8 → light theme.
+	if colorfgbg != "" {
+		if _, bg, ok := strings.Cut(colorfgbg, ";"); ok {
+			// Some terminals use "fg;extra;bg" format
+			if _, last, ok2 := strings.Cut(bg, ";"); ok2 {
+				bg = last
+			}
+			if n, err := strconv.Atoi(strings.TrimSpace(bg)); err == nil {
+				if n >= 8 {
+					return "light"
+				}
+				return "dark"
+			}
+		}
+	}
+
+	// NO_COLOR is typically set in light/simple terminal environments.
+	if nocolor != "" {
+		return "light"
+	}
+
+	return "dark"
 }

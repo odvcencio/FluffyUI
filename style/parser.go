@@ -202,6 +202,13 @@ func mergeMedia(a, b MediaQuery) MediaQuery {
 			out.Invalid = true
 		}
 	}
+	if b.ColorScheme != nil {
+		if out.ColorScheme == nil || *out.ColorScheme == *b.ColorScheme {
+			out.ColorScheme = b.ColorScheme
+		} else {
+			out.Invalid = true
+		}
+	}
 	if out.MaxWidth > 0 && out.MinWidth > out.MaxWidth {
 		out.Invalid = true
 	}

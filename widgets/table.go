@@ -62,6 +62,15 @@ type Table struct {
 	virtualOvrscn  int
 	lastVisStart   int
 	lastVisEnd     int
+
+	// Inline cell editing fields
+	editing    bool
+	editRow    int
+	editCol    int
+	editBuf    string
+	editCursor int
+	selectedCol int
+	onCellEdit func(row, col int, oldValue, newValue string)
 }
 
 // NewTable creates a data table with the given column definitions. Populate
@@ -493,9 +502,13 @@ func (t *Table) Render(ctx runtime.RenderContext) {
 			if x >= content.X+content.Width {
 				break
 			}
-			cell := t.GetCell(rowIndex, colIndex)
-			cell = truncateString(cell, width)
-			writePadded(ctx.Buffer, x, content.Y+1+row, width, cell, style)
+			if t.editing && rowIndex == t.editRow && colIndex == t.editCol {
+				t.renderEditCell(ctx.Buffer, x, content.Y+1+row, width, baseStyle)
+			} else {
+				cell := t.GetCell(rowIndex, colIndex)
+				cell = truncateString(cell, width)
+				writePadded(ctx.Buffer, x, content.Y+1+row, width, cell, style)
+			}
 			x += width + 1
 		}
 	}
@@ -527,6 +540,11 @@ func (t *Table) renderVirtualRows(ctx runtime.RenderContext, content runtime.Rec
 			if x >= content.X+content.Width {
 				break
 			}
+			if t.editing && i == t.editRow && colIndex == t.editCol {
+				t.renderEditCell(ctx.Buffer, x, content.Y+1+screenRow, width, baseStyle)
+				x += width + 1
+				continue
+			}
 			cell := t.GetCell(i, colIndex)
 			cell = truncateString(cell, width)
 			writePadded(ctx.Buffer, x, content.Y+1+screenRow, width, cell, style)
@@ -535,7 +553,7 @@ func (t *Table) renderVirtualRows(ctx runtime.RenderContext, content runtime.Rec
 	}
 }
 
-// HandleMessage handles row navigation.
+// HandleMessage handles row navigation and inline cell editing.
 func (t *Table) HandleMessage(msg runtime.Message) runtime.HandleResult {
 	if t == nil || !t.focused {
 		return runtime.Unhandled()
@@ -544,6 +562,12 @@ func (t *Table) HandleMessage(msg runtime.Message) runtime.HandleResult {
 	if !ok {
 		return runtime.Unhandled()
 	}
+
+	// When in edit mode, handle editing keys first.
+	if t.editing {
+		return t.handleEditKey(key)
+	}
+
 	pageSize := t.ContentBounds().Height - 1
 	if pageSize < 1 {
 		pageSize = t.bounds.Height
@@ -558,6 +582,12 @@ func (t *Table) HandleMessage(msg runtime.Message) runtime.HandleResult {
 	case terminal.KeyDown:
 		t.setSelected(t.selected + 1)
 		return runtime.Handled()
+	case terminal.KeyLeft:
+		t.setSelectedCol(t.selectedCol - 1)
+		return runtime.Handled()
+	case terminal.KeyRight:
+		t.setSelectedCol(t.selectedCol + 1)
+		return runtime.Handled()
 	case terminal.KeyPageUp:
 		t.setSelected(t.selected - pageSize)
 		return runtime.Handled()
@@ -570,8 +600,98 @@ func (t *Table) HandleMessage(msg runtime.Message) runtime.HandleResult {
 	case terminal.KeyEnd:
 		t.setSelected(t.rowCount() - 1)
 		return runtime.Handled()
+	case terminal.KeyEnter, terminal.KeyF2:
+		t.StartEdit()
+		return runtime.Handled()
 	}
 	return runtime.Unhandled()
+}
+
+// renderEditCell draws a cell being edited, with the edit buffer and cursor.
+func (t *Table) renderEditCell(buf *runtime.Buffer, x, y, width int, baseStyle backend.Style) {
+	if buf == nil || width <= 0 {
+		return
+	}
+	editStyle := baseStyle.Reverse(true)
+	runes := []rune(t.editBuf)
+	// Fill the cell with the edit style background
+	for i := 0; i < width; i++ {
+		buf.Set(x+i, y, ' ', editStyle)
+	}
+	// Write edit buffer characters
+	for i := 0; i < width && i < len(runes); i++ {
+		style := editStyle
+		if i == t.editCursor {
+			// Cursor character: use non-reversed (normal) to make it stand out
+			style = baseStyle.Bold(true)
+		}
+		buf.Set(x+i, y, runes[i], style)
+	}
+	// If cursor is at or beyond the text, show cursor as a block
+	if t.editCursor >= len(runes) && t.editCursor < width {
+		buf.Set(x+t.editCursor, y, ' ', baseStyle.Bold(true))
+	}
+}
+
+// handleEditKey processes key events while in cell edit mode.
+func (t *Table) handleEditKey(key runtime.KeyMsg) runtime.HandleResult {
+	runes := []rune(t.editBuf)
+	switch key.Key {
+	case terminal.KeyEnter:
+		t.CommitEdit()
+		return runtime.Handled()
+	case terminal.KeyEscape:
+		t.CancelEdit()
+		return runtime.Handled()
+	case terminal.KeyBackspace:
+		if t.editCursor > 0 {
+			runes = append(runes[:t.editCursor-1], runes[t.editCursor:]...)
+			t.editBuf = string(runes)
+			t.editCursor--
+		}
+		return runtime.Handled()
+	case terminal.KeyDelete:
+		if t.editCursor < len(runes) {
+			runes = append(runes[:t.editCursor], runes[t.editCursor+1:]...)
+			t.editBuf = string(runes)
+		}
+		return runtime.Handled()
+	case terminal.KeyLeft:
+		if t.editCursor > 0 {
+			t.editCursor--
+		}
+		return runtime.Handled()
+	case terminal.KeyRight:
+		if t.editCursor < len(runes) {
+			t.editCursor++
+		}
+		return runtime.Handled()
+	case terminal.KeyHome:
+		t.editCursor = 0
+		return runtime.Handled()
+	case terminal.KeyEnd:
+		t.editCursor = len(runes)
+		return runtime.Handled()
+	case terminal.KeyRune:
+		runes = append(runes[:t.editCursor], append([]rune{key.Rune}, runes[t.editCursor:]...)...)
+		t.editBuf = string(runes)
+		t.editCursor++
+		return runtime.Handled()
+	}
+	return runtime.Handled() // Swallow unrecognized keys while editing
+}
+
+func (t *Table) setSelectedCol(col int) {
+	if t == nil || len(t.Columns) == 0 {
+		return
+	}
+	if col < 0 {
+		col = 0
+	}
+	if col >= len(t.Columns) {
+		col = len(t.Columns) - 1
+	}
+	t.selectedCol = col
 }
 
 func (t *Table) setSelected(index int) {
@@ -828,6 +948,134 @@ func (t *Table) Unbind() {
 		return
 	}
 	t.services = runtime.Services{}
+}
+
+// SetOnCellEdit sets the callback invoked when a cell edit is committed.
+// The callback receives the display row, column, old value, and new value.
+func (t *Table) SetOnCellEdit(fn func(row, col int, oldValue, newValue string)) {
+	if t == nil {
+		return
+	}
+	t.onCellEdit = fn
+}
+
+// Editing reports whether the table is currently in cell edit mode.
+func (t *Table) Editing() bool {
+	if t == nil {
+		return false
+	}
+	return t.editing
+}
+
+// EditRow returns the row index being edited (display index).
+func (t *Table) EditRow() int {
+	if t == nil {
+		return 0
+	}
+	return t.editRow
+}
+
+// EditCol returns the column index being edited.
+func (t *Table) EditCol() int {
+	if t == nil {
+		return 0
+	}
+	return t.editCol
+}
+
+// EditBuffer returns the current edit buffer contents.
+func (t *Table) EditBuffer() string {
+	if t == nil {
+		return ""
+	}
+	return t.editBuf
+}
+
+// EditCursorPos returns the cursor position within the edit buffer.
+func (t *Table) EditCursorPos() int {
+	if t == nil {
+		return 0
+	}
+	return t.editCursor
+}
+
+// SelectedCol returns the currently selected column index.
+func (t *Table) SelectedCol() int {
+	if t == nil {
+		return 0
+	}
+	return t.selectedCol
+}
+
+// SetSelectedCol updates the selected column index.
+func (t *Table) SetSelectedCol(col int) {
+	if t == nil {
+		return
+	}
+	if col < 0 {
+		col = 0
+	}
+	if col >= len(t.Columns) && len(t.Columns) > 0 {
+		col = len(t.Columns) - 1
+	}
+	t.selectedCol = col
+}
+
+// StartEdit enters edit mode on the currently selected cell.
+// The edit buffer is populated with the current cell value.
+func (t *Table) StartEdit() {
+	if t == nil || t.editing {
+		return
+	}
+	if t.rowCount() == 0 || len(t.Columns) == 0 {
+		return
+	}
+	t.editing = true
+	t.editRow = t.selected
+	t.editCol = t.selectedCol
+	t.editBuf = t.GetCell(t.editRow, t.editCol)
+	t.editCursor = len([]rune(t.editBuf))
+	if announcer := t.services.Announcer(); announcer != nil {
+		announcer.Announce(
+			fmt.Sprintf("Editing cell row %d column %d", t.editRow+1, t.editCol+1),
+			accessibility.PriorityPolite,
+		)
+	}
+}
+
+// CancelEdit discards the current edit and exits edit mode.
+func (t *Table) CancelEdit() {
+	if t == nil || !t.editing {
+		return
+	}
+	t.editing = false
+	t.editBuf = ""
+	t.editCursor = 0
+	if announcer := t.services.Announcer(); announcer != nil {
+		announcer.Announce("Edit cancelled", accessibility.PriorityPolite)
+	}
+}
+
+// CommitEdit saves the current edit and exits edit mode.
+// If the data source implements TabularEditable, SetCell is called.
+// Otherwise, for static Rows, the cell is updated directly.
+// The onCellEdit callback (if set) is invoked with old and new values.
+func (t *Table) CommitEdit() {
+	if t == nil || !t.editing {
+		return
+	}
+	oldValue := t.GetCell(t.editRow, t.editCol)
+	newValue := t.editBuf
+	t.SetCell(t.editRow, t.editCol, newValue)
+	t.editing = false
+	t.editBuf = ""
+	t.editCursor = 0
+	if t.onCellEdit != nil {
+		t.onCellEdit(t.editRow, t.editCol, oldValue, newValue)
+	}
+	if announcer := t.services.Announcer(); announcer != nil {
+		announcer.Announce("Edit complete", accessibility.PriorityPolite)
+	}
 }
 
 var _ runtime.Widget = (*Table)(nil)

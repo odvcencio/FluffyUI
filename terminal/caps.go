@@ -17,6 +17,7 @@ type TerminalCaps struct {
 	OSC8Hyperlinks  bool   // OSC-8 hyperlink support
 	Sixel           bool   // Sixel graphics
 	KittyGraphics   bool   // Kitty image protocol
+	KittyKeyboard   bool   // Kitty keyboard protocol (CSI u)
 	BracketedPaste  bool   // Bracketed paste mode
 	MouseSGR        bool   // SGR mouse protocol
 	UnicodeWidth    bool   // Full Unicode width support
@@ -64,6 +65,7 @@ func DetectCaps() *TerminalCaps {
 		caps.CursorShapes = true
 		caps.OSC8Hyperlinks = true
 		caps.KittyGraphics = true
+		caps.KittyKeyboard = true
 		caps.OSC52Clipboard = true
 
 	case termProgramLower == "iterm.app" || termProgramLower == "iterm2":
@@ -79,6 +81,7 @@ func DetectCaps() *TerminalCaps {
 		caps.CursorShapes = true
 		caps.OSC8Hyperlinks = true
 		caps.KittyGraphics = true
+		caps.KittyKeyboard = true
 		caps.OSC52Clipboard = true
 
 	case termProgramLower == "foot":
@@ -87,6 +90,7 @@ func DetectCaps() *TerminalCaps {
 		caps.CursorShapes = true
 		caps.OSC8Hyperlinks = true
 		caps.Sixel = true
+		caps.KittyKeyboard = true
 		caps.OSC52Clipboard = true
 
 	case termProgramLower == "mintty":
@@ -102,6 +106,7 @@ func DetectCaps() *TerminalCaps {
 		caps.OSC8Hyperlinks = true
 		caps.Sixel = true
 		caps.KittyGraphics = true
+		caps.KittyKeyboard = true
 		caps.OSC52Clipboard = true
 
 	case termProgramLower == "rio":
@@ -114,6 +119,7 @@ func DetectCaps() *TerminalCaps {
 		caps.CursorShapes = true
 		caps.OSC8Hyperlinks = true
 		caps.KittyGraphics = true
+		caps.KittyKeyboard = true
 		caps.OSC52Clipboard = true
 
 	case termProgramLower == "alacritty":
@@ -135,6 +141,7 @@ func DetectCaps() *TerminalCaps {
 		caps.CursorShapes = true
 		caps.OSC8Hyperlinks = true
 		caps.KittyGraphics = true
+		caps.KittyKeyboard = true
 		caps.OSC52Clipboard = true
 	}
 
@@ -144,6 +151,7 @@ func DetectCaps() *TerminalCaps {
 		caps.CursorShapes = true
 		caps.OSC8Hyperlinks = true
 		caps.Sixel = true
+		caps.KittyKeyboard = true
 		caps.OSC52Clipboard = true
 	}
 
@@ -157,6 +165,11 @@ func DetectCaps() *TerminalCaps {
 		caps.OSC52Clipboard = true
 	}
 
+	// FLUFFYUI_KITTY_KEYBOARD=1 forces Kitty keyboard protocol support.
+	if os.Getenv("FLUFFYUI_KITTY_KEYBOARD") == "1" {
+		caps.KittyKeyboard = true
+	}
+
 	return caps
 }
 
@@ -164,7 +177,7 @@ func DetectCaps() *TerminalCaps {
 // suitable for diagnostic output.
 func (c *TerminalCaps) String() string {
 	return fmt.Sprintf(
-		"TrueColor=%t SyncOut=%t CursorShapes=%t OSC8=%t OSC52=%t Sixel=%t KittyGfx=%t BracketPaste=%t MouseSGR=%t Unicode=%t TERM=%q TERM_PROGRAM=%q",
+		"TrueColor=%t SyncOut=%t CursorShapes=%t OSC8=%t OSC52=%t Sixel=%t KittyGfx=%t KittyKbd=%t BracketPaste=%t MouseSGR=%t Unicode=%t TERM=%q TERM_PROGRAM=%q",
 		c.TrueColor,
 		c.SynchronizedOut,
 		c.CursorShapes,
@@ -172,6 +185,7 @@ func (c *TerminalCaps) String() string {
 		c.OSC52Clipboard,
 		c.Sixel,
 		c.KittyGraphics,
+		c.KittyKeyboard,
 		c.BracketedPaste,
 		c.MouseSGR,
 		c.UnicodeWidth,
