@@ -47,7 +47,7 @@ func NewColorPicker(opts ...ColorPickerOption) *ColorPicker {
 		}
 		opt(cp)
 	}
-	cp.Base.Role = accessibility.RoleListbox
+	cp.Base.Role = accessibility.RoleGroup
 	cp.syncA11y()
 	return cp
 }
@@ -278,7 +278,7 @@ func (cp *ColorPicker) syncA11y() {
 		return
 	}
 	if cp.Base.Role == "" {
-		cp.Base.Role = accessibility.RoleListbox
+		cp.Base.Role = accessibility.RoleGroup
 	}
 	cp.Base.Label = "Color Picker"
 	cp.Base.RoleDescription = "color picker"

@@ -39,7 +39,7 @@ type Stepper struct {
 // NewStepper creates a stepper.
 func NewStepper(steps ...Step) *Stepper {
 	stepper := &Stepper{Steps: steps, style: backend.DefaultStyle(), label: "Steps"}
-	stepper.Base.Role = accessibility.RoleList
+	stepper.Base.Role = accessibility.RoleGroup
 	stepper.syncA11y()
 	return stepper
 }
@@ -121,7 +121,7 @@ func (s *Stepper) syncA11y() {
 		return
 	}
 	if s.Base.Role == "" {
-		s.Base.Role = accessibility.RoleList
+		s.Base.Role = accessibility.RoleGroup
 	}
 	s.Base.Orientation = "horizontal"
 	label := strings.TrimSpace(s.label)

@@ -50,7 +50,7 @@ func NewTimePicker() *TimePicker {
 		baseDate:    base,
 		now:         time.Now,
 	}
-	p.Base.Role = accessibility.RoleSpinButton
+	p.Base.Role = accessibility.RoleGroup
 	p.syncA11y()
 	return p
 }
@@ -282,7 +282,7 @@ func (t *TimePicker) syncA11y() {
 		return
 	}
 	if t.Base.Role == "" {
-		t.Base.Role = accessibility.RoleSpinButton
+		t.Base.Role = accessibility.RoleGroup
 	}
 	label := strings.TrimSpace(t.label)
 	if label == "" {

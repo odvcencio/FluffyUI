@@ -614,8 +614,8 @@ func TestTimePicker_New(t *testing.T) {
 	if tp == nil {
 		t.Fatal("expected non-nil time picker")
 	}
-	if tp.AccessibleRole() != "spinbutton" {
-		t.Fatalf("expected role spinbutton, got %q", tp.AccessibleRole())
+	if tp.AccessibleRole() != "group" {
+		t.Fatalf("expected role group, got %q", tp.AccessibleRole())
 	}
 }
 

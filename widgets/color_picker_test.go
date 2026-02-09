@@ -13,8 +13,8 @@ func TestColorPicker_New(t *testing.T) {
 	if cp == nil {
 		t.Fatal("expected non-nil color picker")
 	}
-	if cp.AccessibleRole() != "listbox" {
-		t.Fatalf("expected role listbox, got %q", cp.AccessibleRole())
+	if cp.AccessibleRole() != "group" {
+		t.Fatalf("expected role group, got %q", cp.AccessibleRole())
 	}
 	if cp.SelectedIndex() != 0 {
 		t.Fatalf("expected selected index 0, got %d", cp.SelectedIndex())
