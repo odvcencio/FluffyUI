@@ -427,6 +427,69 @@ func parseStyleBlock(block string, sheet *Stylesheet) (Style, Style, []error) {
 				continue
 			}
 			target.Transitions = append(target.Transitions, transitions...)
+		case "min-width":
+			v, err := parseInt(value)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("style: invalid min-width %q", value))
+				continue
+			}
+			target.MinWidth = &v
+		case "max-width":
+			v, err := parseInt(value)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("style: invalid max-width %q", value))
+				continue
+			}
+			target.MaxWidth = &v
+		case "min-height":
+			v, err := parseInt(value)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("style: invalid min-height %q", value))
+				continue
+			}
+			target.MinHeight = &v
+		case "max-height":
+			v, err := parseInt(value)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("style: invalid max-height %q", value))
+				continue
+			}
+			target.MaxHeight = &v
+		case "content-align":
+			ca := parseContentAlign(value)
+			if ca == ContentAlignNone {
+				errs = append(errs, fmt.Errorf("style: invalid content-align %q", value))
+				continue
+			}
+			target.ContentAlign = ca
+		case "dock":
+			d := parseDock(value)
+			if d == DockNone {
+				errs = append(errs, fmt.Errorf("style: invalid dock %q", value))
+				continue
+			}
+			target.Dock = d
+		case "offset-x":
+			v, err := parseInt(value)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("style: invalid offset-x %q", value))
+				continue
+			}
+			target.OffsetX = &v
+		case "offset-y":
+			v, err := parseInt(value)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("style: invalid offset-y %q", value))
+				continue
+			}
+			target.OffsetY = &v
+		case "z-index":
+			v, err := parseInt(value)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("style: invalid z-index %q", value))
+				continue
+			}
+			target.ZIndex = &v
 		default:
 			errs = append(errs, fmt.Errorf("style: unknown property %q", name))
 		}
@@ -948,6 +1011,44 @@ func parseWhiteSpace(value string) (WhiteSpace, error) {
 		return WhiteSpacePre, nil
 	default:
 		return WhiteSpaceNone, fmt.Errorf("style: invalid white-space %q", value)
+	}
+}
+
+func parseInt(value string) (int, error) {
+	value = strings.TrimSpace(value)
+	var n int
+	_, err := fmt.Sscanf(value, "%d", &n)
+	if err != nil {
+		return 0, fmt.Errorf("style: invalid integer %q", value)
+	}
+	return n, nil
+}
+
+func parseContentAlign(value string) ContentAlign {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "start":
+		return ContentAlignStart
+	case "center":
+		return ContentAlignCenter
+	case "end":
+		return ContentAlignEnd
+	default:
+		return ContentAlignNone
+	}
+}
+
+func parseDock(value string) Dock {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "top":
+		return DockTop
+	case "bottom":
+		return DockBottom
+	case "left":
+		return DockLeft
+	case "right":
+		return DockRight
+	default:
+		return DockNone
 	}
 }
 

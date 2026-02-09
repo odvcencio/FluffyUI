@@ -212,6 +212,27 @@ const (
 	WhiteSpacePre                      // preserve whitespace
 )
 
+// ContentAlign defines content alignment within a container.
+type ContentAlign uint8
+
+const (
+	ContentAlignNone   ContentAlign = iota // unset
+	ContentAlignStart                      // start-aligned
+	ContentAlignCenter                     // centered
+	ContentAlignEnd                        // end-aligned
+)
+
+// Dock defines edge pinning for widgets.
+type Dock uint8
+
+const (
+	DockNone   Dock = iota // unset
+	DockTop                // pinned to top
+	DockBottom             // pinned to bottom
+	DockLeft               // pinned to left
+	DockRight              // pinned to right
+)
+
 // BorderChars defines custom border glyphs.
 type BorderChars struct {
 	TopLeft, TopRight       rune
@@ -268,6 +289,25 @@ type Style struct {
 	// Cursor
 	Cursor CursorStyle
 
+	// Layout constraints
+	MinWidth  *int
+	MaxWidth  *int
+	MinHeight *int
+	MaxHeight *int
+
+	// Content alignment
+	ContentAlign ContentAlign
+
+	// Edge pinning
+	Dock Dock
+
+	// Position offsets
+	OffsetX *int
+	OffsetY *int
+
+	// Stacking order
+	ZIndex *int
+
 	// Transitions
 	Transitions []Transition
 }
@@ -297,6 +337,15 @@ func (s Style) IsZero() bool {
 		s.Overflow == OverflowNone &&
 		s.Opacity == nil &&
 		s.Cursor == CursorNone &&
+		s.MinWidth == nil &&
+		s.MaxWidth == nil &&
+		s.MinHeight == nil &&
+		s.MaxHeight == nil &&
+		s.ContentAlign == ContentAlignNone &&
+		s.Dock == DockNone &&
+		s.OffsetX == nil &&
+		s.OffsetY == nil &&
+		s.ZIndex == nil &&
 		len(s.Transitions) == 0
 }
 
@@ -312,7 +361,16 @@ func (s Style) AffectsLayout() bool {
 		s.Visibility != VisibilityNone ||
 		s.Overflow != OverflowNone ||
 		s.WhiteSpace != WhiteSpaceNone ||
-		s.TextAlign != TextAlignNone
+		s.TextAlign != TextAlignNone ||
+		s.MinWidth != nil ||
+		s.MaxWidth != nil ||
+		s.MinHeight != nil ||
+		s.MaxHeight != nil ||
+		s.ContentAlign != ContentAlignNone ||
+		s.Dock != DockNone ||
+		s.OffsetX != nil ||
+		s.OffsetY != nil ||
+		s.ZIndex != nil
 }
 
 // Merge overlays the provided style on top of the current one.
@@ -385,6 +443,33 @@ func (s Style) Merge(override Style) Style {
 	}
 	if override.Cursor != CursorNone {
 		s.Cursor = override.Cursor
+	}
+	if override.MinWidth != nil {
+		s.MinWidth = override.MinWidth
+	}
+	if override.MaxWidth != nil {
+		s.MaxWidth = override.MaxWidth
+	}
+	if override.MinHeight != nil {
+		s.MinHeight = override.MinHeight
+	}
+	if override.MaxHeight != nil {
+		s.MaxHeight = override.MaxHeight
+	}
+	if override.ContentAlign != ContentAlignNone {
+		s.ContentAlign = override.ContentAlign
+	}
+	if override.Dock != DockNone {
+		s.Dock = override.Dock
+	}
+	if override.OffsetX != nil {
+		s.OffsetX = override.OffsetX
+	}
+	if override.OffsetY != nil {
+		s.OffsetY = override.OffsetY
+	}
+	if override.ZIndex != nil {
+		s.ZIndex = override.ZIndex
 	}
 	if len(override.Transitions) > 0 {
 		s.Transitions = override.Transitions

@@ -828,6 +828,510 @@ func TestTextDecorationLineThroughAlias(t *testing.T) {
 	}
 }
 
+// --- min-width / max-width / min-height / max-height ---
+
+func intPtr(n int) *int { return &n }
+
+func TestParseMinWidth(t *testing.T) {
+	data := `Button { min-width: 10; }`
+	sheet, err := Parse(data)
+	if err != nil {
+		t.Fatalf("parse error: %v", err)
+	}
+	btn := &testNode{typ: "Button"}
+	resolved := sheet.Resolve(btn, nil)
+	if resolved.MinWidth == nil || *resolved.MinWidth != 10 {
+		t.Fatalf("min-width = %v, want 10", resolved.MinWidth)
+	}
+}
+
+func TestParseMaxWidth(t *testing.T) {
+	data := `Button { max-width: 80; }`
+	sheet, err := Parse(data)
+	if err != nil {
+		t.Fatalf("parse error: %v", err)
+	}
+	btn := &testNode{typ: "Button"}
+	resolved := sheet.Resolve(btn, nil)
+	if resolved.MaxWidth == nil || *resolved.MaxWidth != 80 {
+		t.Fatalf("max-width = %v, want 80", resolved.MaxWidth)
+	}
+}
+
+func TestParseMinHeight(t *testing.T) {
+	data := `Panel { min-height: 5; }`
+	sheet, err := Parse(data)
+	if err != nil {
+		t.Fatalf("parse error: %v", err)
+	}
+	node := &testNode{typ: "Panel"}
+	resolved := sheet.Resolve(node, nil)
+	if resolved.MinHeight == nil || *resolved.MinHeight != 5 {
+		t.Fatalf("min-height = %v, want 5", resolved.MinHeight)
+	}
+}
+
+func TestParseMaxHeight(t *testing.T) {
+	data := `Panel { max-height: 40; }`
+	sheet, err := Parse(data)
+	if err != nil {
+		t.Fatalf("parse error: %v", err)
+	}
+	node := &testNode{typ: "Panel"}
+	resolved := sheet.Resolve(node, nil)
+	if resolved.MaxHeight == nil || *resolved.MaxHeight != 40 {
+		t.Fatalf("max-height = %v, want 40", resolved.MaxHeight)
+	}
+}
+
+func TestMinMaxDimensionsMerge(t *testing.T) {
+	base := Style{MinWidth: intPtr(10), MaxWidth: intPtr(80)}
+	override := Style{MinWidth: intPtr(20)}
+	merged := base.Merge(override)
+	if merged.MinWidth == nil || *merged.MinWidth != 20 {
+		t.Fatalf("merged min-width = %v, want 20", merged.MinWidth)
+	}
+	if merged.MaxWidth == nil || *merged.MaxWidth != 80 {
+		t.Fatalf("merged max-width = %v, want 80 (from base)", merged.MaxWidth)
+	}
+}
+
+func TestMinMaxDimensionsNotInherited(t *testing.T) {
+	child := Style{}
+	parent := Style{MinWidth: intPtr(10), MaxHeight: intPtr(40)}
+	inherited := child.Inherit(parent)
+	if inherited.MinWidth != nil {
+		t.Fatalf("min-width should not inherit, got %v", inherited.MinWidth)
+	}
+	if inherited.MaxHeight != nil {
+		t.Fatalf("max-height should not inherit, got %v", inherited.MaxHeight)
+	}
+}
+
+func TestMinMaxDimensionsAffectLayout(t *testing.T) {
+	tests := []struct {
+		name  string
+		style Style
+	}{
+		{"min-width", Style{MinWidth: intPtr(10)}},
+		{"max-width", Style{MaxWidth: intPtr(80)}},
+		{"min-height", Style{MinHeight: intPtr(5)}},
+		{"max-height", Style{MaxHeight: intPtr(40)}},
+	}
+	for _, tt := range tests {
+		if !tt.style.AffectsLayout() {
+			t.Fatalf("%s should affect layout", tt.name)
+		}
+	}
+}
+
+func TestMinMaxDimensionsIsZero(t *testing.T) {
+	tests := []struct {
+		name  string
+		style Style
+	}{
+		{"min-width", Style{MinWidth: intPtr(10)}},
+		{"max-width", Style{MaxWidth: intPtr(80)}},
+		{"min-height", Style{MinHeight: intPtr(5)}},
+		{"max-height", Style{MaxHeight: intPtr(40)}},
+	}
+	for _, tt := range tests {
+		if tt.style.IsZero() {
+			t.Fatalf("style with %s should not be zero", tt.name)
+		}
+	}
+}
+
+func TestAllDimensionsCombined(t *testing.T) {
+	data := `Panel { min-width: 10; max-width: 80; min-height: 3; max-height: 40; }`
+	sheet, err := Parse(data)
+	if err != nil {
+		t.Fatalf("parse error: %v", err)
+	}
+	node := &testNode{typ: "Panel"}
+	resolved := sheet.Resolve(node, nil)
+	if resolved.MinWidth == nil || *resolved.MinWidth != 10 {
+		t.Fatalf("min-width = %v, want 10", resolved.MinWidth)
+	}
+	if resolved.MaxWidth == nil || *resolved.MaxWidth != 80 {
+		t.Fatalf("max-width = %v, want 80", resolved.MaxWidth)
+	}
+	if resolved.MinHeight == nil || *resolved.MinHeight != 3 {
+		t.Fatalf("min-height = %v, want 3", resolved.MinHeight)
+	}
+	if resolved.MaxHeight == nil || *resolved.MaxHeight != 40 {
+		t.Fatalf("max-height = %v, want 40", resolved.MaxHeight)
+	}
+}
+
+// --- content-align ---
+
+func TestParseContentAlign(t *testing.T) {
+	tests := []struct {
+		input string
+		want  ContentAlign
+	}{
+		{"start", ContentAlignStart},
+		{"center", ContentAlignCenter},
+		{"end", ContentAlignEnd},
+		{"CENTER", ContentAlignCenter},
+		{"Start", ContentAlignStart},
+	}
+	for _, tt := range tests {
+		got := parseContentAlign(tt.input)
+		if got != tt.want {
+			t.Fatalf("parseContentAlign(%q) = %d, want %d", tt.input, got, tt.want)
+		}
+	}
+}
+
+func TestParseContentAlignInvalid(t *testing.T) {
+	got := parseContentAlign("justify")
+	if got != ContentAlignNone {
+		t.Fatalf("expected ContentAlignNone for invalid, got %d", got)
+	}
+}
+
+func TestParseContentAlignStylesheet(t *testing.T) {
+	data := `Panel { content-align: center; }`
+	sheet, err := Parse(data)
+	if err != nil {
+		t.Fatalf("parse error: %v", err)
+	}
+	node := &testNode{typ: "Panel"}
+	resolved := sheet.Resolve(node, nil)
+	if resolved.ContentAlign != ContentAlignCenter {
+		t.Fatalf("content-align = %d, want center", resolved.ContentAlign)
+	}
+}
+
+func TestContentAlignMerge(t *testing.T) {
+	base := Style{ContentAlign: ContentAlignStart}
+	override := Style{ContentAlign: ContentAlignEnd}
+	merged := base.Merge(override)
+	if merged.ContentAlign != ContentAlignEnd {
+		t.Fatalf("merged content-align = %d, want end", merged.ContentAlign)
+	}
+}
+
+func TestContentAlignMergeNoOverride(t *testing.T) {
+	base := Style{ContentAlign: ContentAlignStart}
+	override := Style{}
+	merged := base.Merge(override)
+	if merged.ContentAlign != ContentAlignStart {
+		t.Fatalf("merged content-align = %d, want start", merged.ContentAlign)
+	}
+}
+
+func TestContentAlignAffectsLayout(t *testing.T) {
+	s := Style{ContentAlign: ContentAlignCenter}
+	if !s.AffectsLayout() {
+		t.Fatal("content-align should affect layout")
+	}
+}
+
+func TestContentAlignIsZero(t *testing.T) {
+	s := Style{ContentAlign: ContentAlignCenter}
+	if s.IsZero() {
+		t.Fatal("style with content-align should not be zero")
+	}
+}
+
+// --- dock ---
+
+func TestParseDock(t *testing.T) {
+	tests := []struct {
+		input string
+		want  Dock
+	}{
+		{"top", DockTop},
+		{"bottom", DockBottom},
+		{"left", DockLeft},
+		{"right", DockRight},
+		{"TOP", DockTop},
+		{"Bottom", DockBottom},
+	}
+	for _, tt := range tests {
+		got := parseDock(tt.input)
+		if got != tt.want {
+			t.Fatalf("parseDock(%q) = %d, want %d", tt.input, got, tt.want)
+		}
+	}
+}
+
+func TestParseDockInvalid(t *testing.T) {
+	got := parseDock("center")
+	if got != DockNone {
+		t.Fatalf("expected DockNone for invalid, got %d", got)
+	}
+}
+
+func TestParseDockStylesheet(t *testing.T) {
+	data := `StatusBar { dock: bottom; }`
+	sheet, err := Parse(data)
+	if err != nil {
+		t.Fatalf("parse error: %v", err)
+	}
+	node := &testNode{typ: "StatusBar"}
+	resolved := sheet.Resolve(node, nil)
+	if resolved.Dock != DockBottom {
+		t.Fatalf("dock = %d, want bottom", resolved.Dock)
+	}
+}
+
+func TestDockMerge(t *testing.T) {
+	base := Style{Dock: DockTop}
+	override := Style{Dock: DockBottom}
+	merged := base.Merge(override)
+	if merged.Dock != DockBottom {
+		t.Fatalf("merged dock = %d, want bottom", merged.Dock)
+	}
+}
+
+func TestDockMergeNoOverride(t *testing.T) {
+	base := Style{Dock: DockTop}
+	override := Style{}
+	merged := base.Merge(override)
+	if merged.Dock != DockTop {
+		t.Fatalf("merged dock = %d, want top", merged.Dock)
+	}
+}
+
+func TestDockAffectsLayout(t *testing.T) {
+	s := Style{Dock: DockLeft}
+	if !s.AffectsLayout() {
+		t.Fatal("dock should affect layout")
+	}
+}
+
+func TestDockIsZero(t *testing.T) {
+	s := Style{Dock: DockRight}
+	if s.IsZero() {
+		t.Fatal("style with dock should not be zero")
+	}
+}
+
+// --- offset-x / offset-y ---
+
+func TestParseOffsetX(t *testing.T) {
+	data := `Panel { offset-x: 5; }`
+	sheet, err := Parse(data)
+	if err != nil {
+		t.Fatalf("parse error: %v", err)
+	}
+	node := &testNode{typ: "Panel"}
+	resolved := sheet.Resolve(node, nil)
+	if resolved.OffsetX == nil || *resolved.OffsetX != 5 {
+		t.Fatalf("offset-x = %v, want 5", resolved.OffsetX)
+	}
+}
+
+func TestParseOffsetY(t *testing.T) {
+	data := `Panel { offset-y: -3; }`
+	sheet, err := Parse(data)
+	if err != nil {
+		t.Fatalf("parse error: %v", err)
+	}
+	node := &testNode{typ: "Panel"}
+	resolved := sheet.Resolve(node, nil)
+	if resolved.OffsetY == nil || *resolved.OffsetY != -3 {
+		t.Fatalf("offset-y = %v, want -3", resolved.OffsetY)
+	}
+}
+
+func TestOffsetMerge(t *testing.T) {
+	base := Style{OffsetX: intPtr(5), OffsetY: intPtr(10)}
+	override := Style{OffsetX: intPtr(2)}
+	merged := base.Merge(override)
+	if merged.OffsetX == nil || *merged.OffsetX != 2 {
+		t.Fatalf("merged offset-x = %v, want 2", merged.OffsetX)
+	}
+	if merged.OffsetY == nil || *merged.OffsetY != 10 {
+		t.Fatalf("merged offset-y = %v, want 10 (from base)", merged.OffsetY)
+	}
+}
+
+func TestOffsetAffectsLayout(t *testing.T) {
+	if !(Style{OffsetX: intPtr(1)}).AffectsLayout() {
+		t.Fatal("offset-x should affect layout")
+	}
+	if !(Style{OffsetY: intPtr(1)}).AffectsLayout() {
+		t.Fatal("offset-y should affect layout")
+	}
+}
+
+func TestOffsetIsZero(t *testing.T) {
+	if (Style{OffsetX: intPtr(0)}).IsZero() {
+		t.Fatal("style with offset-x should not be zero")
+	}
+	if (Style{OffsetY: intPtr(0)}).IsZero() {
+		t.Fatal("style with offset-y should not be zero")
+	}
+}
+
+// --- z-index ---
+
+func TestParseZIndex(t *testing.T) {
+	data := `Dialog { z-index: 100; }`
+	sheet, err := Parse(data)
+	if err != nil {
+		t.Fatalf("parse error: %v", err)
+	}
+	node := &testNode{typ: "Dialog"}
+	resolved := sheet.Resolve(node, nil)
+	if resolved.ZIndex == nil || *resolved.ZIndex != 100 {
+		t.Fatalf("z-index = %v, want 100", resolved.ZIndex)
+	}
+}
+
+func TestParseZIndexNegative(t *testing.T) {
+	data := `Panel { z-index: -1; }`
+	sheet, err := Parse(data)
+	if err != nil {
+		t.Fatalf("parse error: %v", err)
+	}
+	node := &testNode{typ: "Panel"}
+	resolved := sheet.Resolve(node, nil)
+	if resolved.ZIndex == nil || *resolved.ZIndex != -1 {
+		t.Fatalf("z-index = %v, want -1", resolved.ZIndex)
+	}
+}
+
+func TestZIndexMerge(t *testing.T) {
+	base := Style{ZIndex: intPtr(10)}
+	override := Style{ZIndex: intPtr(100)}
+	merged := base.Merge(override)
+	if merged.ZIndex == nil || *merged.ZIndex != 100 {
+		t.Fatalf("merged z-index = %v, want 100", merged.ZIndex)
+	}
+}
+
+func TestZIndexMergeNoOverride(t *testing.T) {
+	base := Style{ZIndex: intPtr(10)}
+	override := Style{}
+	merged := base.Merge(override)
+	if merged.ZIndex == nil || *merged.ZIndex != 10 {
+		t.Fatalf("merged z-index = %v, want 10", merged.ZIndex)
+	}
+}
+
+func TestZIndexAffectsLayout(t *testing.T) {
+	s := Style{ZIndex: intPtr(10)}
+	if !s.AffectsLayout() {
+		t.Fatal("z-index should affect layout")
+	}
+}
+
+func TestZIndexIsZero(t *testing.T) {
+	s := Style{ZIndex: intPtr(0)}
+	if s.IsZero() {
+		t.Fatal("style with z-index should not be zero")
+	}
+}
+
+// --- Combined layout properties stylesheet ---
+
+func TestAllLayoutPropertiesCombined(t *testing.T) {
+	data := `
+Panel {
+  min-width: 10;
+  max-width: 80;
+  min-height: 3;
+  max-height: 40;
+  content-align: center;
+  dock: top;
+  offset-x: 2;
+  offset-y: -1;
+  z-index: 50;
+}
+`
+	sheet, err := Parse(data)
+	if err != nil {
+		t.Fatalf("parse error: %v", err)
+	}
+	node := &testNode{typ: "Panel"}
+	resolved := sheet.Resolve(node, nil)
+
+	if resolved.MinWidth == nil || *resolved.MinWidth != 10 {
+		t.Fatalf("min-width = %v, want 10", resolved.MinWidth)
+	}
+	if resolved.MaxWidth == nil || *resolved.MaxWidth != 80 {
+		t.Fatalf("max-width = %v, want 80", resolved.MaxWidth)
+	}
+	if resolved.MinHeight == nil || *resolved.MinHeight != 3 {
+		t.Fatalf("min-height = %v, want 3", resolved.MinHeight)
+	}
+	if resolved.MaxHeight == nil || *resolved.MaxHeight != 40 {
+		t.Fatalf("max-height = %v, want 40", resolved.MaxHeight)
+	}
+	if resolved.ContentAlign != ContentAlignCenter {
+		t.Fatalf("content-align = %d, want center", resolved.ContentAlign)
+	}
+	if resolved.Dock != DockTop {
+		t.Fatalf("dock = %d, want top", resolved.Dock)
+	}
+	if resolved.OffsetX == nil || *resolved.OffsetX != 2 {
+		t.Fatalf("offset-x = %v, want 2", resolved.OffsetX)
+	}
+	if resolved.OffsetY == nil || *resolved.OffsetY != -1 {
+		t.Fatalf("offset-y = %v, want -1", resolved.OffsetY)
+	}
+	if resolved.ZIndex == nil || *resolved.ZIndex != 50 {
+		t.Fatalf("z-index = %v, want 50", resolved.ZIndex)
+	}
+}
+
+// --- Layout properties with specificity ---
+
+func TestLayoutPropertiesSpecificity(t *testing.T) {
+	data := `
+Panel { dock: top; z-index: 1; }
+Panel.sidebar { dock: left; }
+#main { z-index: 100; }
+`
+	sheet, err := Parse(data)
+	if err != nil {
+		t.Fatalf("parse error: %v", err)
+	}
+	node := &testNode{typ: "Panel", id: "main", classes: []string{"sidebar"}}
+	resolved := sheet.Resolve(node, nil)
+
+	if resolved.Dock != DockLeft {
+		t.Fatalf("dock = %d, want left (class wins over type)", resolved.Dock)
+	}
+	if resolved.ZIndex == nil || *resolved.ZIndex != 100 {
+		t.Fatalf("z-index = %v, want 100 (id wins)", resolved.ZIndex)
+	}
+}
+
+// --- Layout properties with variables ---
+
+func TestLayoutPropertiesWithVariables(t *testing.T) {
+	data := `
+:root {
+  --sidebar-width: 30;
+  --layer: 10;
+}
+Panel {
+  min-width: var(--sidebar-width);
+  z-index: var(--layer);
+}
+`
+	sheet, err := Parse(data)
+	if err != nil {
+		t.Fatalf("parse error: %v", err)
+	}
+	node := &testNode{typ: "Panel"}
+	resolved := sheet.Resolve(node, nil)
+
+	if resolved.MinWidth == nil || *resolved.MinWidth != 30 {
+		t.Fatalf("min-width = %v, want 30 (via variable)", resolved.MinWidth)
+	}
+	if resolved.ZIndex == nil || *resolved.ZIndex != 10 {
+		t.Fatalf("z-index = %v, want 10 (via variable)", resolved.ZIndex)
+	}
+}
+
 // --- Media query combined with new properties ---
 
 func TestNewPropertiesMediaQuery(t *testing.T) {
