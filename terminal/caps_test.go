@@ -426,6 +426,7 @@ func TestDetectCaps_String(t *testing.T) {
 		"OSC8=true",
 		"Sixel=false",
 		"KittyGfx=true",
+		"ITermImg=false",
 		"BracketPaste=true",
 		"MouseSGR=true",
 		"Unicode=true",
@@ -464,6 +465,39 @@ func TestDetectCaps_RawEnvStored(t *testing.T) {
 	}
 	if caps.TermProgram != "WezTerm" {
 		t.Errorf("TermProgram should store raw value, got %q", caps.TermProgram)
+	}
+}
+
+func TestCaps_ITermInlineImages(t *testing.T) {
+	// iTerm.app should enable ITermInlineImages.
+	t.Setenv("TERM", "xterm-256color")
+	t.Setenv("TERM_PROGRAM", "iTerm.app")
+	t.Setenv("COLORTERM", "")
+
+	caps := DetectCaps()
+	if !caps.ITermInlineImages {
+		t.Error("iTerm.app should enable ITermInlineImages")
+	}
+
+	// iTerm2 variant should also enable it.
+	t.Setenv("TERM_PROGRAM", "iTerm2")
+	caps = DetectCaps()
+	if !caps.ITermInlineImages {
+		t.Error("iTerm2 should enable ITermInlineImages")
+	}
+
+	// Other terminals should not have it.
+	t.Setenv("TERM_PROGRAM", "kitty")
+	caps = DetectCaps()
+	if caps.ITermInlineImages {
+		t.Error("kitty should not enable ITermInlineImages")
+	}
+
+	// Default (no TERM_PROGRAM) should not have it.
+	t.Setenv("TERM_PROGRAM", "")
+	caps = DetectCaps()
+	if caps.ITermInlineImages {
+		t.Error("default should not enable ITermInlineImages")
 	}
 }
 

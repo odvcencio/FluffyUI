@@ -21,9 +21,10 @@ type TerminalCaps struct {
 	BracketedPaste  bool   // Bracketed paste mode
 	MouseSGR        bool   // SGR mouse protocol
 	UnicodeWidth    bool   // Full Unicode width support
-	OSC52Clipboard  bool   // OSC-52 clipboard support
-	TermProgram     string // TERM_PROGRAM value
-	Term            string // TERM value
+	OSC52Clipboard   bool   // OSC-52 clipboard support
+	ITermInlineImages bool  // iTerm2 inline image protocol
+	TermProgram      string // TERM_PROGRAM value
+	Term             string // TERM value
 }
 
 // DetectCaps probes environment variables and returns a TerminalCaps
@@ -74,6 +75,7 @@ func DetectCaps() *TerminalCaps {
 		caps.CursorShapes = true
 		caps.OSC8Hyperlinks = true
 		caps.OSC52Clipboard = true
+		caps.ITermInlineImages = true
 
 	case termProgramLower == "kitty":
 		caps.TrueColor = true
@@ -177,7 +179,7 @@ func DetectCaps() *TerminalCaps {
 // suitable for diagnostic output.
 func (c *TerminalCaps) String() string {
 	return fmt.Sprintf(
-		"TrueColor=%t SyncOut=%t CursorShapes=%t OSC8=%t OSC52=%t Sixel=%t KittyGfx=%t KittyKbd=%t BracketPaste=%t MouseSGR=%t Unicode=%t TERM=%q TERM_PROGRAM=%q",
+		"TrueColor=%t SyncOut=%t CursorShapes=%t OSC8=%t OSC52=%t Sixel=%t KittyGfx=%t KittyKbd=%t ITermImg=%t BracketPaste=%t MouseSGR=%t Unicode=%t TERM=%q TERM_PROGRAM=%q",
 		c.TrueColor,
 		c.SynchronizedOut,
 		c.CursorShapes,
@@ -186,6 +188,7 @@ func (c *TerminalCaps) String() string {
 		c.Sixel,
 		c.KittyGraphics,
 		c.KittyKeyboard,
+		c.ITermInlineImages,
 		c.BracketedPaste,
 		c.MouseSGR,
 		c.UnicodeWidth,
