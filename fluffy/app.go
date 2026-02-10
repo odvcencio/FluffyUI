@@ -183,6 +183,16 @@ func newBuilder() (*appBuilder, error) {
 		return nil, err
 	}
 
+	// If FLUFFYUI_WEB_ADDR_FILE is set, write the actual listen address
+	// after the web backend is initialized. This is used by the playground
+	// to discover the dynamic port assigned by :0.
+	var webAddrFile string
+	if f := os.Getenv("FLUFFYUI_WEB_ADDR_FILE"); f != "" {
+		if _, ok := be.(*web.Backend); ok {
+			webAddrFile = f
+		}
+	}
+
 	registry := keybind.NewRegistry()
 	keybind.RegisterStandardCommands(registry)
 	keybind.RegisterScrollCommands(registry)
@@ -222,6 +232,15 @@ func newBuilder() (*appBuilder, error) {
 			Indicator: indicator,
 			Style:     focusStyle,
 		},
+	}
+
+	if webAddrFile != "" {
+		wb := be.(*web.Backend)
+		cfg.OnReady = func(_ *runtime.App) {
+			if addr := wb.Addr(); addr != nil {
+				_ = os.WriteFile(webAddrFile, []byte(addr.String()), 0o644)
+			}
+		}
 	}
 
 	return &appBuilder{
