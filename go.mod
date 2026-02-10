@@ -12,9 +12,10 @@ require (
 	github.com/oklog/ulid/v2 v2.1.1
 	github.com/u2takey/ffmpeg-go v0.5.0
 	github.com/yuin/goldmark v1.7.16
+	golang.org/x/crypto v0.48.0
 	golang.org/x/image v0.35.0
-	golang.org/x/sys v0.40.0
-	golang.org/x/term v0.39.0
+	golang.org/x/sys v0.41.0
+	golang.org/x/term v0.40.0
 	golang.org/x/time v0.14.0
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -36,7 +37,7 @@ require (
 	github.com/u2takey/go-utils v0.3.1 // indirect
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
-	golang.org/x/text v0.33.0 // indirect
+	golang.org/x/text v0.34.0 // indirect
 )
 
 replace github.com/mark3labs/mcp-go => ./third_party/mcp-go

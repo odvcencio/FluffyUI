@@ -69,8 +69,18 @@ func main() {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
+	case "snapshot":
+		if err := runSnapshot(os.Args[2:]); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
 	case "dev":
 		if err := runDev(os.Args[2:]); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+	case "ssh":
+		if err := runSSH(os.Args[2:]); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
@@ -84,14 +94,16 @@ func usage() {
 	fmt.Fprint(os.Stderr, `fluffy - FluffyUI developer tools
 
 usage:
-  fluffy dev [--watch path] [--ext .go,.fss] [--debounce 200ms] -- <cmd> [args...]
-  fluffy dev [--watch path] [--ext .go,.fss] [--debounce 200ms] --run <pkg-or-file>
+  fluffy dev [--watch path] [--ext .go,.fss] [--debounce 200ms] [--inspect] [--debug-log path] [--profile] -- <cmd> [args...]
+  fluffy dev [--watch path] [--ext .go,.fss] [--debounce 200ms] [--inspect] [--debug-log path] [--profile] --run <pkg-or-file>
   fluffy create <name> [--template minimal|full|game] [--module path] [--force]
   fluffy add widget|page <Name> [--dir path] [--force]
   fluffy theme init|check|export [--path theme.yaml] [--output theme.css] [--force]
   fluffy test [--visual] [--race] [--pkg ./...]
   fluffy doctor [--json]
   fluffy record [--output file.cast|file.gif] [--export file] [--title title] [-- <cmd>]
+  fluffy snapshot [--output file] [--format ansi|text] [--width 80] [--height 24] [--delay 500ms] -- <cmd> [args...]
+  fluffy ssh [--addr :2222] [--host-key path] [--password pw] [--no-auth] -- <cmd> [args...]
 `)
 }
 
@@ -105,6 +117,12 @@ func runDev(args []string) error {
 	fs.StringVar(&exts, "ext", ".go,.fss,.yaml,.json", "comma-separated extensions")
 	fs.DurationVar(&debounce, "debounce", 200*time.Millisecond, "restart debounce window")
 	fs.StringVar(&runTarget, "run", "", "go run target (package, file, or module)")
+	var inspect bool
+	var debugLog string
+	var profile bool
+	fs.BoolVar(&inspect, "inspect", false, "set FLUFFYUI_INSPECT=1 in subprocess")
+	fs.StringVar(&debugLog, "debug-log", "", "set FLUFFYUI_DEBUG_LOG=`path` in subprocess")
+	fs.BoolVar(&profile, "profile", false, "set FLUFFYUI_PROFILE=1 in subprocess")
 	fs.SetOutput(os.Stderr)
 
 	split := indexOf(args, "--")
@@ -138,6 +156,17 @@ func runDev(args []string) error {
 		return errors.New("no extensions to watch")
 	}
 
+	var extraEnv []string
+	if inspect {
+		extraEnv = append(extraEnv, "FLUFFYUI_INSPECT=1")
+	}
+	if debugLog != "" {
+		extraEnv = append(extraEnv, "FLUFFYUI_DEBUG_LOG="+debugLog)
+	}
+	if profile {
+		extraEnv = append(extraEnv, "FLUFFYUI_PROFILE=1")
+	}
+
 	restarts := make(chan struct{}, 1)
 	stop := make(chan struct{})
 	var wg sync.WaitGroup
@@ -147,7 +176,7 @@ func runDev(args []string) error {
 		watchLoop(watches, extSet, 500*time.Millisecond, debounce, restarts, stop)
 	}()
 
-	cmd, err := startCmd(cmdArgs)
+	cmd, err := startCmd(cmdArgs, extraEnv)
 	if err != nil {
 		close(stop)
 		wg.Wait()
@@ -162,7 +191,7 @@ func runDev(args []string) error {
 		select {
 		case <-restarts:
 			_ = stopCmd(cmd)
-			cmd, err = startCmd(cmdArgs)
+			cmd, err = startCmd(cmdArgs, extraEnv)
 			if err != nil {
 				close(stop)
 				wg.Wait()
@@ -177,11 +206,14 @@ func runDev(args []string) error {
 	}
 }
 
-func startCmd(args []string) (*exec.Cmd, error) {
+func startCmd(args []string, extraEnv []string) (*exec.Cmd, error) {
 	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
+	if len(extraEnv) > 0 {
+		cmd.Env = append(os.Environ(), extraEnv...)
+	}
 	if err := cmd.Start(); err != nil {
 		return nil, err
 	}
