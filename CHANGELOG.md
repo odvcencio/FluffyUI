@@ -1,5 +1,54 @@
 # Changelog
 
+## v0.5.0 - 2026-02-09
+
+### Highlights
+- **Bidirectional text**: full RTL support for Input and TextArea widgets with cursor position mapping for Arabic, Hebrew, and other RTL scripts.
+- **CSS Grid track sizing**: `Fr()`, `Px()`, `AutoTrack()` units with proportional space distribution, replacing the fixed uniform grid.
+- **Standalone prompts library**: `prompts.Confirm()`, `prompts.Input()`, `prompts.Choose()` for shell-friendly interactive prompts using inline mode.
+- **SSH server**: `fluffy ssh` command serves any FluffyUI app over SSH with Ed25519 key generation and configurable auth.
+- **Documentation site**: mdBook configuration with GitHub Pages auto-deployment for all 51 documentation files.
+- **Fuzz testing**: 15M+ executions across FSS parser, FUR markup, and Kitty keyboard protocol with zero panics.
+
+### New Packages
+- **`i18n/`**: Bidirectional text support with `DetectDirection()`, `BidiReorder()`, `MirrorBrackets()`, and `CursorMap` for logical-to-visual cursor position mapping.
+- **`prompts/`**: Standalone interactive prompts (`Confirm`, `Input`, `Choose`) backed by FluffyUI inline mode with full keyboard handling and simulation backend testing.
+- **`ssh/`**: SSH server package with per-session command execution, Ed25519 host key generation, and password authentication.
+
+### Widget Enhancements
+- **Base**: added `hovered` and `active` state tracking with `SetHovered()`, `IsHovered()`, `SetActive()`, `IsActive()` methods; `StyleState()` now reports all four states (focused, disabled, hovered, active).
+- **Grid**: CSS Grid-like track sizing with `Fr()` (fractional), `Px()` (fixed), `AutoTrack()` units; `resolveTracks()` algorithm distributes space proportionally; `TrackGridBuilder` fluent API; `NewTrackGrid()` constructor; backward-compatible with legacy uniform grid.
+- **Input**: BiDi text rendering with RTL detection, `BidiReorder()` for display, `CursorMap` for cursor positioning, and right-alignment for RTL content.
+- **TextArea**: per-line BiDi reordering with RTL right-alignment.
+
+### Styling
+- `:hover` and `:active` pseudo-classes now fully functional end-to-end: FSS parsing, selector matching, and widget state tracking all wired together.
+- **ThemeToggle**: convenience API for cycling through stylesheets with `NewThemeToggle()`, `Toggle()`, `SetIndex()`, and `Bind()` for automatic app updates.
+
+### Agent & MCP
+- `list_themes` tool: returns available built-in theme names (dark, light, monokai, nord).
+- `set_theme` tool: switches the active theme by name at runtime.
+
+### CLI Tools
+- `fluffy snapshot`: captures a single frame from a FluffyUI app with configurable format, dimensions, and delay.
+- `fluffy ssh`: serves FluffyUI apps over SSH with `--addr`, `--host-key`, `--password`, `--no-auth` flags.
+- `fluffy dev`: new `--inspect`, `--debug-log`, and `--profile` flags for injecting debug environment variables into the subprocess.
+
+### Testing
+- Fuzz tests for FSS parser (`style/parser_fuzz_test.go`), FUR markup (`fur/markup_fuzz_test.go`), and Kitty keyboard protocol (`terminal/kitty_fuzz_test.go`).
+- 24 new Grid track sizing tests covering `resolveTracks()`, `trackOffsets()`, builder API, layout, and backward compatibility.
+- 15 prompts package tests covering Confirm, Choose, and Input with simulation backend.
+- Hover/active state tests for Base widget and stylesheet selector matching.
+
+### Documentation
+- mdBook site: `book.toml`, `SUMMARY.md` mapping all docs, and `docs/README.md` landing page.
+- GitHub Actions workflow (`.github/workflows/docs.yml`) for automated Pages deployment on docs changes.
+- `docs/awesome.md`: curated resource list covering all 88 widgets, 44 examples, integrations, and version highlights.
+- README rewritten: feature comparison table, badges, quickstart code, 68% size reduction (696 to 219 lines).
+
+### Dependencies
+- Added `golang.org/x/crypto` v0.48.0 for SSH server support.
+
 ## v0.4.1 - 2026-02-09
 
 ### Highlights
