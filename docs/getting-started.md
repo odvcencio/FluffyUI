@@ -3,7 +3,7 @@
 FluffyUI is a batteries-included TUI framework for Go. It ships with a runtime
 loop, reactive state, layout, and a growing widget catalog.
 
-![Quickstart demo](demos/quickstart.gif)
+<a href="demos/quickstart.gif" target="_blank"><img src="demos/quickstart.gif" alt="Quickstart demo"></a>
 
 ## Install
 

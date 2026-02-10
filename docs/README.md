@@ -5,7 +5,7 @@ A batteries-included Terminal User Interface (TUI) framework for Go. Build inter
 **Reactive. Accessible. Testable. Terminal UI for Go.**
 
 <p align="center">
-  <img src="demos/hero.gif" width="640" alt="FluffyUI hero demo">
+  <a href="demos/hero.gif" target="_blank"><img src="demos/hero.gif" width="640" alt="FluffyUI hero demo"></a>
 </p>
 
 ```bash
@@ -31,8 +31,8 @@ go get github.com/odvcencio/fluffyui@latest
 
 | Widgets & Forms | Data Visualization | Graphics & Animation |
 |:-:|:-:|:-:|
-| ![Buttons](demos/buttons.gif) | ![Table](demos/table.gif) | ![Graphics](demos/graphics.gif) |
-| ![Input](demos/input.gif) | ![Sparkline](demos/sparkline.gif) | ![Fireworks](demos/fireworks.gif) |
+| <a href="demos/buttons.gif" target="_blank"><img src="demos/buttons.gif" alt="Buttons"></a> | <a href="demos/table.gif" target="_blank"><img src="demos/table.gif" alt="Table"></a> | <a href="demos/graphics.gif" target="_blank"><img src="demos/graphics.gif" alt="Graphics"></a> |
+| <a href="demos/input.gif" target="_blank"><img src="demos/input.gif" alt="Input"></a> | <a href="demos/sparkline.gif" target="_blank"><img src="demos/sparkline.gif" alt="Sparkline"></a> | <a href="demos/fireworks.gif" target="_blank"><img src="demos/fireworks.gif" alt="Fireworks"></a> |
 
 ## Quick Links
 

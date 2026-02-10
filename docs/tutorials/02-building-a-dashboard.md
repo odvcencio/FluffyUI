@@ -2,7 +2,7 @@
 
 This tutorial sketches a data dashboard using charts, tables, and signals.
 
-![Live sparkline data](../demos/sparkline.gif)
+<a href="../demos/sparkline.gif" target="_blank"><img src="../demos/sparkline.gif" alt="Live sparkline data"></a>
 
 ## Layout Structure
 
@@ -32,7 +32,7 @@ data.Update(func(values []widgets.BarData) []widgets.BarData {
 })
 ```
 
-![Table widget](../demos/table.gif)
+<a href="../demos/table.gif" target="_blank"><img src="../demos/table.gif" alt="Table widget"></a>
 
 ## Reference
 

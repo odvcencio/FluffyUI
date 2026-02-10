@@ -22,7 +22,7 @@ See `docs/widgets/layout.md` and `examples/widgets/layout`.
 
 See `docs/widgets/data.md` and `examples/widgets/data`.
 
-![Table widget](../demos/table.gif)
+<a href="../demos/table.gif" target="_blank"><img src="../demos/table.gif" alt="Table widget"></a>
 
 - List
 - Table
@@ -33,13 +33,13 @@ See `docs/widgets/data.md` and `examples/widgets/data`.
 - RichText
 - SearchWidget
 
-![List widget](../demos/list.gif)
+<a href="../demos/list.gif" target="_blank"><img src="../demos/list.gif" alt="List widget"></a>
 
 ## Input
 
 See `docs/widgets/input.md` and `examples/widgets/input`.
 
-![Button variants](../demos/buttons.gif)
+<a href="../demos/buttons.gif" target="_blank"><img src="../demos/buttons.gif" alt="Button variants"></a>
 
 - Button
 - Checkbox
@@ -56,21 +56,21 @@ See `docs/widgets/input.md` and `examples/widgets/input`.
 - DateRangePicker
 - TimePicker
 
-![Input with validation](../demos/input.gif)
+<a href="../demos/input.gif" target="_blank"><img src="../demos/input.gif" alt="Input with validation"></a>
 
-![Select dropdown](../demos/select.gif)
+<a href="../demos/select.gif" target="_blank"><img src="../demos/select.gif" alt="Select dropdown"></a>
 
-![Checkbox and radio](../demos/checkbox.gif)
+<a href="../demos/checkbox.gif" target="_blank"><img src="../demos/checkbox.gif" alt="Checkbox and radio"></a>
 
-![Slider controls](../demos/slider.gif)
+<a href="../demos/slider.gif" target="_blank"><img src="../demos/slider.gif" alt="Slider controls"></a>
 
-![TextArea editor](../demos/textarea.gif)
+<a href="../demos/textarea.gif" target="_blank"><img src="../demos/textarea.gif" alt="TextArea editor"></a>
 
 ## Navigation
 
 See `docs/widgets/navigation.md` and `examples/widgets/navigation`.
 
-![Tabs](../demos/tabs.gif)
+<a href="../demos/tabs.gif" target="_blank"><img src="../demos/tabs.gif" alt="Tabs"></a>
 
 - Tabs
 - Menu
@@ -84,7 +84,7 @@ See `docs/widgets/navigation.md` and `examples/widgets/navigation`.
 
 See `docs/widgets/feedback.md` and `examples/widgets/feedback`.
 
-![Dialog](../demos/dialog.gif)
+<a href="../demos/dialog.gif" target="_blank"><img src="../demos/dialog.gif" alt="Dialog"></a>
 
 - Dialog
 - Spinner
@@ -93,9 +93,9 @@ See `docs/widgets/feedback.md` and `examples/widgets/feedback`.
 - ToastStack
 - Charts (Sparkline, BarChart, LineChart)
 
-![Progress and spinners](../demos/progress.gif)
+<a href="../demos/progress.gif" target="_blank"><img src="../demos/progress.gif" alt="Progress and spinners"></a>
 
-![Live sparkline data](../demos/sparkline.gif)
+<a href="../demos/sparkline.gif" target="_blank"><img src="../demos/sparkline.gif" alt="Live sparkline data"></a>
 
 ## Developer helpers
 

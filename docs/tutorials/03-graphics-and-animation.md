@@ -2,7 +2,7 @@
 
 This tutorial draws with the pixel canvas and animates particles.
 
-![Canvas graphics](../demos/graphics.gif)
+<a href="../demos/graphics.gif" target="_blank"><img src="../demos/graphics.gif" alt="Canvas graphics"></a>
 
 ## Canvas Drawing
 
@@ -14,7 +14,7 @@ widget := widgets.NewCanvasWidget(func(c *graphics.Canvas) {
 })
 ```
 
-![Animation easing functions](../demos/easing.gif)
+<a href="../demos/easing.gif" target="_blank"><img src="../demos/easing.gif" alt="Animation easing functions"></a>
 
 ## Particles + Force Fields
 
@@ -29,7 +29,7 @@ ps.Update(dt)
 ps.Render(canvas)
 ```
 
-![3D particle fireworks](../demos/fireworks.gif)
+<a href="../demos/fireworks.gif" target="_blank"><img src="../demos/fireworks.gif" alt="3D particle fireworks"></a>
 
 ## Reference
 

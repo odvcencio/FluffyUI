@@ -3,7 +3,7 @@
 The `forms` package provides field state, validation, and form-level
 coordination. It is UI-agnostic so it can be wired to any widget.
 
-![Form input with validation](demos/input.gif)
+<a href="demos/input.gif" target="_blank"><img src="demos/input.gif" alt="Form input with validation"></a>
 
 ## Fields and validators
 
