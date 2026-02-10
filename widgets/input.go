@@ -8,6 +8,7 @@ import (
 	"github.com/odvcencio/fluffyui/backend"
 	"github.com/odvcencio/fluffyui/clipboard"
 	"github.com/odvcencio/fluffyui/forms"
+	"github.com/odvcencio/fluffyui/i18n"
 	"github.com/odvcencio/fluffyui/runtime"
 	"github.com/odvcencio/fluffyui/state"
 	uistyle "github.com/odvcencio/fluffyui/style"
@@ -430,6 +431,9 @@ func (i *Input) Render(ctx runtime.RenderContext) {
 		return
 	}
 
+	// Detect text direction for BiDi support
+	dir := i18n.DetectDirection(text)
+
 	// Calculate visible portion of text
 	// Scroll so cursor is always visible
 	visibleStart := 0
@@ -447,15 +451,40 @@ func (i *Input) Render(ctx runtime.RenderContext) {
 		visibleRunes = runes[visibleStart:visibleEnd]
 	}
 
+	// Apply BiDi reordering for display
+	displayRunes := visibleRunes
+	var cursorMap i18n.CursorMap
+	if dir == i18n.DirectionRTL && len(visibleRunes) > 0 {
+		logicalStr := string(visibleRunes)
+		displayStr := i18n.BidiReorder(logicalStr, i18n.DirectionRTL)
+		displayRunes = []rune(displayStr)
+		cursorMap = i18n.BuildCursorMap(logicalStr, displayStr)
+	}
+
+	// Right-align RTL text
+	xOffset := 0
+	if dir == i18n.DirectionRTL {
+		displayW := textWidth(string(displayRunes))
+		if displayW < content.Width {
+			xOffset = content.Width - displayW
+		}
+	}
+
 	// Draw text with selection highlighting
 	selectionStyle := style.Reverse(true)
 	sel := i.selection.Normalize()
 	hasSelection := !i.selection.IsEmpty()
 
-	for idx, ch := range visibleRunes {
-		textIdx := visibleStart + idx
-		screenX := content.X + idx
+	for idx, ch := range displayRunes {
+		screenX := content.X + xOffset + idx
 		charStyle := style
+
+		// Map display index back to logical index for selection highlighting
+		logicalIdx := idx
+		if dir == i18n.DirectionRTL {
+			logicalIdx = cursorMap.VisualToLogical(idx)
+		}
+		textIdx := visibleStart + logicalIdx
 
 		// Highlight if within selection
 		if hasSelection && textIdx >= sel.Start && textIdx < sel.End {
@@ -467,10 +496,31 @@ func (i *Input) Render(ctx runtime.RenderContext) {
 
 	// Draw cursor if focused (by inverting the cell)
 	if i.focused {
-		cursorX := content.X + i.cursorPos - visibleStart
+		visualCursorPos := i.cursorPos - visibleStart
+		if dir == i18n.DirectionRTL && len(visibleRunes) > 0 {
+			if visualCursorPos >= 0 && visualCursorPos < len(visibleRunes) {
+				visualCursorPos = cursorMap.LogicalToVisual(visualCursorPos)
+			}
+			// For RTL, when cursor is at the end of text, place it at the left edge
+			if i.cursorPos >= textLen {
+				visualCursorPos = -1 // will be adjusted with xOffset below
+				// Place cursor at the position before the first visual character
+				if xOffset > 0 {
+					cursorX := content.X + xOffset - 1
+					if cursorX >= content.X && cursorX < content.X+content.Width {
+						cursorStyle := style.Reverse(true)
+						ctx.Buffer.Set(cursorX, content.Y, ' ', cursorStyle)
+					}
+					return
+				}
+			}
+		}
+		cursorX := content.X + xOffset + visualCursorPos
 		if cursorX >= content.X && cursorX < content.X+content.Width {
 			var cursorChar rune = ' '
-			if i.cursorPos < textLen {
+			if dir == i18n.DirectionRTL && len(displayRunes) > 0 && visualCursorPos >= 0 && visualCursorPos < len(displayRunes) {
+				cursorChar = displayRunes[visualCursorPos]
+			} else if i.cursorPos < textLen {
 				cursorChar = runes[i.cursorPos]
 			}
 			cursorStyle := style.Reverse(true)

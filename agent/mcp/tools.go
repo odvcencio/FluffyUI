@@ -18,6 +18,7 @@ import (
 	"github.com/odvcencio/fluffyui/keybind"
 	"github.com/odvcencio/fluffyui/runtime"
 	"github.com/odvcencio/fluffyui/scroll"
+	"github.com/odvcencio/fluffyui/style"
 	"github.com/odvcencio/fluffyui/terminal"
 	"github.com/odvcencio/fluffyui/widgets"
 )
@@ -451,6 +452,14 @@ func registerTools(s *Server) {
 		mcp.WithDescription("Execute multiple tool calls in sequence and return all results."),
 		mcp.WithInputSchema[batchExecuteArgs](),
 	), s.handleBatchExecute)
+
+	addTool(s, mcp.NewTool("list_themes",
+		mcp.WithDescription("List available built-in themes."),
+	), s.handleListThemes)
+	addTool(s, mcp.NewTool("set_theme",
+		mcp.WithDescription("Switch to a built-in theme by name (dark, light, monokai, nord)."),
+		mcp.WithInputSchema[themeArgs](),
+	), s.handleSetTheme)
 }
 
 func addTool(s *Server, tool mcp.Tool, handler mcpserver.ToolHandlerFunc) {
@@ -3840,4 +3849,39 @@ func equalStringSlice(a, b []string) bool {
 		}
 	}
 	return true
+}
+
+type themeArgs struct {
+	Name string `json:"name"`
+}
+
+var builtinThemeNames = []string{"dark", "light", "monokai", "nord"}
+
+func (s *Server) handleListThemes(_ context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return s.toolResult("list_themes", builtinThemeNames), nil
+}
+
+func (s *Server) handleSetTheme(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	args := themeArgs{}
+	if err := req.BindArguments(&args); err != nil {
+		return nil, newMCPError(mcp.INVALID_PARAMS, err.Error(), nil)
+	}
+	name := strings.TrimSpace(strings.ToLower(args.Name))
+	var sheet *style.Stylesheet
+	switch name {
+	case "dark":
+		sheet = style.DarkTheme()
+	case "light":
+		sheet = style.LightTheme()
+	case "monokai":
+		sheet = style.MonokaiTheme()
+	case "nord":
+		sheet = style.NordTheme()
+	default:
+		return s.toolError("set_theme", fmt.Errorf("unknown theme %q; available: dark, light, monokai, nord", args.Name)), nil
+	}
+	if s.app != nil {
+		s.app.SetStylesheet(sheet)
+	}
+	return s.toolResult("set_theme", name), nil
 }

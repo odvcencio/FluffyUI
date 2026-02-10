@@ -3,6 +3,7 @@ package fluffy
 import (
 	"github.com/odvcencio/fluffyui/runtime"
 	"github.com/odvcencio/fluffyui/state"
+	"github.com/odvcencio/fluffyui/style"
 	"github.com/odvcencio/fluffyui/widgets"
 )
 
@@ -127,3 +128,60 @@ func Form(fields ...widgets.FormFieldDef) *widgets.Form {
 func FormField(label string, widget runtime.Widget) widgets.FormFieldDef {
 	return widgets.FormField(label, widget)
 }
+
+// ThemeToggle cycles through a set of stylesheets.
+//
+// Use this when you want to let users switch between themes at runtime.
+// Call Bind to connect it to an App so that Toggle and SetIndex
+// automatically apply the selected stylesheet.
+//
+// Example:
+//
+//	toggle := fluffy.NewThemeToggle(style.DarkTheme(), style.LightTheme())
+//	toggle.Bind(app)
+//	toggle.Toggle() // switches to light
+type ThemeToggle struct {
+	themes []*style.Stylesheet
+	index  int
+	app    *runtime.App
+}
+
+// NewThemeToggle creates a toggle that cycles through the given stylesheets.
+// If no themes are provided, it defaults to dark and light themes.
+func NewThemeToggle(themes ...*style.Stylesheet) *ThemeToggle {
+	if len(themes) == 0 {
+		themes = []*style.Stylesheet{style.DarkTheme(), style.LightTheme()}
+	}
+	return &ThemeToggle{themes: themes}
+}
+
+// Bind connects the toggle to an app for automatic switching.
+func (t *ThemeToggle) Bind(app *runtime.App) { t.app = app }
+
+// Current returns the active stylesheet.
+func (t *ThemeToggle) Current() *style.Stylesheet { return t.themes[t.index] }
+
+// Index returns the current theme index.
+func (t *ThemeToggle) Index() int { return t.index }
+
+// Toggle advances to the next theme and applies it.
+func (t *ThemeToggle) Toggle() {
+	t.index = (t.index + 1) % len(t.themes)
+	if t.app != nil {
+		t.app.SetStylesheet(t.themes[t.index])
+	}
+}
+
+// SetIndex switches to a specific theme by index.
+func (t *ThemeToggle) SetIndex(i int) {
+	if i < 0 || i >= len(t.themes) {
+		return
+	}
+	t.index = i
+	if t.app != nil {
+		t.app.SetStylesheet(t.themes[t.index])
+	}
+}
+
+// Len returns the number of themes.
+func (t *ThemeToggle) Len() int { return len(t.themes) }

@@ -8,6 +8,7 @@ import (
 	"github.com/odvcencio/fluffyui/backend"
 	"github.com/odvcencio/fluffyui/clipboard"
 	"github.com/odvcencio/fluffyui/forms"
+	"github.com/odvcencio/fluffyui/i18n"
 	"github.com/odvcencio/fluffyui/runtime"
 	"github.com/odvcencio/fluffyui/state"
 	uistyle "github.com/odvcencio/fluffyui/style"
@@ -410,6 +411,10 @@ func (t *TextArea) Render(ctx runtime.RenderContext) {
 			break
 		}
 		lineText := t.lineText(lineIndex, lineStarts, lineLengths)
+		dir := i18n.DetectDirection(lineText)
+		if dir == i18n.DirectionRTL {
+			lineText = i18n.BidiReorder(lineText, dir)
+		}
 		if scrollX < len(lineText) {
 			lineText = lineText[scrollX:]
 		} else {
@@ -418,7 +423,11 @@ func (t *TextArea) Render(ctx runtime.RenderContext) {
 		if len(lineText) > content.Width {
 			lineText = lineText[:content.Width]
 		}
-		writePadded(ctx.Buffer, content.X, content.Y+row, content.Width, lineText, style)
+		x := content.X
+		if dir == i18n.DirectionRTL && len(lineText) < content.Width {
+			x = content.X + content.Width - len(lineText)
+		}
+		writePadded(ctx.Buffer, x, content.Y+row, content.Width, lineText, style)
 	}
 
 	if t.focused {

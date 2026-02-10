@@ -105,3 +105,23 @@ func TestResolveAttributeSelector(t *testing.T) {
 		t.Fatalf("dim = %v, want nil", resolved.Dim)
 	}
 }
+
+func TestHoverSelectorMatches(t *testing.T) {
+	// Create a stylesheet with a hover rule.
+	sheet := NewStylesheet().
+		Add(Select("Button").Pseudo(PseudoHover), Style{Bold: Bool(true)})
+
+	// Node NOT hovered.
+	node := &testNode{typ: "Button", state: WidgetState{Hovered: false}}
+	resolved := sheet.Resolve(node, nil)
+	if resolved.Bold != nil {
+		t.Fatal("should not apply hover style when not hovered")
+	}
+
+	// Node IS hovered.
+	node.state.Hovered = true
+	resolved = sheet.Resolve(node, nil)
+	if resolved.Bold == nil || !*resolved.Bold {
+		t.Fatal("should apply hover style when hovered")
+	}
+}

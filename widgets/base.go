@@ -21,9 +21,13 @@ type Base struct {
 	layoutStyle   style.Style
 	layoutMetrics layoutMetrics
 	focused       bool
+	hovered       bool
+	active        bool
 	needsRender   bool
 	id            string
 	classes       []string
+	onMount       func()
+	onUnmount     func()
 }
 
 // Layout stores the assigned bounds.
@@ -167,6 +171,8 @@ func (b *Base) StyleState() style.WidgetState {
 	return style.WidgetState{
 		Focused:  b.focused,
 		Disabled: b.State.Disabled,
+		Hovered:  b.hovered,
+		Active:   b.active,
 	}
 }
 
@@ -204,6 +210,44 @@ func (b *Base) IsFocused() bool {
 	return b.focused
 }
 
+// SetHovered sets the hover state of the widget.
+func (b *Base) SetHovered(hovered bool) {
+	if b == nil {
+		return
+	}
+	if b.hovered != hovered {
+		b.hovered = hovered
+		b.Invalidate()
+	}
+}
+
+// IsHovered returns true if the widget is currently hovered.
+func (b *Base) IsHovered() bool {
+	if b == nil {
+		return false
+	}
+	return b.hovered
+}
+
+// SetActive sets the active (pressed) state of the widget.
+func (b *Base) SetActive(active bool) {
+	if b == nil {
+		return
+	}
+	if b.active != active {
+		b.active = active
+		b.Invalidate()
+	}
+}
+
+// IsActive returns true if the widget is currently active (pressed).
+func (b *Base) IsActive() bool {
+	if b == nil {
+		return false
+	}
+	return b.active
+}
+
 // Invalidate marks the widget as needing a render pass.
 func (b *Base) Invalidate() {
 	if b == nil {
@@ -226,6 +270,68 @@ func (b *Base) ClearInvalidation() {
 		return
 	}
 	b.needsRender = false
+}
+
+// OnMount registers a callback that fires when the widget is bound
+// (mounted into a screen). If the widget type defines its own Bind method,
+// call b.Base.Bind(services) to trigger the hook.
+func (b *Base) OnMount(fn func()) {
+	if b == nil {
+		return
+	}
+	b.onMount = fn
+}
+
+// OnUnmount registers a callback that fires when the widget is unbound
+// (removed from a screen). If the widget type defines its own Unbind method,
+// call b.Base.Unbind() to trigger the hook.
+func (b *Base) OnUnmount(fn func()) {
+	if b == nil {
+		return
+	}
+	b.onUnmount = fn
+}
+
+// Bind implements runtime.Bindable for Base. Widgets that define their own
+// Bind will shadow this; the onMount hook is separately invoked by
+// OnMountHook which BindTree calls after Bind.
+func (b *Base) Bind(services runtime.Services) {
+	if b == nil {
+		return
+	}
+}
+
+// Unbind implements runtime.Unbindable for Base. Widgets that define their
+// own Unbind will shadow this; the onUnmount hook is separately invoked by
+// OnUnmountHook which UnbindTree calls before Unbind.
+func (b *Base) Unbind() {
+	if b == nil {
+		return
+	}
+}
+
+// OnMountHook implements runtime.MountHook. It invokes the onMount callback
+// if one has been registered via OnMount. BindTree calls this automatically
+// after Bind, so hooks fire even if a widget has its own Bind method.
+func (b *Base) OnMountHook() {
+	if b == nil {
+		return
+	}
+	if b.onMount != nil {
+		b.onMount()
+	}
+}
+
+// OnUnmountHook implements runtime.UnmountHook. It invokes the onUnmount
+// callback if one has been registered via OnUnmount. UnbindTree calls this
+// automatically before Unbind.
+func (b *Base) OnUnmountHook() {
+	if b == nil {
+		return
+	}
+	if b.onUnmount != nil {
+		b.onUnmount()
+	}
 }
 
 func normalizeClasses(classes []string) []string {
@@ -258,11 +364,51 @@ func normalizeClasses(classes []string) []string {
 // FocusableBase extends Base for focusable widgets.
 type FocusableBase struct {
 	Base
+	onFocus func()
+	onBlur  func()
 }
 
 // CanFocus returns true for focusable widgets.
 func (f *FocusableBase) CanFocus() bool {
 	return true
+}
+
+// OnFocus registers a callback that fires when the widget gains focus.
+func (f *FocusableBase) OnFocus(fn func()) {
+	if f == nil {
+		return
+	}
+	f.onFocus = fn
+}
+
+// OnBlur registers a callback that fires when the widget loses focus.
+func (f *FocusableBase) OnBlur(fn func()) {
+	if f == nil {
+		return
+	}
+	f.onBlur = fn
+}
+
+// Focus marks the widget as focused and invokes the onFocus hook.
+func (f *FocusableBase) Focus() {
+	if f == nil {
+		return
+	}
+	f.Base.Focus()
+	if f.onFocus != nil {
+		f.onFocus()
+	}
+}
+
+// Blur marks the widget as unfocused and invokes the onBlur hook.
+func (f *FocusableBase) Blur() {
+	if f == nil {
+		return
+	}
+	f.Base.Blur()
+	if f.onBlur != nil {
+		f.onBlur()
+	}
 }
 
 func textWidth(s string) int {
