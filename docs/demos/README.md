@@ -44,7 +44,7 @@ This directory contains recordings and GIFs demonstrating the full depth of Fluf
 
 | Demo | Preview |
 |------|---------|
-| **candy-wars** -- Full trading game demonstrating all features | ![candy-wars](candy-wars-playback.gif) |
+| **candy-wars** -- Full trading game demonstrating all features | Run: `go run ./examples/candy-wars` |
 
 ## Framework Capabilities Demonstrated
 

@@ -2,7 +2,7 @@
 
 FluffyUI ships multiple showcase-style demos so you can explore the widget catalog quickly.
 
-![Candy Wars — full trading game built with FluffyUI](demos/candy-wars-playback.gif)
+![FluffyUI](demos/hero.gif)
 
 Run the lightweight sampler:
 
