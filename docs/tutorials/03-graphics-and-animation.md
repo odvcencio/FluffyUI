@@ -2,6 +2,8 @@
 
 This tutorial draws with the pixel canvas and animates particles.
 
+![Canvas graphics](../demos/graphics.gif)
+
 ## Canvas Drawing
 
 ```go
@@ -11,6 +13,8 @@ widget := widgets.NewCanvasWidget(func(c *graphics.Canvas) {
     c.FillCircle(24, 10, 6)
 })
 ```
+
+![Animation easing functions](../demos/easing.gif)
 
 ## Particles + Force Fields
 
@@ -24,6 +28,8 @@ ps.AddForceField(&animation.RadialField{
 ps.Update(dt)
 ps.Render(canvas)
 ```
+
+![3D particle fireworks](../demos/fireworks.gif)
 
 ## Reference
 

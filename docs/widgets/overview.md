@@ -1,6 +1,6 @@
 # Widgets Overview
 
-FluffyUI ships with a growing catalog of widgets. The list below is grouped by
+FluffyUI ships with a growing catalog of 88+ widgets. The list below is grouped by
 category with links to the relevant guides and examples.
 
 GoDoc usage examples live in the `widgets` package (for example `ExampleList`,
@@ -22,6 +22,8 @@ See `docs/widgets/layout.md` and `examples/widgets/layout`.
 
 See `docs/widgets/data.md` and `examples/widgets/data`.
 
+![Table widget](../demos/table.gif)
+
 - List
 - Table
 - DataGrid
@@ -31,9 +33,13 @@ See `docs/widgets/data.md` and `examples/widgets/data`.
 - RichText
 - SearchWidget
 
+![List widget](../demos/list.gif)
+
 ## Input
 
 See `docs/widgets/input.md` and `examples/widgets/input`.
+
+![Button variants](../demos/buttons.gif)
 
 - Button
 - Checkbox
@@ -50,9 +56,13 @@ See `docs/widgets/input.md` and `examples/widgets/input`.
 - DateRangePicker
 - TimePicker
 
+![Input with validation](../demos/input.gif)
+
 ## Navigation
 
 See `docs/widgets/navigation.md` and `examples/widgets/navigation`.
+
+![Tabs](../demos/tabs.gif)
 
 - Tabs
 - Menu
@@ -66,12 +76,18 @@ See `docs/widgets/navigation.md` and `examples/widgets/navigation`.
 
 See `docs/widgets/feedback.md` and `examples/widgets/feedback`.
 
+![Dialog](../demos/dialog.gif)
+
 - Dialog
 - Spinner
 - Progress
 - Alert
 - ToastStack
 - Charts (Sparkline, BarChart, LineChart)
+
+![Progress and spinners](../demos/progress.gif)
+
+![Live sparkline data](../demos/sparkline.gif)
 
 ## Developer helpers
 

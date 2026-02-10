@@ -2,43 +2,45 @@
 
 This directory contains recordings and GIFs demonstrating the full depth of FluffyUI's capabilities.
 
+![FluffyUI hero](hero.gif)
+
 ## Available Demos
 
 ### Core Widgets
 
-| Demo | Description | File |
-|------|-------------|------|
-| **hero** | Animated FluffyUI logo with rainbow effects | [hero.gif](hero.gif) |
-| **quickstart** | Hello world with typing animation and sparkles | [quickstart.gif](quickstart.gif) |
-| **buttons** | Button variants (primary, secondary, danger, success, warning) | [buttons.gif](buttons.gif) |
-| **input** | Form input with validation states and password strength | [input.gif](input.gif) |
-| **dialog** | Modal dialogs with focus management and animations | [dialog.gif](dialog.gif) |
-| **tabs** | Tabbed navigation with content switching | [tabs.gif](tabs.gif) |
+| Demo | Preview |
+|------|---------|
+| **hero** -- Animated FluffyUI logo with rainbow effects | ![hero](hero.gif) |
+| **quickstart** -- Hello world with typing animation and sparkles | ![quickstart](quickstart.gif) |
+| **buttons** -- Button variants (primary, secondary, danger, success, warning) | ![buttons](buttons.gif) |
+| **input** -- Form input with validation states and password strength | ![input](input.gif) |
+| **dialog** -- Modal dialogs with focus management and animations | ![dialog](dialog.gif) |
+| **tabs** -- Tabbed navigation with content switching | ![tabs](tabs.gif) |
 
 ### Data Widgets
 
-| Demo | Description | File |
-|------|-------------|------|
-| **table** | Sortable data table with selection and status indicators | [table.gif](table.gif) |
-| **list** | File manager-style list with checkboxes and selection | [list.gif](list.gif) |
-| **sparkline** | Live data visualization with multiple metrics | [sparkline.gif](sparkline.gif) |
-| **progress** | Progress bars, spinners, and multi-step indicators | [progress.gif](progress.gif) |
-| **counter** | Reactive counter with history sparkline | [counter.gif](counter.gif) |
+| Demo | Preview |
+|------|---------|
+| **table** -- Sortable data table with selection and status indicators | ![table](table.gif) |
+| **list** -- File manager-style list with checkboxes and selection | ![list](list.gif) |
+| **sparkline** -- Live data visualization with multiple metrics | ![sparkline](sparkline.gif) |
+| **progress** -- Progress bars, spinners, and multi-step indicators | ![progress](progress.gif) |
+| **counter** -- Reactive counter with history sparkline | ![counter](counter.gif) |
 
 ### Graphics & Animation
 
-| Demo | Description | File |
-|------|-------------|------|
-| **graphics** | Canvas API with shapes, curves, and transforms | [graphics.gif](graphics.gif) |
-| **easing** | Animation easing functions visualization | [easing.gif](easing.gif) |
-| **fireworks** | 3D particle effects with perspective projection | [fireworks.gif](fireworks.gif) |
-| **video** | Video player widget demo | [video.gif](video.gif) |
+| Demo | Preview |
+|------|---------|
+| **graphics** -- Canvas API with shapes, curves, and transforms | ![graphics](graphics.gif) |
+| **easing** -- Animation easing functions visualization | ![easing](easing.gif) |
+| **fireworks** -- 3D particle effects with perspective projection | ![fireworks](fireworks.gif) |
+| **video** -- Video player widget demo | ![video](video.gif) |
 
 ### Complete Applications
 
-| Demo | Description | File |
-|------|-------------|------|
-| **candy-wars** | Full trading game demonstrating all features | [candy-wars-playback.gif](candy-wars-playback.gif) |
+| Demo | Preview |
+|------|---------|
+| **candy-wars** -- Full trading game demonstrating all features | ![candy-wars](candy-wars-playback.gif) |
 
 ## Framework Capabilities Demonstrated
 

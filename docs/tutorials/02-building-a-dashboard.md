@@ -2,6 +2,8 @@
 
 This tutorial sketches a data dashboard using charts, tables, and signals.
 
+![Live sparkline data](../demos/sparkline.gif)
+
 ## Layout Structure
 
 ```go
@@ -29,6 +31,8 @@ data.Update(func(values []widgets.BarData) []widgets.BarData {
     return values
 })
 ```
+
+![Table widget](../demos/table.gif)
 
 ## Reference
 
