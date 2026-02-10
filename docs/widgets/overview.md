@@ -58,6 +58,14 @@ See `docs/widgets/input.md` and `examples/widgets/input`.
 
 ![Input with validation](../demos/input.gif)
 
+![Select dropdown](../demos/select.gif)
+
+![Checkbox and radio](../demos/checkbox.gif)
+
+![Slider controls](../demos/slider.gif)
+
+![TextArea editor](../demos/textarea.gif)
+
 ## Navigation
 
 See `docs/widgets/navigation.md` and `examples/widgets/navigation`.

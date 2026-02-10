@@ -64,6 +64,10 @@ func main() {
 		{"sparkline", demoSparkline, 80, 24, 0},
 		{"tabs", demoTabs, 80, 24, 0},
 		{"input", demoInput, 80, 24, 0},
+		{"select", demoSelect, 60, 16, 0},
+		{"checkbox", demoCheckbox, 60, 16, 0},
+		{"slider", demoSlider, 80, 24, 0},
+		{"textarea", demoTextarea, 80, 24, 0},
 		{"graphics", demoGraphics, 100, 32, 0},
 		{"easing", demoEasing, 120, 40, 0},
 		{"hero", demoHero, 80, 24, 0},
@@ -1582,6 +1586,652 @@ func (d *inputDemo) HandleMessage(msg runtime.Message) runtime.HandleResult {
 		return runtime.Handled()
 	}
 	return runtime.Unhandled()
+}
+
+// =============================================================================
+// Select Demo - Dropdown with cycling options
+// =============================================================================
+
+func demoSelect() runtime.Widget {
+	return &selectDemo{}
+}
+
+type selectDemo struct {
+	widgets.Component
+	frame    int
+	selected int
+	open     bool
+	phase    int // 0=closed, 1=opening, 2=cycling, 3=closing, 4=pause, then repeat
+	cycleIdx int
+}
+
+var selectOptions = []string{"Go", "Python", "Rust", "TypeScript"}
+
+func (d *selectDemo) Measure(constraints runtime.Constraints) runtime.Size {
+	return constraints.MaxSize()
+}
+
+func (d *selectDemo) Layout(bounds runtime.Rect) {
+	d.Component.Layout(bounds)
+}
+
+func (d *selectDemo) Render(ctx runtime.RenderContext) {
+	bounds := d.Bounds()
+	ctx.Clear(backend.DefaultStyle())
+
+	ctx.Buffer.SetString(bounds.X+2, bounds.Y+1, "Select Widget", backend.DefaultStyle().Bold(true).Foreground(backend.ColorBrightCyan))
+
+	// Label
+	y := bounds.Y + 3
+	ctx.Buffer.SetString(bounds.X+2, y, "Language:", backend.DefaultStyle())
+
+	// Draw the select box
+	boxWidth := 24
+	boxStyle := backend.DefaultStyle().Background(backend.ColorBrightWhite).Foreground(backend.ColorBlack)
+	borderColor := backend.ColorWhite
+	if d.open {
+		borderColor = backend.ColorBrightCyan
+	}
+
+	ctx.Buffer.SetString(bounds.X+12, y, "[", backend.DefaultStyle().Foreground(borderColor).Bold(true))
+	ctx.Buffer.SetString(bounds.X+13+boxWidth, y, "]", backend.DefaultStyle().Foreground(borderColor).Bold(true))
+
+	// Fill the select box background
+	for i := 0; i < boxWidth; i++ {
+		ctx.Buffer.Set(bounds.X+13+i, y, ' ', boxStyle)
+	}
+
+	// Show selected value
+	selectedText := selectOptions[d.selected]
+	ctx.Buffer.SetString(bounds.X+14, y, selectedText, boxStyle)
+
+	// Dropdown arrow
+	arrow := "▼"
+	if d.open {
+		arrow = "▲"
+	}
+	ctx.Buffer.SetString(bounds.X+13+boxWidth-2, y, arrow, boxStyle.Foreground(backend.ColorBlue))
+
+	// Draw dropdown list when open
+	if d.open {
+		for i, opt := range selectOptions {
+			optY := y + 1 + i
+			optStyle := backend.DefaultStyle()
+
+			if i == d.cycleIdx {
+				// Highlighted option
+				optStyle = backend.DefaultStyle().Background(backend.ColorBrightCyan).Foreground(backend.ColorBlack).Bold(true)
+				ctx.Buffer.SetString(bounds.X+12, optY, "▶", backend.DefaultStyle().Foreground(backend.ColorBrightCyan).Bold(true))
+			} else {
+				ctx.Buffer.SetString(bounds.X+12, optY, " ", backend.DefaultStyle())
+			}
+
+			// Draw option background
+			for j := 0; j < boxWidth+1; j++ {
+				ctx.Buffer.Set(bounds.X+13+j, optY, ' ', optStyle)
+			}
+			ctx.Buffer.SetString(bounds.X+14, optY, opt, optStyle)
+		}
+	}
+
+	// Current selection display
+	infoY := bounds.Y + 10
+	ctx.Buffer.SetString(bounds.X+2, infoY, "Selected:", backend.DefaultStyle().Dim(true))
+	ctx.Buffer.SetString(bounds.X+12, infoY, selectOptions[d.selected], backend.DefaultStyle().Foreground(backend.ColorBrightGreen).Bold(true))
+
+	// Navigation hint
+	ctx.Buffer.SetString(bounds.X+2, bounds.Y+bounds.Height-2, "↑↓ to browse, Enter to select", backend.DefaultStyle().Dim(true))
+
+	ctx.Buffer.DrawBox(bounds, backend.DefaultStyle())
+}
+
+func (d *selectDemo) HandleMessage(msg runtime.Message) runtime.HandleResult {
+	if _, ok := msg.(runtime.TickMsg); ok {
+		d.frame++
+
+		switch d.phase {
+		case 0: // Closed, waiting to open
+			if d.frame%30 == 0 {
+				d.open = true
+				d.cycleIdx = d.selected
+				d.phase = 1
+			}
+
+		case 1: // Just opened, pause briefly
+			if d.frame%15 == 0 {
+				d.phase = 2
+			}
+
+		case 2: // Cycling through options
+			if d.frame%12 == 0 {
+				d.cycleIdx = (d.cycleIdx + 1) % len(selectOptions)
+				if d.cycleIdx == (d.selected+2)%len(selectOptions) {
+					d.phase = 3
+				}
+			}
+
+		case 3: // Selecting and closing
+			if d.frame%15 == 0 {
+				d.selected = d.cycleIdx
+				d.open = false
+				d.phase = 4
+			}
+
+		case 4: // Pause before next cycle
+			if d.frame%45 == 0 {
+				d.phase = 0
+			}
+		}
+
+		d.Invalidate()
+		return runtime.Handled()
+	}
+	return runtime.Unhandled()
+}
+
+// =============================================================================
+// Checkbox Demo - Checkboxes and radio buttons being toggled
+// =============================================================================
+
+func demoCheckbox() runtime.Widget {
+	return &checkboxDemo{}
+}
+
+type checkboxDemo struct {
+	widgets.Component
+	frame    int
+	checks   [3]bool // Dark mode, Notifications, Auto-save
+	radio    int     // 0=Small, 1=Medium, 2=Large (-1 = none)
+	phase    int     // 0-2=toggling checkboxes, 3-5=switching radios, 6=pause, 7=reset
+	focusIdx int
+}
+
+var checkLabels = []string{"Dark mode", "Notifications", "Auto-save"}
+var radioLabels = []string{"Small", "Medium", "Large"}
+
+func (d *checkboxDemo) Measure(constraints runtime.Constraints) runtime.Size {
+	return constraints.MaxSize()
+}
+
+func (d *checkboxDemo) Layout(bounds runtime.Rect) {
+	d.Component.Layout(bounds)
+}
+
+func (d *checkboxDemo) Render(ctx runtime.RenderContext) {
+	bounds := d.Bounds()
+	ctx.Clear(backend.DefaultStyle())
+
+	ctx.Buffer.SetString(bounds.X+2, bounds.Y+1, "Checkbox & Radio", backend.DefaultStyle().Bold(true).Foreground(backend.ColorBrightCyan))
+
+	// Checkboxes section
+	y := bounds.Y + 3
+	ctx.Buffer.SetString(bounds.X+2, y, "Preferences:", backend.DefaultStyle().Dim(true))
+	y++
+
+	for i, label := range checkLabels {
+		optY := y + i
+		checkChar := "☐"
+		style := backend.DefaultStyle()
+
+		if d.checks[i] {
+			checkChar = "☑"
+			style = backend.DefaultStyle().Foreground(backend.ColorBrightGreen)
+		}
+
+		// Focus indicator
+		if d.focusIdx == i {
+			ctx.Buffer.SetString(bounds.X+3, optY, "▶", backend.DefaultStyle().Foreground(backend.ColorBrightCyan).Bold(true))
+			style = style.Bold(true)
+		}
+
+		ctx.Buffer.SetString(bounds.X+5, optY, checkChar, style)
+		ctx.Buffer.SetString(bounds.X+8, optY, label, backend.DefaultStyle())
+	}
+
+	// Radio buttons section
+	y += len(checkLabels) + 1
+	ctx.Buffer.SetString(bounds.X+2, y, "Size:", backend.DefaultStyle().Dim(true))
+	y++
+
+	for i, label := range radioLabels {
+		optY := y + i
+		radioChar := "◯"
+		style := backend.DefaultStyle()
+
+		if d.radio == i {
+			radioChar = "◉"
+			style = backend.DefaultStyle().Foreground(backend.ColorBrightGreen)
+		}
+
+		// Focus indicator
+		if d.focusIdx == i+3 {
+			ctx.Buffer.SetString(bounds.X+3, optY, "▶", backend.DefaultStyle().Foreground(backend.ColorBrightCyan).Bold(true))
+			style = style.Bold(true)
+		}
+
+		ctx.Buffer.SetString(bounds.X+5, optY, radioChar, style)
+		ctx.Buffer.SetString(bounds.X+8, optY, label, backend.DefaultStyle())
+	}
+
+	// Navigation hint
+	ctx.Buffer.SetString(bounds.X+2, bounds.Y+bounds.Height-2, "Space to toggle, ↑↓ to move", backend.DefaultStyle().Dim(true))
+
+	ctx.Buffer.DrawBox(bounds, backend.DefaultStyle())
+}
+
+func (d *checkboxDemo) HandleMessage(msg runtime.Message) runtime.HandleResult {
+	if _, ok := msg.(runtime.TickMsg); ok {
+		d.frame++
+
+		switch d.phase {
+		case 0: // Toggle first checkbox
+			d.focusIdx = 0
+			if d.frame%25 == 0 {
+				d.checks[0] = true
+				d.phase = 1
+			}
+
+		case 1: // Toggle second checkbox
+			d.focusIdx = 1
+			if d.frame%25 == 0 {
+				d.checks[1] = true
+				d.phase = 2
+			}
+
+		case 2: // Toggle third checkbox
+			d.focusIdx = 2
+			if d.frame%25 == 0 {
+				d.checks[2] = true
+				d.phase = 3
+			}
+
+		case 3: // Select first radio
+			d.focusIdx = 3
+			if d.frame%20 == 0 {
+				d.radio = 0
+				d.phase = 4
+			}
+
+		case 4: // Select second radio
+			d.focusIdx = 4
+			if d.frame%20 == 0 {
+				d.radio = 1
+				d.phase = 5
+			}
+
+		case 5: // Select third radio
+			d.focusIdx = 5
+			if d.frame%20 == 0 {
+				d.radio = 2
+				d.phase = 6
+			}
+
+		case 6: // Pause
+			if d.frame%45 == 0 {
+				d.phase = 7
+			}
+
+		case 7: // Reset
+			d.checks = [3]bool{}
+			d.radio = -1
+			d.focusIdx = 0
+			d.phase = 0
+		}
+
+		d.Invalidate()
+		return runtime.Handled()
+	}
+	return runtime.Unhandled()
+}
+
+// =============================================================================
+// Slider Demo - Horizontal sliders with animated fill
+// =============================================================================
+
+func demoSlider() runtime.Widget {
+	return &sliderDemo{}
+}
+
+type sliderDemo struct {
+	widgets.Component
+	frame      int
+	volume     int // 0-100
+	brightness int // 0-100
+	balanceLo  int // range slider low
+	balanceHi  int // range slider high
+	phase      int // 0=volume, 1=brightness, 2=balance, 3=pause, 4=reset
+}
+
+func (d *sliderDemo) Measure(constraints runtime.Constraints) runtime.Size {
+	return constraints.MaxSize()
+}
+
+func (d *sliderDemo) Layout(bounds runtime.Rect) {
+	d.Component.Layout(bounds)
+}
+
+func (d *sliderDemo) drawSlider(ctx runtime.RenderContext, x, y, width, value int, label string, color backend.Color) {
+	// Label
+	ctx.Buffer.SetString(x, y, label, backend.DefaultStyle().Bold(true))
+
+	// Slider track
+	barY := y + 1
+	filledWidth := value * width / 100
+	for i := 0; i < width; i++ {
+		char := '░'
+		style := backend.DefaultStyle().Dim(true)
+		if i < filledWidth {
+			char = '█'
+			style = backend.DefaultStyle().Foreground(color)
+		} else if i == filledWidth && filledWidth < width {
+			char = '▓'
+			style = backend.DefaultStyle().Foreground(color).Dim(true)
+		}
+		ctx.Buffer.Set(x+i, barY, char, style)
+	}
+
+	// Value label
+	valStr := fmt.Sprintf(" %d%%", value)
+	ctx.Buffer.SetString(x+width+1, barY, valStr, backend.DefaultStyle().Foreground(color).Bold(true))
+}
+
+func (d *sliderDemo) drawRangeSlider(ctx runtime.RenderContext, x, y, width, lo, hi int, label string, color backend.Color) {
+	// Label
+	ctx.Buffer.SetString(x, y, label, backend.DefaultStyle().Bold(true))
+
+	// Slider track
+	barY := y + 1
+	loPos := lo * width / 100
+	hiPos := hi * width / 100
+	for i := 0; i < width; i++ {
+		char := '░'
+		style := backend.DefaultStyle().Dim(true)
+		if i >= loPos && i <= hiPos {
+			char = '█'
+			style = backend.DefaultStyle().Foreground(color)
+		}
+		ctx.Buffer.Set(x+i, barY, char, style)
+	}
+
+	// Range label
+	rangeStr := fmt.Sprintf(" %d%%-%d%%", lo, hi)
+	ctx.Buffer.SetString(x+width+1, barY, rangeStr, backend.DefaultStyle().Foreground(color).Bold(true))
+}
+
+func (d *sliderDemo) Render(ctx runtime.RenderContext) {
+	bounds := d.Bounds()
+	ctx.Clear(backend.DefaultStyle())
+
+	ctx.Buffer.SetString(bounds.X+2, bounds.Y+1, "Slider Controls", backend.DefaultStyle().Bold(true).Foreground(backend.ColorBrightCyan))
+
+	barWidth := 50
+
+	// Volume slider
+	y := bounds.Y + 4
+	activeColor := backend.ColorBrightCyan
+	volLabel := "Volume"
+	if d.phase == 0 {
+		volLabel = "Volume  ◀"
+	}
+	d.drawSlider(ctx, bounds.X+4, y, barWidth, d.volume, volLabel, activeColor)
+
+	// Brightness slider
+	y += 4
+	brightLabel := "Brightness"
+	brightColor := backend.ColorBrightYellow
+	if d.phase == 1 {
+		brightLabel = "Brightness  ◀"
+	}
+	d.drawSlider(ctx, bounds.X+4, y, barWidth, d.brightness, brightLabel, brightColor)
+
+	// Balance range slider
+	y += 4
+	balLabel := "Balance (range)"
+	balColor := backend.ColorBrightMagenta
+	if d.phase == 2 {
+		balLabel = "Balance (range)  ◀"
+	}
+	d.drawRangeSlider(ctx, bounds.X+4, y, barWidth, d.balanceLo, d.balanceHi, balLabel, balColor)
+
+	// Hint
+	ctx.Buffer.SetString(bounds.X+2, bounds.Y+bounds.Height-2, "← → to adjust value", backend.DefaultStyle().Dim(true))
+
+	ctx.Buffer.DrawBox(bounds, backend.DefaultStyle())
+}
+
+func (d *sliderDemo) HandleMessage(msg runtime.Message) runtime.HandleResult {
+	if _, ok := msg.(runtime.TickMsg); ok {
+		d.frame++
+
+		switch d.phase {
+		case 0: // Volume filling up
+			if d.frame%2 == 0 && d.volume < 80 {
+				d.volume += 2
+			}
+			if d.volume >= 80 {
+				d.phase = 1
+			}
+
+		case 1: // Brightness filling up
+			if d.frame%3 == 0 && d.brightness < 60 {
+				d.brightness += 2
+			}
+			if d.brightness >= 60 {
+				d.phase = 2
+				d.balanceLo = 50
+				d.balanceHi = 50
+			}
+
+		case 2: // Balance range expanding
+			if d.frame%3 == 0 {
+				if d.balanceLo > 20 {
+					d.balanceLo -= 2
+				}
+				if d.balanceHi < 75 {
+					d.balanceHi += 2
+				}
+				if d.balanceLo <= 20 && d.balanceHi >= 75 {
+					d.phase = 3
+				}
+			}
+
+		case 3: // Pause
+			if d.frame%60 == 0 {
+				d.phase = 4
+			}
+
+		case 4: // Reset
+			d.volume = 0
+			d.brightness = 0
+			d.balanceLo = 0
+			d.balanceHi = 0
+			d.phase = 0
+		}
+
+		d.Invalidate()
+		return runtime.Handled()
+	}
+	return runtime.Unhandled()
+}
+
+// =============================================================================
+// Textarea Demo - Multiline text editor with typing animation
+// =============================================================================
+
+func demoTextarea() runtime.Widget {
+	return &textareaDemo{}
+}
+
+type textareaDemo struct {
+	widgets.Component
+	frame     int
+	charIdx   int
+	showLines bool
+	phase     int // 0=typing, 1=show line numbers, 2=pause, 3=reset
+}
+
+var textareaContent = "func hello() {\n    fmt.Println(\"Hello!\")\n    return nil\n}"
+
+func (d *textareaDemo) Measure(constraints runtime.Constraints) runtime.Size {
+	return constraints.MaxSize()
+}
+
+func (d *textareaDemo) Layout(bounds runtime.Rect) {
+	d.Component.Layout(bounds)
+}
+
+func (d *textareaDemo) Render(ctx runtime.RenderContext) {
+	bounds := d.Bounds()
+	ctx.Clear(backend.DefaultStyle())
+
+	ctx.Buffer.SetString(bounds.X+2, bounds.Y+1, "Text Editor", backend.DefaultStyle().Bold(true).Foreground(backend.ColorBrightCyan))
+
+	// Editor area
+	editorX := bounds.X + 3
+	editorY := bounds.Y + 3
+	editorW := bounds.Width - 6
+	editorH := 12
+
+	// Draw editor background
+	editorBg := backend.DefaultStyle().Background(backend.Color(236)) // dark gray
+	for row := 0; row < editorH; row++ {
+		for col := 0; col < editorW; col++ {
+			ctx.Buffer.Set(editorX+col, editorY+row, ' ', editorBg)
+		}
+	}
+
+	// Get visible text
+	visibleText := textareaContent
+	if d.charIdx < len(textareaContent) {
+		visibleText = textareaContent[:d.charIdx]
+	}
+
+	// Split into lines
+	lines := strings.Split(visibleText, "\n")
+
+	// Line number gutter width
+	gutterW := 0
+	if d.showLines {
+		gutterW = 4
+	}
+
+	// Draw line numbers and text
+	for i, line := range lines {
+		lineY := editorY + i
+		if lineY >= editorY+editorH {
+			break
+		}
+
+		if d.showLines {
+			// Line number
+			numStr := fmt.Sprintf("%2d ", i+1)
+			numStyle := backend.DefaultStyle().Foreground(backend.ColorBrightYellow).Dim(true)
+			ctx.Buffer.SetString(editorX, lineY, numStr, numStyle)
+		}
+
+		// Syntax highlighting
+		textX := editorX + gutterW
+		for j, ch := range line {
+			if textX+j >= editorX+editorW {
+				break
+			}
+			style := editorBg.Foreground(backend.ColorBrightWhite)
+
+			// Simple keyword highlighting
+			remaining := line[j:]
+			if strings.HasPrefix(remaining, "func") || strings.HasPrefix(remaining, "return") || strings.HasPrefix(remaining, "nil") {
+				style = style.Foreground(backend.ColorBrightMagenta).Bold(true)
+			} else if ch == '"' || (j > 0 && isInString(line, j)) {
+				style = style.Foreground(backend.ColorBrightGreen)
+			} else if ch == '(' || ch == ')' || ch == '{' || ch == '}' {
+				style = style.Foreground(backend.ColorBrightYellow)
+			} else if ch == '.' {
+				style = style.Foreground(backend.ColorBrightCyan)
+			}
+
+			ctx.Buffer.Set(textX+j, lineY, ch, style)
+		}
+	}
+
+	// Blinking cursor
+	if d.phase == 0 && (d.frame/10)%2 == 0 {
+		// Calculate cursor position
+		cursorLine := len(lines) - 1
+		cursorCol := len(lines[cursorLine])
+		cursorX := editorX + gutterW + cursorCol
+		cursorY := editorY + cursorLine
+		if cursorX < editorX+editorW && cursorY < editorY+editorH {
+			ctx.Buffer.SetString(cursorX, cursorY, "▌", editorBg.Foreground(backend.ColorBrightCyan))
+		}
+	}
+
+	// Editor border
+	borderStyle := backend.DefaultStyle().Foreground(backend.ColorBrightCyan)
+	// Top border
+	ctx.Buffer.SetString(editorX-1, editorY-1, "┌"+strings.Repeat("─", editorW)+"┐", borderStyle)
+	// Bottom border
+	ctx.Buffer.SetString(editorX-1, editorY+editorH, "└"+strings.Repeat("─", editorW)+"┘", borderStyle)
+	// Side borders
+	for row := 0; row < editorH; row++ {
+		ctx.Buffer.SetString(editorX-1, editorY+row, "│", borderStyle)
+		ctx.Buffer.SetString(editorX+editorW, editorY+row, "│", borderStyle)
+	}
+
+	// Status bar
+	statusY := editorY + editorH + 1
+	totalLines := strings.Count(textareaContent, "\n") + 1
+	curLine := strings.Count(visibleText, "\n") + 1
+	statusText := fmt.Sprintf("Ln %d/%d  Col %d  Go", curLine, totalLines, d.charIdx)
+	ctx.Buffer.SetString(editorX, statusY, statusText, backend.DefaultStyle().Dim(true))
+
+	ctx.Buffer.DrawBox(bounds, backend.DefaultStyle())
+}
+
+func (d *textareaDemo) HandleMessage(msg runtime.Message) runtime.HandleResult {
+	if _, ok := msg.(runtime.TickMsg); ok {
+		d.frame++
+
+		switch d.phase {
+		case 0: // Typing
+			if d.frame%3 == 0 && d.charIdx < len(textareaContent) {
+				d.charIdx++
+			}
+			if d.charIdx >= len(textareaContent) {
+				d.phase = 1
+			}
+
+		case 1: // Show line numbers
+			if d.frame%20 == 0 {
+				d.showLines = true
+				d.phase = 2
+			}
+
+		case 2: // Pause
+			if d.frame%60 == 0 {
+				d.phase = 3
+			}
+
+		case 3: // Reset
+			d.charIdx = 0
+			d.showLines = false
+			d.phase = 0
+		}
+
+		d.Invalidate()
+		return runtime.Handled()
+	}
+	return runtime.Unhandled()
+}
+
+// isInString checks if position j in line is inside a double-quoted string.
+func isInString(line string, j int) bool {
+	inStr := false
+	for i := 0; i < j; i++ {
+		if line[i] == '"' {
+			inStr = !inStr
+		}
+	}
+	return inStr
 }
 
 // =============================================================================

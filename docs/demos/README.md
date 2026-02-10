@@ -16,6 +16,10 @@ This directory contains recordings and GIFs demonstrating the full depth of Fluf
 | **input** -- Form input with validation states and password strength | ![input](input.gif) |
 | **dialog** -- Modal dialogs with focus management and animations | ![dialog](dialog.gif) |
 | **tabs** -- Tabbed navigation with content switching | ![tabs](tabs.gif) |
+| **select** -- Dropdown selection cycling through options | ![select](select.gif) |
+| **checkbox** -- Checkbox toggles and radio button groups | ![checkbox](checkbox.gif) |
+| **slider** -- Volume, brightness, and range sliders | ![slider](slider.gif) |
+| **textarea** -- Multiline code editor with syntax highlighting | ![textarea](textarea.gif) |
 
 ### Data Widgets
 

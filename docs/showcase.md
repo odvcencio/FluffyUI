@@ -31,9 +31,14 @@ go run ./examples/widgets/gallery
 | ![Buttons](demos/buttons.gif) | ![Table](demos/table.gif) | ![Sparkline](demos/sparkline.gif) |
 | ![Input](demos/input.gif) | ![List](demos/list.gif) | ![Progress](demos/progress.gif) |
 
-| Dialogs & Navigation | Reactive State | Video Playback |
+| Select & Checkbox | Sliders & TextArea | Navigation |
 |:-:|:-:|:-:|
-| ![Dialog](demos/dialog.gif) | ![Counter](demos/counter.gif) | ![Video](demos/video.gif) |
-| ![Tabs](demos/tabs.gif) | ![Easing](demos/easing.gif) | ![Fireworks](demos/fireworks.gif) |
+| ![Select](demos/select.gif) | ![Slider](demos/slider.gif) | ![Tabs](demos/tabs.gif) |
+| ![Checkbox](demos/checkbox.gif) | ![TextArea](demos/textarea.gif) | ![Dialog](demos/dialog.gif) |
+
+| Reactive State | Graphics & Animation | Full Applications |
+|:-:|:-:|:-:|
+| ![Counter](demos/counter.gif) | ![Easing](demos/easing.gif) | ![Video](demos/video.gif) |
+| ![Fireworks](demos/fireworks.gif) | ![Graphics](demos/graphics.gif) | |
 
 The docs TUI viewer (`go run ./docs/site`) picks up this page as part of the site navigation.
