@@ -1,0 +1,16 @@
+[book]
+title = "FluffyUI Documentation"
+description = "The most comprehensive Go TUI framework"
+authors = ["FluffyUI Contributors"]
+language = "en"
+src = "."
+
+[build]
+build-dir = "book"
+create-missing = false
+
+[output.html]
+default-theme = "navy"
+preferred-dark-theme = "navy"
+git-repository-url = "https://github.com/odvcencio/fluffyui"
+additional-css = []
