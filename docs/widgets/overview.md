@@ -22,7 +22,14 @@ See `docs/widgets/layout.md` and `examples/widgets/layout`.
 
 See `docs/widgets/data.md` and `examples/widgets/data`.
 
-<a href="../demos/table.gif" target="_blank"><img src="../demos/table.gif" alt="Table widget"></a>
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 1.5rem 0;">
+<div>
+<div class="fluffy-demo" data-cast="../demos/table.cast" data-cols="80" data-rows="24"></div>
+</div>
+<div>
+<div class="fluffy-demo" data-cast="../demos/list.cast" data-cols="80" data-rows="24"></div>
+</div>
+</div>
 
 - List
 - Table
@@ -33,13 +40,18 @@ See `docs/widgets/data.md` and `examples/widgets/data`.
 - RichText
 - SearchWidget
 
-<a href="../demos/list.gif" target="_blank"><img src="../demos/list.gif" alt="List widget"></a>
-
 ## Input
 
 See `docs/widgets/input.md` and `examples/widgets/input`.
 
-<a href="../demos/buttons.gif" target="_blank"><img src="../demos/buttons.gif" alt="Button variants"></a>
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 1.5rem 0;">
+<div>
+<div class="fluffy-demo" data-cast="../demos/buttons.cast" data-cols="80" data-rows="24"></div>
+</div>
+<div>
+<div class="fluffy-demo" data-cast="../demos/input.cast" data-cols="80" data-rows="24"></div>
+</div>
+</div>
 
 - Button
 - Checkbox
@@ -56,21 +68,13 @@ See `docs/widgets/input.md` and `examples/widgets/input`.
 - DateRangePicker
 - TimePicker
 
-<a href="../demos/input.gif" target="_blank"><img src="../demos/input.gif" alt="Input with validation"></a>
-
-<a href="../demos/select.gif" target="_blank"><img src="../demos/select.gif" alt="Select dropdown"></a>
-
-<a href="../demos/checkbox.gif" target="_blank"><img src="../demos/checkbox.gif" alt="Checkbox and radio"></a>
-
-<a href="../demos/slider.gif" target="_blank"><img src="../demos/slider.gif" alt="Slider controls"></a>
-
-<a href="../demos/textarea.gif" target="_blank"><img src="../demos/textarea.gif" alt="TextArea editor"></a>
-
 ## Navigation
 
 See `docs/widgets/navigation.md` and `examples/widgets/navigation`.
 
-<a href="../demos/tabs.gif" target="_blank"><img src="../demos/tabs.gif" alt="Tabs"></a>
+<div style="margin: 1.5rem 0;">
+<div class="fluffy-demo" data-cast="../demos/tabs.cast" data-cols="80" data-rows="24"></div>
+</div>
 
 - Tabs
 - Menu
@@ -84,7 +88,14 @@ See `docs/widgets/navigation.md` and `examples/widgets/navigation`.
 
 See `docs/widgets/feedback.md` and `examples/widgets/feedback`.
 
-<a href="../demos/dialog.gif" target="_blank"><img src="../demos/dialog.gif" alt="Dialog"></a>
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 1.5rem 0;">
+<div>
+<div class="fluffy-demo" data-cast="../demos/dialog.cast" data-cols="80" data-rows="24"></div>
+</div>
+<div>
+<div class="fluffy-demo" data-cast="../demos/sparkline.cast" data-cols="80" data-rows="24"></div>
+</div>
+</div>
 
 - Dialog
 - Spinner
@@ -92,10 +103,6 @@ See `docs/widgets/feedback.md` and `examples/widgets/feedback`.
 - Alert
 - ToastStack
 - Charts (Sparkline, BarChart, LineChart)
-
-<a href="../demos/progress.gif" target="_blank"><img src="../demos/progress.gif" alt="Progress and spinners"></a>
-
-<a href="../demos/sparkline.gif" target="_blank"><img src="../demos/sparkline.gif" alt="Live sparkline data"></a>
 
 ## Developer helpers
 

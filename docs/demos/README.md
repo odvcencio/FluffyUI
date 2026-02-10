@@ -8,43 +8,72 @@ This directory contains recordings and GIFs demonstrating the full depth of Fluf
 
 ### Core Widgets
 
-| Demo | Preview |
-|------|---------|
-| **hero** -- Animated FluffyUI logo with rainbow effects | ![hero](hero.gif) |
-| **quickstart** -- Hello world with typing animation and sparkles | ![quickstart](quickstart.gif) |
-| **buttons** -- Button variants (primary, secondary, danger, success, warning) | ![buttons](buttons.gif) |
-| **input** -- Form input with validation states and password strength | ![input](input.gif) |
-| **dialog** -- Modal dialogs with focus management and animations | ![dialog](dialog.gif) |
-| **tabs** -- Tabbed navigation with content switching | ![tabs](tabs.gif) |
-| **select** -- Dropdown selection cycling through options | ![select](select.gif) |
-| **checkbox** -- Checkbox toggles and radio button groups | ![checkbox](checkbox.gif) |
-| **slider** -- Volume, brightness, and range sliders | ![slider](slider.gif) |
-| **textarea** -- Multiline code editor with syntax highlighting | ![textarea](textarea.gif) |
+#### hero -- Animated FluffyUI logo with rainbow effects
+<div class="fluffy-demo" data-cast="hero.cast" data-cols="80" data-rows="24"></div>
+
+#### quickstart -- Hello world with typing animation and sparkles
+<div class="fluffy-demo" data-cast="quickstart.cast" data-cols="80" data-rows="24"></div>
+
+#### buttons -- Button variants (primary, secondary, danger, success, warning)
+<div class="fluffy-demo" data-cast="buttons.cast" data-cols="80" data-rows="24"></div>
+
+#### input -- Form input with validation states and password strength
+<div class="fluffy-demo" data-cast="input.cast" data-cols="80" data-rows="24"></div>
+
+#### dialog -- Modal dialogs with focus management and animations
+<div class="fluffy-demo" data-cast="dialog.cast" data-cols="80" data-rows="24"></div>
+
+#### tabs -- Tabbed navigation with content switching
+<div class="fluffy-demo" data-cast="tabs.cast" data-cols="80" data-rows="24"></div>
+
+#### select -- Dropdown selection cycling through options
+<div class="fluffy-demo" data-cast="select.cast" data-cols="80" data-rows="24"></div>
+
+#### checkbox -- Checkbox toggles and radio button groups
+<div class="fluffy-demo" data-cast="checkbox.cast" data-cols="80" data-rows="24"></div>
+
+#### slider -- Volume, brightness, and range sliders
+<div class="fluffy-demo" data-cast="slider.cast" data-cols="80" data-rows="24"></div>
+
+#### textarea -- Multiline code editor with syntax highlighting
+<div class="fluffy-demo" data-cast="textarea.cast" data-cols="80" data-rows="24"></div>
 
 ### Data Widgets
 
-| Demo | Preview |
-|------|---------|
-| **table** -- Sortable data table with selection and status indicators | ![table](table.gif) |
-| **list** -- File manager-style list with checkboxes and selection | ![list](list.gif) |
-| **sparkline** -- Live data visualization with multiple metrics | ![sparkline](sparkline.gif) |
-| **progress** -- Progress bars, spinners, and multi-step indicators | ![progress](progress.gif) |
-| **counter** -- Reactive counter with history sparkline | ![counter](counter.gif) |
+#### table -- Sortable data table with selection and status indicators
+<div class="fluffy-demo" data-cast="table.cast" data-cols="80" data-rows="24"></div>
+
+#### list -- File manager-style list with checkboxes and selection
+<div class="fluffy-demo" data-cast="list.cast" data-cols="80" data-rows="24"></div>
+
+#### sparkline -- Live data visualization with multiple metrics
+<div class="fluffy-demo" data-cast="sparkline.cast" data-cols="80" data-rows="24"></div>
+
+#### progress -- Progress bars, spinners, and multi-step indicators
+<div class="fluffy-demo" data-cast="progress.cast" data-cols="80" data-rows="24"></div>
+
+#### counter -- Reactive counter with history sparkline
+<div class="fluffy-demo" data-cast="counter.cast" data-cols="80" data-rows="24"></div>
 
 ### Graphics & Animation
 
-| Demo | Preview |
-|------|---------|
-| **graphics** -- Canvas API with shapes, curves, and transforms | ![graphics](graphics.gif) |
-| **easing** -- Animation easing functions visualization | ![easing](easing.gif) |
-| **fireworks** -- 3D particle effects with perspective projection | ![fireworks](fireworks.gif) |
-| **video** -- Video player widget demo | ![video](video.gif) |
+#### graphics -- Canvas API with shapes, curves, and transforms
+<div class="fluffy-demo" data-cast="graphics.cast" data-cols="80" data-rows="24"></div>
+
+#### easing -- Animation easing functions visualization
+<div class="fluffy-demo" data-cast="easing.cast" data-cols="80" data-rows="24"></div>
+
+#### fireworks -- 3D particle effects with perspective projection
+<div class="fluffy-demo" data-cast="fireworks.cast" data-cols="80" data-rows="24"></div>
+
+#### video -- Video player widget demo
+<div class="fluffy-demo" data-cast="video.cast" data-cols="80" data-rows="24"></div>
 
 ### Complete Applications
 
-| Demo | Preview |
-|------|---------|
-| **candy-wars** -- Full trading game demonstrating all features | Run: `go run ./examples/candy-wars` |
+#### candy-wars -- Full trading game demonstrating all features
+
+Run: `go run ./examples/candy-wars`
 
 ## Framework Capabilities Demonstrated
 

@@ -13,4 +13,5 @@ create-missing = false
 default-theme = "navy"
 preferred-dark-theme = "navy"
 git-repository-url = "https://github.com/odvcencio/fluffyui"
-additional-css = []
+additional-css = ["theme/asciinema-player.css"]
+additional-js = ["theme/asciinema-player.min.js", "theme/playground.js"]
