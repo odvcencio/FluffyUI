@@ -19,13 +19,22 @@ type Screen struct {
 	// Cursor position for input
 	cursorX, cursorY int
 	cursorVisible    bool
+
+	// Dirty region tracking — bounding box of all modified cells this frame.
+	dirtyMinX, dirtyMinY int
+	dirtyMaxX, dirtyMaxY int
+	hasDirty             bool
+
+	// Per-row dirty flags — true when any cell in the row was modified.
+	dirtyRows []bool
 }
 
 // NewScreen creates a new screen buffer with the given dimensions.
 func NewScreen(width, height int) *Screen {
 	s := &Screen{
-		width:  width,
-		height: height,
+		width:     width,
+		height:    height,
+		dirtyRows: make([]bool, height),
 	}
 	s.current = s.allocBuffer(width, height)
 	s.previous = s.allocBuffer(width, height)
@@ -69,6 +78,19 @@ func (s *Screen) Resize(width, height int) {
 	s.previous = newPrevious // Force full redraw on resize
 	s.width = width
 	s.height = height
+
+	// Reset and mark entire screen dirty after resize.
+	s.dirtyRows = make([]bool, height)
+	if width > 0 && height > 0 {
+		s.dirtyMinX, s.dirtyMinY = 0, 0
+		s.dirtyMaxX, s.dirtyMaxY = width-1, height-1
+		s.hasDirty = true
+		for i := range s.dirtyRows {
+			s.dirtyRows[i] = true
+		}
+	} else {
+		s.hasDirty = false
+	}
 }
 
 // Clear resets the current buffer to empty cells.
@@ -81,6 +103,10 @@ func (s *Screen) Clear() {
 		for x := range s.current[y] {
 			s.current[y][x] = empty
 		}
+	}
+	// Mark entire screen as dirty so the diff picks up the clearing.
+	if s.width > 0 && s.height > 0 {
+		s.markDirtyRectUnsafe(0, 0, s.width-1, s.height-1)
 	}
 }
 
@@ -109,6 +135,40 @@ func (s *Screen) setUnsafe(x, y int, r rune, style Style) {
 	// Wide characters occupy two cells; mark second as continuation
 	if width == 2 && x+1 < s.width {
 		s.current[y][x+1] = Cell{Rune: 0, Width: 0, Style: style}
+	}
+
+	// Update dirty tracking.
+	s.markDirtyUnsafe(x, y)
+}
+
+// markDirtyUnsafe updates dirty bounding box and row flags. Caller must hold lock.
+func (s *Screen) markDirtyUnsafe(x, y int) {
+	if !s.hasDirty {
+		s.dirtyMinX, s.dirtyMinY = x, y
+		s.dirtyMaxX, s.dirtyMaxY = x, y
+		s.hasDirty = true
+	} else {
+		if x < s.dirtyMinX {
+			s.dirtyMinX = x
+		}
+		if y < s.dirtyMinY {
+			s.dirtyMinY = y
+		}
+		if x > s.dirtyMaxX {
+			s.dirtyMaxX = x
+		}
+		if y > s.dirtyMaxY {
+			s.dirtyMaxY = y
+		}
+	}
+	s.dirtyRows[y] = true
+}
+
+// resetDirty clears all dirty tracking state. Caller must hold lock.
+func (s *Screen) resetDirty() {
+	s.hasDirty = false
+	for i := range s.dirtyRows {
+		s.dirtyRows[i] = false
 	}
 }
 
@@ -170,10 +230,42 @@ func (s *Screen) FillRectCell(x, y, w, h int, cell Cell) {
 	endX := min(s.width, x+w)
 	endY := min(s.height, y+h)
 
+	if startX >= endX || startY >= endY {
+		return
+	}
+
 	for row := startY; row < endY; row++ {
 		for col := startX; col < endX; col++ {
 			s.current[row][col] = cell
 		}
+	}
+
+	// Update dirty tracking for the clamped region.
+	s.markDirtyRectUnsafe(startX, startY, endX-1, endY-1)
+}
+
+// markDirtyRectUnsafe updates dirty tracking for a rectangular region. Caller must hold lock.
+func (s *Screen) markDirtyRectUnsafe(minX, minY, maxX, maxY int) {
+	if !s.hasDirty {
+		s.dirtyMinX, s.dirtyMinY = minX, minY
+		s.dirtyMaxX, s.dirtyMaxY = maxX, maxY
+		s.hasDirty = true
+	} else {
+		if minX < s.dirtyMinX {
+			s.dirtyMinX = minX
+		}
+		if minY < s.dirtyMinY {
+			s.dirtyMinY = minY
+		}
+		if maxX > s.dirtyMaxX {
+			s.dirtyMaxX = maxX
+		}
+		if maxY > s.dirtyMaxY {
+			s.dirtyMaxY = maxY
+		}
+	}
+	for row := minY; row <= maxY; row++ {
+		s.dirtyRows[row] = true
 	}
 }
 
@@ -285,6 +377,7 @@ func (s *Screen) ClearCurrentBuffer() {
 			s.current[y][x] = empty
 		}
 	}
+	s.resetDirty()
 }
 
 // CopyToPrevious copies current buffer to previous.
@@ -310,6 +403,10 @@ func (s *Screen) Blit(src *Screen, srcX, srcY, dstX, dstY, w, h int) {
 	defer s.mu.Unlock()
 	defer src.mu.RUnlock()
 
+	// Track the actual bounding box of written cells.
+	blitMinX, blitMinY := s.width, s.height
+	blitMaxX, blitMaxY := -1, -1
+
 	for row := 0; row < h; row++ {
 		sy := srcY + row
 		dy := dstY + row
@@ -327,7 +424,24 @@ func (s *Screen) Blit(src *Screen, srcX, srcY, dstX, dstY, w, h int) {
 			}
 
 			s.current[dy][dx] = src.current[sy][sx]
+
+			if dx < blitMinX {
+				blitMinX = dx
+			}
+			if dx > blitMaxX {
+				blitMaxX = dx
+			}
+			if dy < blitMinY {
+				blitMinY = dy
+			}
+			if dy > blitMaxY {
+				blitMaxY = dy
+			}
 		}
+	}
+
+	if blitMaxX >= 0 {
+		s.markDirtyRectUnsafe(blitMinX, blitMinY, blitMaxX, blitMaxY)
 	}
 }
 

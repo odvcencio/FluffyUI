@@ -40,8 +40,25 @@ func (r *Renderer) Render() string {
 	r.screen.mu.Lock()
 	defer r.screen.mu.Unlock()
 
+	// Fast path: nothing was written this frame.
+	if !r.screen.hasDirty {
+		// Swap buffers and clear for next frame.
+		r.screen.previous, r.screen.current = r.screen.current, r.screen.previous
+		empty := EmptyCell()
+		for y := range r.screen.current {
+			for x := range r.screen.current[y] {
+				r.screen.current[y][x] = empty
+			}
+		}
+		return ""
+	}
+
 	r.writer.Reset()
-	r.writer.Grow(r.screen.width * r.screen.height / 4) // ~25% change estimate
+
+	// Size estimate based on dirty region rather than full screen.
+	dirtyArea := (r.screen.dirtyMaxX - r.screen.dirtyMinX + 1) *
+		(r.screen.dirtyMaxY - r.screen.dirtyMinY + 1)
+	r.writer.Grow(dirtyArea / 2)
 
 	if r.syncOutput {
 		r.writer.buf.WriteString(ANSISyncStart)
@@ -52,8 +69,12 @@ func (r *Renderer) Render() string {
 	var lastStyle Style
 	styleSet := false
 
-	for y := 0; y < r.screen.height; y++ {
-		for x := 0; x < r.screen.width; x++ {
+	// Only iterate over the dirty bounding box rows, skipping clean rows.
+	for y := r.screen.dirtyMinY; y <= r.screen.dirtyMaxY; y++ {
+		if !r.screen.dirtyRows[y] {
+			continue
+		}
+		for x := r.screen.dirtyMinX; x <= r.screen.dirtyMaxX; x++ {
 			curr := r.screen.current[y][x]
 			prev := r.screen.previous[y][x]
 
@@ -103,13 +124,14 @@ func (r *Renderer) Render() string {
 	// Swap buffers for next frame
 	r.screen.previous, r.screen.current = r.screen.current, r.screen.previous
 
-	// Clear the new current buffer for next frame
+	// Clear the new current buffer for next frame and reset dirty tracking.
 	empty := EmptyCell()
 	for y := range r.screen.current {
 		for x := range r.screen.current[y] {
 			r.screen.current[y][x] = empty
 		}
 	}
+	r.screen.resetDirty()
 
 	if r.syncOutput {
 		r.writer.buf.WriteString(ANSISyncEnd)
@@ -179,6 +201,9 @@ func (r *Renderer) RenderFull() string {
 	for y := range r.screen.current {
 		copy(r.screen.previous[y], r.screen.current[y])
 	}
+
+	// Reset dirty tracking since the full frame has been rendered.
+	r.screen.resetDirty()
 
 	if r.syncOutput {
 		r.writer.buf.WriteString(ANSISyncEnd)
@@ -373,14 +398,33 @@ func (c *Compositor) compositeLayer(layer *Screen) {
 	defer layer.mu.RUnlock()
 	defer c.screen.mu.Unlock()
 
+	compMinX, compMinY := c.screen.width, c.screen.height
+	compMaxX, compMaxY := -1, -1
+
 	for y := 0; y < min(c.screen.height, layer.height); y++ {
 		for x := 0; x < min(c.screen.width, layer.width); x++ {
 			cell := layer.current[y][x]
 			// Only overlay non-empty cells
 			if !cell.Empty() {
 				c.screen.current[y][x] = cell
+				if x < compMinX {
+					compMinX = x
+				}
+				if x > compMaxX {
+					compMaxX = x
+				}
+				if y < compMinY {
+					compMinY = y
+				}
+				if y > compMaxY {
+					compMaxY = y
+				}
 			}
 		}
+	}
+
+	if compMaxX >= 0 {
+		c.screen.markDirtyRectUnsafe(compMinX, compMinY, compMaxX, compMaxY)
 	}
 }
 

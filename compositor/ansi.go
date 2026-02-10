@@ -181,12 +181,13 @@ func StyleDelta(from, to Style) string {
 
 // ANSIWriter helps build ANSI output efficiently.
 type ANSIWriter struct {
-	buf       strings.Builder
-	lastStyle Style
-	styleSet  bool
-	lastX     int
-	lastY     int
-	posSet    bool
+	buf        strings.Builder
+	lastStyle  Style
+	styleSet   bool
+	lastX      int
+	lastY      int
+	posSet     bool
+	styleCache map[Style]string // Caches StyleToANSI results within a frame.
 }
 
 // NewANSIWriter creates a new ANSI writer.
@@ -226,7 +227,16 @@ func (w *ANSIWriter) SetStyle(s Style) {
 	if w.styleSet && w.lastStyle.Equal(s) {
 		return
 	}
-	w.buf.WriteString(StyleToANSI(s))
+	// Look up cached ANSI string to avoid repeated StyleToANSI allocations.
+	ansi, ok := w.styleCache[s]
+	if !ok {
+		ansi = StyleToANSI(s)
+		if w.styleCache == nil {
+			w.styleCache = make(map[Style]string, 16)
+		}
+		w.styleCache[s] = ansi
+	}
+	w.buf.WriteString(ansi)
 	w.lastStyle = s
 	w.styleSet = true
 }
@@ -251,6 +261,10 @@ func (w *ANSIWriter) Reset() {
 	w.lastX = -1
 	w.lastY = -1
 	w.posSet = false
+	// Clear the style cache entries but keep the map allocated.
+	for k := range w.styleCache {
+		delete(w.styleCache, k)
+	}
 }
 
 // ResetStyle adds a style reset to the buffer.
