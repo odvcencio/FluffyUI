@@ -97,9 +97,7 @@ func TestFixedSpacer_StyleType(t *testing.T) {
 func TestFixedSpacer_WidgetInterface(t *testing.T) {
 	// Compile-time check is in spacer.go, but verify at runtime too.
 	var w runtime.Widget = NewFixedSpacer(1, 1)
-	if w == nil {
-		t.Fatal("expected FixedSpacer to satisfy runtime.Widget")
-	}
+	_ = w // compile-time interface satisfaction check
 }
 
 func TestFixedSpacer_NegativeDimensions(t *testing.T) {

@@ -483,8 +483,11 @@ func (c *showcaseColumns) Measure(constraints runtime.Constraints) runtime.Size 
 }
 
 func (c *showcaseColumns) Layout(bounds runtime.Rect) {
+	if c == nil {
+		return
+	}
 	c.Base.Layout(bounds)
-	if c == nil || bounds.Width <= 0 || bounds.Height <= 0 {
+	if bounds.Width <= 0 || bounds.Height <= 0 {
 		return
 	}
 	available := bounds.Width - c.gap

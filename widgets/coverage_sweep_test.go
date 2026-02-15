@@ -12,33 +12,6 @@ import (
 	flufftest "github.com/odvcencio/fluffyui/testing"
 )
 
-type testGridSource struct {
-	rows [][]string
-}
-
-func (t *testGridSource) RowCount() int { return len(t.rows) }
-
-func (t *testGridSource) Cell(row, col int) string {
-	if row < 0 || row >= len(t.rows) || col < 0 || col >= len(t.rows[row]) {
-		return ""
-	}
-	return t.rows[row][col]
-}
-
-func (t *testGridSource) Row(row int) []string {
-	if row < 0 || row >= len(t.rows) {
-		return nil
-	}
-	return t.rows[row]
-}
-
-func (t *testGridSource) SetCell(row, col int, value string) {
-	if row < 0 || row >= len(t.rows) || col < 0 || col >= len(t.rows[row]) {
-		return
-	}
-	t.rows[row][col] = value
-}
-
 func TestCalendarOptionsAndSignals(t *testing.T) {
 	now := time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC)
 	min := now.AddDate(0, 0, -3)

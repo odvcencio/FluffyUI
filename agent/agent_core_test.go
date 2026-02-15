@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"context"
 	"errors"
 	"path/filepath"
 	"strings"
@@ -406,7 +407,7 @@ func TestAgentFinderState(t *testing.T) {
 		t.Fatalf("find by id failed: %+v", byID)
 	}
 
-	if err := agt.WithWidgetByID(nil, nameInfo.ID, func(w runtime.Widget, _ accessibility.Accessible) error {
+	if err := agt.WithWidgetByID(context.TODO(), nameInfo.ID, func(w runtime.Widget, _ accessibility.Accessible) error {
 		if w != input {
 			return errors.New("unexpected widget")
 		}
@@ -415,7 +416,7 @@ func TestAgentFinderState(t *testing.T) {
 		t.Fatalf("with widget by id: %v", err)
 	}
 
-	if err := agt.WithWidgetByID(nil, " ", func(runtime.Widget, accessibility.Accessible) error {
+	if err := agt.WithWidgetByID(context.TODO(), " ", func(runtime.Widget, accessibility.Accessible) error {
 		return nil
 	}); !errors.Is(err, ErrWidgetNotFound) {
 		t.Fatalf("expected ErrWidgetNotFound, got %v", err)

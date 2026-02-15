@@ -521,41 +521,6 @@ func (b *Backend) styleToANSI(fg, bg backend.Color, attrs backend.AttrMask) []by
 	return buf
 }
 
-// resize updates the terminal dimensions.
-func (b *Backend) resize(width, height int) {
-	b.termMu.Lock()
-	defer b.termMu.Unlock()
-	if width == b.width && height == b.height {
-		return
-	}
-
-	// Allocate new cell buffer
-	newCells := make([]backend.Cell, width*height)
-
-	// Copy existing content
-	minWidth := width
-	if b.width < minWidth {
-		minWidth = b.width
-	}
-	minHeight := height
-	if b.height < minHeight {
-		minHeight = b.height
-	}
-
-	for y := 0; y < minHeight; y++ {
-		for x := 0; x < minWidth; x++ {
-			newCells[y*width+x] = b.cells[y*b.width+x]
-		}
-	}
-
-	b.width = width
-	b.height = height
-	b.cells = newCells
-
-	// Notify runtime of resize
-	b.PostEvent(terminal.ResizeEvent{Width: width, Height: height})
-}
-
 // Ensure Backend implements backend.Backend
 var _ backend.Backend = (*Backend)(nil)
 

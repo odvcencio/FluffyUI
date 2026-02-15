@@ -84,10 +84,6 @@ func AllFocusableHaveRoles() TreeCheck {
 // if the widget implements it.
 func NoDuplicateIDs() TreeCheck {
 	return func(root runtime.Widget) error {
-		type idInfo struct {
-			id   string
-			path string
-		}
 		seen := map[string]string{} // id -> first path
 		var errs []string
 		walkWidgetTree(root, func(w runtime.Widget, path string) {

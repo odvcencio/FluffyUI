@@ -14,7 +14,8 @@ import (
 )
 
 func TestCandyWarsSimRun(t *testing.T) {
-	rand.Seed(1)
+	rng := rand.New(rand.NewSource(1))
+	_ = rng // seeded local RNG available if needed
 
 	be := sim.New(120, 40)
 	if err := be.Init(); err != nil {

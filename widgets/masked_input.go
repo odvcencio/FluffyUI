@@ -721,28 +721,6 @@ func (m *MaskedInput) displayToValueIndex(displayPos int) int {
 	return valueIdx
 }
 
-func (m *MaskedInput) valueToDisplayIndex(valueIdx int) int {
-	slots := m.parseMask()
-	count := 0
-	for i, slot := range slots {
-		if !slot.literal {
-			if count == valueIdx {
-				return i
-			}
-			count++
-		}
-	}
-	return len(slots)
-}
-
-func (m *MaskedInput) isEditablePosition(pos int) bool {
-	slots := m.parseMask()
-	if pos < 0 || pos >= len(slots) {
-		return false
-	}
-	return !slots[pos].literal
-}
-
 func (m *MaskedInput) moveCursor(delta int) {
 	slots := m.parseMask()
 	if len(slots) == 0 {

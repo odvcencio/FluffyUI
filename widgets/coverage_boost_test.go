@@ -21,9 +21,7 @@ import (
 
 func TestVideoPlayer_Construction(t *testing.T) {
 	player := &VideoPlayer{}
-	if player == nil {
-		t.Fatal("expected non-nil video player")
-	}
+	_ = player // verify construction succeeds
 }
 
 func TestVideoPlayer_PlayPause(t *testing.T) {

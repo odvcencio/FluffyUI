@@ -16,13 +16,6 @@ type integrationSync struct {
 	app      *runtime.App
 }
 
-func newIntegrationSync(app *runtime.App) *integrationSync {
-	return &integrationSync{
-		renderCh: make(chan struct{}, 10),
-		app:      app,
-	}
-}
-
 func (s *integrationSync) notifyRender() {
 	select {
 	case s.renderCh <- struct{}{}:
@@ -142,13 +135,6 @@ func startTestAppWithSync(t *testing.T, be *sim.Backend, root runtime.Widget) (*
 	})
 
 	return app, sync
-}
-
-// Deprecated: use startTestAppWithSync instead.
-func startTestApp(t *testing.T, be *sim.Backend, root runtime.Widget) *runtime.App {
-	t.Helper()
-	app, _ := startTestAppWithSync(t, be, root)
-	return app
 }
 
 func TestIntegration_TabFocusTraversal(t *testing.T) {

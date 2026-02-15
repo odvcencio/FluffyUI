@@ -13,12 +13,6 @@ func testLabel(text string) runtime.Widget {
 	return widgets.NewLabel(text)
 }
 
-func measureAndLayout(w runtime.Widget, width, height int) {
-	c := runtime.Constraints{MaxWidth: width, MaxHeight: height}
-	w.Measure(c)
-	w.Layout(runtime.Rect{X: 0, Y: 0, Width: width, Height: height})
-}
-
 func renderToString(w runtime.Widget, width, height int) string {
 	buf := runtime.NewBuffer(width, height)
 	c := runtime.Constraints{MaxWidth: width, MaxHeight: height}

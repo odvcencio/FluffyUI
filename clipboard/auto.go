@@ -88,10 +88,7 @@ func (c *AutoClipboard) Write(text string) error {
 // Always returns true for non-nil instances because the in-memory fallback
 // is always available.
 func (c *AutoClipboard) Available() bool {
-	if c == nil {
-		return false
-	}
-	return true
+	return c != nil
 }
 
 // Primary returns the clipboard selected for write operations, useful for

@@ -98,8 +98,6 @@ type Log struct {
 	offset     int        // Scroll offset (0 = bottom in auto-scroll mode)
 	showTime   bool       // Show timestamps
 	minLevel   LogLevel   // Minimum level to display
-	selection  Selection  // Text selection
-
 	label         string
 	style         backend.Style
 	selectedStyle backend.Style

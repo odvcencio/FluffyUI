@@ -10,7 +10,6 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	"sync"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -29,8 +28,6 @@ type Server struct {
 	config    Config
 	sshConfig *ssh.ServerConfig
 	listener  net.Listener
-	mu        sync.Mutex
-	sessions  int
 }
 
 // New creates a new SSH server with the given config.
