@@ -201,3 +201,292 @@ func TestBreadcrumbCustomSeparator(t *testing.T) {
 		t.Errorf("Width with custom separator = %d, want 5", size.Width)
 	}
 }
+
+func TestBreadcrumbStyleType(t *testing.T) {
+	bc := NewBreadcrumb()
+	if got := bc.StyleType(); got != "Breadcrumb" {
+		t.Errorf("StyleType() = %q, want %q", got, "Breadcrumb")
+	}
+}
+
+func TestBreadcrumbCollapsible(t *testing.T) {
+	bc := NewBreadcrumb(
+		BreadcrumbItem{Label: "Home"},
+		BreadcrumbItem{Label: "Products"},
+		BreadcrumbItem{Label: "Electronics"},
+		BreadcrumbItem{Label: "Phones"},
+		BreadcrumbItem{Label: "Details"},
+	)
+
+	// Not collapsible by default
+	if bc.Collapsible() {
+		t.Error("Breadcrumb should not be collapsible by default")
+	}
+
+	// Enable collapsing
+	bc.SetCollapsible(true)
+	if !bc.Collapsible() {
+		t.Error("Breadcrumb should be collapsible after SetCollapsible(true)")
+	}
+
+	// Default thresholds
+	if bc.CollapseThreshold() != 4 {
+		t.Errorf("Default CollapseThreshold = %d, want 4", bc.CollapseThreshold())
+	}
+	if bc.CollapseKeep() != 2 {
+		t.Errorf("Default CollapseKeep = %d, want 2", bc.CollapseKeep())
+	}
+}
+
+func TestBreadcrumbNeedsCollapse(t *testing.T) {
+	bc := NewBreadcrumb(
+		BreadcrumbItem{Label: "Home"},
+		BreadcrumbItem{Label: "Products"},
+		BreadcrumbItem{Label: "Electronics"},
+		BreadcrumbItem{Label: "Phones"},
+		BreadcrumbItem{Label: "Details"},
+	)
+	bc.SetCollapsible(true)
+
+	// Full width: "Home" + " > " + "Products" + " > " + "Electronics" + " > " + "Phones" + " > " + "Details"
+	// = 4 + 3 + 8 + 3 + 11 + 3 + 6 + 3 + 7 = 48
+	fullWidth := bc.fullWidth()
+	if fullWidth != 48 {
+		t.Errorf("fullWidth = %d, want 48", fullWidth)
+	}
+
+	// Should not collapse when wide enough
+	if bc.needsCollapse(100) {
+		t.Error("Should not collapse when width=100")
+	}
+
+	// Should collapse when narrow
+	if !bc.needsCollapse(30) {
+		t.Error("Should collapse when width=30")
+	}
+}
+
+func TestBreadcrumbCollapsedIndices(t *testing.T) {
+	bc := NewBreadcrumb(
+		BreadcrumbItem{Label: "Home"},     // 0
+		BreadcrumbItem{Label: "Products"}, // 1
+		BreadcrumbItem{Label: "Elec"},     // 2
+		BreadcrumbItem{Label: "Phones"},   // 3
+		BreadcrumbItem{Label: "Details"},  // 4
+	)
+	bc.SetCollapsible(true)
+	bc.SetCollapseKeep(2)
+
+	indices := bc.collapsedIndices()
+	// Should be: [0, -1, 3, 4]  (first, ellipsis, last 2)
+	expected := []int{0, -1, 3, 4}
+	if len(indices) != len(expected) {
+		t.Fatalf("collapsedIndices len = %d, want %d: %v", len(indices), len(expected), indices)
+	}
+	for i, v := range indices {
+		if v != expected[i] {
+			t.Errorf("collapsedIndices[%d] = %d, want %d", i, v, expected[i])
+		}
+	}
+}
+
+func TestBreadcrumbCollapsedIndicesKeep3(t *testing.T) {
+	bc := NewBreadcrumb(
+		BreadcrumbItem{Label: "A"},
+		BreadcrumbItem{Label: "B"},
+		BreadcrumbItem{Label: "C"},
+		BreadcrumbItem{Label: "D"},
+		BreadcrumbItem{Label: "E"},
+		BreadcrumbItem{Label: "F"},
+	)
+	bc.SetCollapsible(true)
+	bc.SetCollapseKeep(3)
+
+	indices := bc.collapsedIndices()
+	// Should be: [0, -1, 3, 4, 5]
+	expected := []int{0, -1, 3, 4, 5}
+	if len(indices) != len(expected) {
+		t.Fatalf("collapsedIndices len = %d, want %d: %v", len(indices), len(expected), indices)
+	}
+	for i, v := range indices {
+		if v != expected[i] {
+			t.Errorf("collapsedIndices[%d] = %d, want %d", i, v, expected[i])
+		}
+	}
+}
+
+func TestBreadcrumbCollapseThresholdBelowMinimum(t *testing.T) {
+	bc := NewBreadcrumb(
+		BreadcrumbItem{Label: "Home"},
+		BreadcrumbItem{Label: "About"},
+		BreadcrumbItem{Label: "Contact"},
+	)
+	bc.SetCollapsible(true)
+
+	// 3 items is below default threshold of 4, should not collapse
+	if bc.needsCollapse(5) {
+		t.Error("Should not collapse when item count < threshold")
+	}
+}
+
+func TestBreadcrumbSetCollapseThreshold(t *testing.T) {
+	bc := NewBreadcrumb()
+	bc.SetCollapseThreshold(6)
+	if bc.CollapseThreshold() != 6 {
+		t.Errorf("CollapseThreshold = %d, want 6", bc.CollapseThreshold())
+	}
+
+	// Invalid: less than 2
+	bc.SetCollapseThreshold(1)
+	if bc.CollapseThreshold() != 6 {
+		t.Errorf("CollapseThreshold should remain 6 after invalid set, got %d", bc.CollapseThreshold())
+	}
+}
+
+func TestBreadcrumbSetCollapseKeep(t *testing.T) {
+	bc := NewBreadcrumb()
+	bc.SetCollapseKeep(3)
+	if bc.CollapseKeep() != 3 {
+		t.Errorf("CollapseKeep = %d, want 3", bc.CollapseKeep())
+	}
+
+	// Invalid: less than 1
+	bc.SetCollapseKeep(0)
+	if bc.CollapseKeep() != 3 {
+		t.Errorf("CollapseKeep should remain 3 after invalid set, got %d", bc.CollapseKeep())
+	}
+}
+
+func TestBreadcrumbARIACurrent(t *testing.T) {
+	bc := NewBreadcrumb(
+		BreadcrumbItem{Label: "Home"},
+		BreadcrumbItem{Label: "Docs"},
+	)
+	bc.syncA11y()
+
+	if bc.Base.Current != "page" {
+		t.Errorf("Current = %q, want %q", bc.Base.Current, "page")
+	}
+}
+
+func TestBreadcrumbARIACurrentEmpty(t *testing.T) {
+	bc := NewBreadcrumb()
+	bc.syncA11y()
+
+	if bc.Base.Current != "" {
+		t.Errorf("Current should be empty for no items, got %q", bc.Base.Current)
+	}
+}
+
+func TestBreadcrumbARIANavRole(t *testing.T) {
+	bc := NewBreadcrumb(BreadcrumbItem{Label: "Home"})
+	bc.syncA11y()
+
+	if bc.Base.Role != "navigation" {
+		t.Errorf("Role = %q, want %q", bc.Base.Role, "navigation")
+	}
+	if bc.Base.Label != "Breadcrumbs" {
+		t.Errorf("Label = %q, want %q", bc.Base.Label, "Breadcrumbs")
+	}
+}
+
+func TestBreadcrumbBindUnbind(t *testing.T) {
+	bc := NewBreadcrumb()
+	svc := runtime.Services{}
+	bc.Bind(svc)
+	bc.Unbind()
+	// Should not panic
+}
+
+func TestBreadcrumbNilGuards(t *testing.T) {
+	var bc *Breadcrumb
+
+	// All methods should handle nil gracefully
+	if bc.Selected() != 0 {
+		t.Error("nil Selected should return 0")
+	}
+	if bc.Collapsible() {
+		t.Error("nil Collapsible should return false")
+	}
+	if bc.CollapseThreshold() != 4 {
+		t.Errorf("nil CollapseThreshold = %d, want 4", bc.CollapseThreshold())
+	}
+	if bc.CollapseKeep() != 2 {
+		t.Errorf("nil CollapseKeep = %d, want 2", bc.CollapseKeep())
+	}
+
+	bc.SetSeparator("/")
+	bc.SetCollapsible(true)
+	bc.SetCollapseThreshold(5)
+	bc.SetCollapseKeep(3)
+	bc.SetOnNavigate(nil)
+	bc.Bind(runtime.Services{})
+	bc.Unbind()
+	bc.Render(runtime.RenderContext{})
+	bc.syncA11y()
+}
+
+func TestBreadcrumbCollapsedClickItemAtPosition(t *testing.T) {
+	bc := NewBreadcrumb(
+		BreadcrumbItem{Label: "Home"},     // 0
+		BreadcrumbItem{Label: "Products"}, // 1
+		BreadcrumbItem{Label: "Elec"},     // 2
+		BreadcrumbItem{Label: "Phones"},   // 3
+		BreadcrumbItem{Label: "Details"},  // 4
+	)
+	bc.SetCollapsible(true)
+	bc.SetCollapseKeep(2)
+
+	// Layout with narrow width to trigger collapse
+	bc.Layout(runtime.Rect{X: 0, Y: 0, Width: 30, Height: 1})
+
+	// When collapsed: "Home" + " > " + "..." + " > " + "Phones" + " > " + "Details"
+	// Positions:       0-3     4-6     7       8-10    11-16      17-19   20-26
+	// The ellipsis is 1 char wide (unicode ...)
+
+	// Clicking on "Home" (x=0) should return original index 0
+	got := bc.itemAtPosition(0, 0)
+	if got != 0 {
+		t.Errorf("Click at x=0 should hit item 0, got %d", got)
+	}
+
+	// Clicking on the ellipsis should return -1 (not a real item)
+	gotEllipsis := bc.itemAtPosition(7, 0)
+	if gotEllipsis != -1 {
+		t.Errorf("Click on ellipsis should return -1, got %d", gotEllipsis)
+	}
+}
+
+func TestBreadcrumbPathString(t *testing.T) {
+	bc := NewBreadcrumb(
+		BreadcrumbItem{Label: "Home"},
+		BreadcrumbItem{Label: "  "},
+		BreadcrumbItem{Label: "Docs"},
+	)
+	path := bc.pathString()
+	// Blank labels are skipped
+	if path != "Home > Docs" {
+		t.Errorf("pathString = %q, want %q", path, "Home > Docs")
+	}
+}
+
+func TestBreadcrumbEmptyItems(t *testing.T) {
+	bc := NewBreadcrumb()
+	result := bc.HandleMessage(runtime.KeyMsg{Key: terminal.KeyEnter})
+	if result.Handled {
+		t.Error("Empty breadcrumb should not handle messages")
+	}
+}
+
+func TestBreadcrumbUnfocusedKeysIgnored(t *testing.T) {
+	bc := NewBreadcrumb(
+		BreadcrumbItem{Label: "A"},
+		BreadcrumbItem{Label: "B"},
+	)
+	bc.Layout(runtime.Rect{X: 0, Y: 0, Width: 20, Height: 1})
+	// Not focused
+	result := bc.HandleMessage(runtime.KeyMsg{Key: terminal.KeyRight})
+	if result.Handled {
+		t.Error("Unfocused breadcrumb should not handle key messages")
+	}
+}

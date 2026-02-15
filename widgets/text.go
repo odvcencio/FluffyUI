@@ -5,6 +5,7 @@ import (
 
 	"github.com/odvcencio/fluffyui/accessibility"
 	"github.com/odvcencio/fluffyui/backend"
+	"github.com/odvcencio/fluffyui/i18n"
 	"github.com/odvcencio/fluffyui/runtime"
 	uistyle "github.com/odvcencio/fluffyui/style"
 )
@@ -12,12 +13,14 @@ import (
 // Text is a simple text display widget.
 type Text struct {
 	Base
-	text      string
-	style     backend.Style
-	lines     []string // Cached line splits
-	a11yLabel string
-	styleSet  bool
-	services  runtime.Services
+	text         string
+	style        backend.Style
+	lines        []string // Cached line splits
+	a11yLabel    string
+	styleSet     bool
+	direction    i18n.Direction
+	directionSet bool // true if direction was explicitly set via SetDirection
+	services     runtime.Services
 }
 
 // TextOption configures a Text widget.
@@ -30,6 +33,17 @@ func WithTextStyle(style backend.Style) TextOption {
 			return
 		}
 		t.SetStyle(style)
+	}
+}
+
+// WithTextDirection sets an explicit text direction (DirectionLTR or DirectionRTL).
+// When set, auto-detection is bypassed for rendering.
+func WithTextDirection(dir i18n.Direction) TextOption {
+	return func(t *Text) {
+		if t == nil {
+			return
+		}
+		t.SetDirection(dir)
 	}
 }
 
@@ -84,6 +98,24 @@ func (t *Text) Text() string {
 func (t *Text) SetStyle(style backend.Style) {
 	t.style = style
 	t.styleSet = true
+}
+
+// SetDirection sets an explicit text direction override.
+// Pass DirectionRTL for right-to-left or DirectionLTR for left-to-right.
+// When set, auto-detection is bypassed.
+func (t *Text) SetDirection(dir i18n.Direction) {
+	t.direction = dir
+	t.directionSet = true
+}
+
+// Direction returns the effective text direction.
+// If a direction was explicitly set, it returns that.
+// Otherwise, it auto-detects from the text content.
+func (t *Text) Direction() i18n.Direction {
+	if t.directionSet {
+		return t.direction
+	}
+	return i18n.DetectDirection(t.text)
 }
 
 // Deprecated: prefer WithTextStyle during construction or SetStyle for mutation.
@@ -144,16 +176,29 @@ func (t *Text) Render(ctx runtime.RenderContext) {
 		style = final.ToBackend()
 	}
 
+	dir := t.Direction()
 	for i, line := range t.lines {
 		if i >= bounds.Height {
 			break
 		}
 		y := bounds.Y + i
 		displayLine := line
+		// Apply bidi reordering for RTL text
+		if dir == i18n.DirectionRTL {
+			displayLine = i18n.BidiReorder(displayLine, i18n.DirectionRTL)
+		}
 		if textWidth(displayLine) > bounds.Width {
 			displayLine = clipString(displayLine, bounds.Width)
 		}
-		ctx.Buffer.SetString(bounds.X, y, displayLine, style)
+		// Right-align RTL text
+		x := bounds.X
+		if dir == i18n.DirectionRTL {
+			lineW := textWidth(displayLine)
+			if lineW < bounds.Width {
+				x = bounds.X + bounds.Width - lineW
+			}
+		}
+		ctx.Buffer.SetString(x, y, displayLine, style)
 	}
 }
 
@@ -186,12 +231,14 @@ func (t *Text) syncA11y() {
 // Label is a single-line text widget often used for headers/labels.
 type Label struct {
 	Base
-	text      string
-	style     backend.Style
-	alignment Alignment
-	a11yLabel string
-	styleSet  bool
-	services  runtime.Services
+	text         string
+	style        backend.Style
+	alignment    Alignment
+	a11yLabel    string
+	styleSet     bool
+	direction    i18n.Direction
+	directionSet bool // true if direction was explicitly set via SetDirection
+	services     runtime.Services
 }
 
 // LabelOption configures a Label widget.
@@ -214,6 +261,17 @@ func WithLabelAlignment(align Alignment) LabelOption {
 			return
 		}
 		l.SetAlignment(align)
+	}
+}
+
+// WithLabelDirection sets an explicit text direction (DirectionLTR or DirectionRTL).
+// When set, auto-detection is bypassed for rendering.
+func WithLabelDirection(dir i18n.Direction) LabelOption {
+	return func(l *Label) {
+		if l == nil {
+			return
+		}
+		l.SetDirection(dir)
 	}
 }
 
@@ -278,6 +336,24 @@ func (l *Label) SetAlignment(align Alignment) {
 	l.alignment = align
 }
 
+// SetDirection sets an explicit text direction override.
+// Pass DirectionRTL for right-to-left or DirectionLTR for left-to-right.
+// When set, auto-detection is bypassed.
+func (l *Label) SetDirection(dir i18n.Direction) {
+	l.direction = dir
+	l.directionSet = true
+}
+
+// Direction returns the effective text direction.
+// If a direction was explicitly set, it returns that.
+// Otherwise, it auto-detects from the text content.
+func (l *Label) Direction() i18n.Direction {
+	if l.directionSet {
+		return l.direction
+	}
+	return i18n.DetectDirection(l.text)
+}
+
 // Deprecated: prefer WithLabelStyle during construction or SetStyle for mutation.
 func (l *Label) WithStyle(style backend.Style) *Label {
 	l.style = style
@@ -318,14 +394,25 @@ func (l *Label) Render(ctx runtime.RenderContext) {
 	l.syncA11y()
 
 	text := l.text
+	dir := l.Direction()
+
+	// Apply bidi reordering for RTL text
+	if dir == i18n.DirectionRTL {
+		text = i18n.BidiReorder(text, i18n.DirectionRTL)
+	}
 	if textWidth(text) > bounds.Width {
 		text = truncateString(text, bounds.Width)
 	}
 
-	// Calculate X position based on alignment
+	// Calculate X position based on alignment.
+	// RTL text defaults to right-alignment unless explicitly overridden.
 	x := bounds.X
 	textW := textWidth(text)
-	switch l.alignment {
+	alignment := l.alignment
+	if dir == i18n.DirectionRTL && alignment == AlignLeft {
+		alignment = AlignRight
+	}
+	switch alignment {
 	case AlignCenter:
 		x = bounds.X + (bounds.Width-textW)/2
 	case AlignRight:

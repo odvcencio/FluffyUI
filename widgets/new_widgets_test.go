@@ -84,20 +84,21 @@ func TestRichTextRender(t *testing.T) {
 }
 
 func TestDataGridEditingCommit(t *testing.T) {
-	grid := NewDataGrid(
-		TableColumn{Title: "Name"},
-		TableColumn{Title: "Value"},
-	)
+	grid := NewDataGrid([]DataGridColumn{{Header: "Name", Width: 10}, {Header: "Value", Width: 10}})
 	grid.SetRows([][]string{{"Alpha", "1"}})
-	grid.SetSelected(0, 1)
-	grid.StartEditing()
-	if !grid.editing {
+	grid.SetSelectedCell(0, 1)
+	grid.Focus()
+	grid.StartEdit()
+	if !grid.Editing() {
 		t.Fatalf("expected editing to be true")
 	}
-	grid.editor.SetText("42")
-	grid.CommitEditing()
-	if grid.GetCell(0, 1) != "42" {
-		t.Errorf("expected cell updated to 42, got %s", grid.GetCell(0, 1))
+	// Clear existing value "1" with backspace, then type "42"
+	grid.HandleMessage(runtime.KeyMsg{Key: terminal.KeyBackspace})
+	grid.HandleMessage(runtime.KeyMsg{Key: terminal.KeyRune, Rune: '4'})
+	grid.HandleMessage(runtime.KeyMsg{Key: terminal.KeyRune, Rune: '2'})
+	grid.HandleMessage(runtime.KeyMsg{Key: terminal.KeyEnter}) // commits
+	if grid.Cell(0, 1) != "42" {
+		t.Errorf("expected cell updated to 42, got %s", grid.Cell(0, 1))
 	}
 }
 

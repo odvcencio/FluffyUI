@@ -196,3 +196,45 @@ func Conditional(show bool, widget runtime.Widget) runtime.Widget {
 	}
 	return nil
 }
+
+// onMounter is implemented by widgets that support an OnMount lifecycle hook.
+type onMounter interface {
+	OnMount(fn func())
+}
+
+// onUnmounter is implemented by widgets that support an OnUnmount lifecycle hook.
+type onUnmounter interface {
+	OnUnmount(fn func())
+}
+
+// WithMount sets an onMount callback on a widget and returns it for chaining.
+// The callback fires when the widget is bound (mounted into a screen).
+// If the widget does not support OnMount, this is a no-op.
+//
+// Example:
+//
+//	label := fluffy.WithMount(fluffy.Label("Hello"), func() {
+//	    log.Println("label mounted")
+//	})
+func WithMount(w runtime.Widget, fn func()) runtime.Widget {
+	if m, ok := w.(onMounter); ok {
+		m.OnMount(fn)
+	}
+	return w
+}
+
+// WithUnmount sets an onUnmount callback on a widget and returns it for chaining.
+// The callback fires when the widget is unbound (removed from a screen).
+// If the widget does not support OnUnmount, this is a no-op.
+//
+// Example:
+//
+//	label := fluffy.WithUnmount(fluffy.Label("Hello"), func() {
+//	    log.Println("label unmounted")
+//	})
+func WithUnmount(w runtime.Widget, fn func()) runtime.Widget {
+	if m, ok := w.(onUnmounter); ok {
+		m.OnUnmount(fn)
+	}
+	return w
+}

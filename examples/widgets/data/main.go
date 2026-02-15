@@ -62,10 +62,10 @@ func NewDataView() *DataView {
 	)
 	view.table.SetRows([][]string{{"One", "1"}, {"Two", "2"}, {"Three", "3"}, {"Four", "4"}})
 
-	view.grid = widgets.NewDataGrid(
-		widgets.TableColumn{Title: "Key"},
-		widgets.TableColumn{Title: "Value"},
-	)
+	view.grid = widgets.NewDataGrid([]widgets.DataGridColumn{
+		{Header: "Key", Width: 10},
+		{Header: "Value", Width: 10},
+	})
 	view.grid.SetRows([][]string{{"Alpha", "10"}, {"Beta", "20"}, {"Gamma", "30"}})
 
 	view.richText = widgets.NewRichText("## Notes\n- Fast grid editing\n- Styled markdown\n")
@@ -96,9 +96,9 @@ func NewDataView() *DataView {
 		}
 	})
 
-	view.grid.SetOnEdit(func(row, col int, value string) {
+	view.grid.SetOnCellEdit(func(row, col int, oldValue, newValue string) {
 		if view.log != nil {
-			view.log.Info(fmt.Sprintf("Edited [%d,%d] -> %s", row, col, value))
+			view.log.Info(fmt.Sprintf("Edited [%d,%d] -> %s", row, col, newValue))
 		}
 	})
 

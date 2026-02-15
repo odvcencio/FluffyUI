@@ -609,25 +609,6 @@ import (
 	ui "github.com/odvcencio/fluffyui/widgets"
 )
 
-type tableSource struct {
-	rows int
-}
-
-func (t tableSource) RowCount() int {
-	return t.rows
-}
-
-func (t tableSource) Cell(row, col int) string {
-	switch col {
-	case 0:
-		return fmt.Sprintf("Row %d", row+1)
-	case 1:
-		return fmt.Sprintf("Value %d", (row+1)*10)
-	default:
-		return ""
-	}
-}
-
 func main() {
 	app, err := fluffy.NewApp()
 	if err != nil {
@@ -643,11 +624,15 @@ func main() {
 }
 
 func buildViewer() runtime.Widget {
-	grid := ui.NewDataGrid(
-		ui.TableColumn{Title: "Name"},
-		ui.TableColumn{Title: "Value"},
-	)
-	grid.SetDataSource(tableSource{rows: 10000})
+	rows := make([][]string, 10000)
+	for i := range rows {
+		rows[i] = []string{fmt.Sprintf("Row %d", i+1), fmt.Sprintf("Value %d", (i+1)*10)}
+	}
+	grid := ui.NewDataGrid([]ui.DataGridColumn{
+		{Header: "Name", Width: 15},
+		{Header: "Value", Width: 15},
+	})
+	grid.SetRows(rows)
 
 	panel := ui.NewPanel(grid, ui.WithPanelBorder(backend.DefaultStyle()))
 	panel.SetTitle("Data Viewer")

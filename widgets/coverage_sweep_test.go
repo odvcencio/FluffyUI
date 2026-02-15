@@ -97,30 +97,20 @@ func TestCalendarOptionsAndSignals(t *testing.T) {
 }
 
 func TestDataGridEditingAndSetters(t *testing.T) {
-	source := &testGridSource{rows: [][]string{{"1", "2"}, {"3", "4"}}}
-	grid := NewDataGrid(TableColumn{Title: "A", Width: 4}, TableColumn{Title: "B", Width: 4})
-	WithDataGridLabel("Grid")(grid)
-	WithDataGridStyle(backend.DefaultStyle())(grid)
-	grid.SetColumns([]TableColumn{{Title: "A", Width: 4}, {Title: "B", Width: 4}})
-	grid.SetRows(source.rows)
-	grid.SetDataSource(source)
-	if grid.DataSource() == nil {
-		t.Fatalf("expected data source")
-	}
+	grid := NewDataGrid([]DataGridColumn{{Header: "A", Width: 4}, {Header: "B", Width: 4}})
+	grid.SetRows([][]string{{"1", "2"}, {"3", "4"}})
 	grid.SetLabel("Grid")
 	grid.SetStyle(backend.DefaultStyle())
 	grid.SetHeaderStyle(backend.DefaultStyle().Bold(true))
 	grid.SetSelectedStyle(backend.DefaultStyle().Reverse(true))
-	grid.SetEditingStyle(backend.DefaultStyle().Reverse(true))
-	grid.SetOnEdit(func(row, col int, value string) {})
-	grid.SetOnSelect(func(row, col int) {})
+	grid.SetOnCellEdit(func(row, col int, oldValue, newValue string) {})
 	_ = grid.StyleType()
 
 	grid.Bind(runtime.Services{})
 	grid.Layout(runtime.Rect{X: 0, Y: 0, Width: 20, Height: 6})
 	grid.Focus()
-	grid.SetSelected(0, 1)
-	row, col := grid.SelectedPosition()
+	grid.SetSelectedCell(0, 1)
+	row, col := grid.SelectedCell()
 	if row != 0 || col != 1 {
 		t.Fatalf("unexpected selected position")
 	}
@@ -131,13 +121,12 @@ func TestDataGridEditingAndSetters(t *testing.T) {
 	grid.HandleMessage(runtime.MouseMsg{Button: runtime.MouseWheelDown})
 	grid.HandleMessage(runtime.MouseMsg{Button: runtime.MouseLeft, Action: runtime.MousePress, X: 1, Y: 2})
 
-	grid.StartEditing()
-	grid.CancelEditing()
-	grid.CommitEditing()
-	_ = grid.IsEditing()
+	grid.StartEdit()
+	grid.CancelEdit()
+	grid.CommitEdit()
+	_ = grid.Editing()
 	_ = grid.ColumnCount()
 	_ = grid.RowCount()
-	_ = grid.DataSource()
 
 	grid.Unbind()
 	_ = flufftest.RenderToString(grid, 20, 6)

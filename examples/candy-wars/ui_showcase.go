@@ -203,13 +203,13 @@ func NewShowcaseTabContent() *ShowcaseTabContent {
 	)
 	table.SetRows([][]string{{"One", "1"}, {"Two", "2"}, {"Three", "3"}})
 
-	grid := widgets.NewDataGrid(
-		widgets.TableColumn{Title: "Key"},
-		widgets.TableColumn{Title: "Value"},
-	)
+	grid := widgets.NewDataGrid([]widgets.DataGridColumn{
+		{Header: "Key", Width: 10},
+		{Header: "Value", Width: 10},
+	})
 	grid.SetRows([][]string{{"Alpha", "10"}, {"Beta", "20"}, {"Gamma", "30"}})
-	grid.SetOnEdit(func(row, col int, value string) {
-		s.setStatus(fmt.Sprintf("DataGrid: [%d,%d] %s", row, col, truncateStatus(value, 12)))
+	grid.SetOnCellEdit(func(row, col int, oldValue, newValue string) {
+		s.setStatus(fmt.Sprintf("DataGrid: [%d,%d] %s", row, col, truncateStatus(newValue, 12)))
 	})
 
 	dataBox := demo.NewVBox(list, table, grid)

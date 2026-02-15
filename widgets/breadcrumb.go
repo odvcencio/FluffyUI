@@ -16,7 +16,13 @@ type BreadcrumbItem struct {
 	OnClick func()
 }
 
-// Breadcrumb renders a path of items.
+// Breadcrumb renders a path of items with optional collapsing.
+//
+// When the items exceed the available width, the breadcrumb automatically
+// collapses middle items into an ellipsis ("..."), keeping the first item
+// and the last N visible items (controlled by SetCollapseKeep, default 2).
+// The collapse threshold can be configured with SetCollapseThreshold
+// (minimum item count before collapsing, default 4).
 type Breadcrumb struct {
 	FocusableBase
 	Items      []BreadcrumbItem
@@ -24,13 +30,20 @@ type Breadcrumb struct {
 	onNavigate func(index int)
 	separator  string
 	services   runtime.Services
+
+	// Collapse configuration
+	collapsible       bool // enable automatic collapsing
+	collapseThreshold int  // minimum items before collapsing kicks in (default 4)
+	collapseKeep      int  // number of trailing items to keep visible (default 2)
 }
 
 // NewBreadcrumb creates a breadcrumb.
 func NewBreadcrumb(items ...BreadcrumbItem) *Breadcrumb {
 	crumb := &Breadcrumb{
-		Items:     items,
-		separator: " > ",
+		Items:             items,
+		separator:         " > ",
+		collapseThreshold: 4,
+		collapseKeep:      2,
 	}
 	crumb.Base.Role = accessibility.RoleNavigation
 	crumb.Base.Landmark = accessibility.LandmarkNavigation
@@ -38,11 +51,63 @@ func NewBreadcrumb(items ...BreadcrumbItem) *Breadcrumb {
 	return crumb
 }
 
+// StyleType returns the selector type name for FSS stylesheet targeting.
+func (b *Breadcrumb) StyleType() string {
+	return "Breadcrumb"
+}
+
 // SetSeparator sets the separator between items (default " > ").
 func (b *Breadcrumb) SetSeparator(sep string) {
 	if b != nil {
 		b.separator = sep
 	}
+}
+
+// SetCollapsible enables or disables automatic collapsing when items overflow.
+func (b *Breadcrumb) SetCollapsible(enabled bool) {
+	if b != nil {
+		b.collapsible = enabled
+	}
+}
+
+// Collapsible reports whether automatic collapsing is enabled.
+func (b *Breadcrumb) Collapsible() bool {
+	if b == nil {
+		return false
+	}
+	return b.collapsible
+}
+
+// SetCollapseThreshold sets the minimum number of items before collapsing
+// activates. Default is 4.
+func (b *Breadcrumb) SetCollapseThreshold(n int) {
+	if b != nil && n >= 2 {
+		b.collapseThreshold = n
+	}
+}
+
+// CollapseThreshold returns the minimum item count before collapsing.
+func (b *Breadcrumb) CollapseThreshold() int {
+	if b == nil {
+		return 4
+	}
+	return b.collapseThreshold
+}
+
+// SetCollapseKeep sets the number of trailing items kept visible when
+// collapsed. Default is 2.
+func (b *Breadcrumb) SetCollapseKeep(n int) {
+	if b != nil && n >= 1 {
+		b.collapseKeep = n
+	}
+}
+
+// CollapseKeep returns the number of trailing items kept visible.
+func (b *Breadcrumb) CollapseKeep() int {
+	if b == nil {
+		return 2
+	}
+	return b.collapseKeep
 }
 
 // SetOnNavigate sets the callback for navigation to a breadcrumb item.
@@ -67,20 +132,66 @@ func (b *Breadcrumb) Selected() int {
 	return b.selected
 }
 
+// fullWidth computes the total width needed to render all items.
+func (b *Breadcrumb) fullWidth() int {
+	sep := b.sep()
+	sepW := textWidth(sep)
+	w := 0
+	for i, item := range b.Items {
+		w += textWidth(item.Label)
+		if i < len(b.Items)-1 {
+			w += sepW
+		}
+	}
+	return w
+}
+
+// sep returns the effective separator string.
+func (b *Breadcrumb) sep() string {
+	if b.separator == "" {
+		return " > "
+	}
+	return b.separator
+}
+
+// needsCollapse returns true if the items should be collapsed to fit.
+func (b *Breadcrumb) needsCollapse(availableWidth int) bool {
+	if !b.collapsible {
+		return false
+	}
+	if len(b.Items) < b.collapseThreshold {
+		return false
+	}
+	return b.fullWidth() > availableWidth
+}
+
+// collapsedIndices returns the display indices when collapsed.
+// Format: [first, ellipsis_placeholder, last_N...]
+// The returned slice contains the original indices of visible items.
+// Index -1 is used as a placeholder for the ellipsis.
+func (b *Breadcrumb) collapsedIndices() []int {
+	n := len(b.Items)
+	keep := b.collapseKeep
+	if keep >= n {
+		keep = n - 1
+	}
+	if keep < 1 {
+		keep = 1
+	}
+	// first item + ellipsis + last keep items
+	indices := make([]int, 0, 2+keep)
+	indices = append(indices, 0)  // first item
+	indices = append(indices, -1) // ellipsis placeholder
+	for i := n - keep; i < n; i++ {
+		indices = append(indices, i)
+	}
+	return indices
+}
+
 // Measure returns desired size.
 func (b *Breadcrumb) Measure(constraints runtime.Constraints) runtime.Size {
 	return b.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {
-		width := 0
-		sep := b.separator
-		if sep == "" {
-			sep = " > "
-		}
-		for i, item := range b.Items {
-			width += textWidth(item.Label)
-			if i < len(b.Items)-1 {
-				width += textWidth(sep)
-			}
-		}
+		width := b.fullWidth()
 		if width < 1 {
 			width = 1
 		}
@@ -99,19 +210,32 @@ func (b *Breadcrumb) Render(ctx runtime.RenderContext) {
 		return
 	}
 
-	sep := b.separator
-	if sep == "" {
-		sep = " > "
-	}
+	sep := b.sep()
 	sepWidth := textWidth(sep)
 
-	x := bounds.X
 	normalStyle := backend.DefaultStyle()
 	selectedStyle := normalStyle.Reverse(true)
 	sepStyle := normalStyle.Dim(true)
+	// Last item gets underline to indicate "current page" visually
+	currentStyle := normalStyle.Bold(true)
+	currentSelectedStyle := currentStyle.Reverse(true)
 
-	for i, item := range b.Items {
-		if i > 0 {
+	collapsed := b.needsCollapse(bounds.Width)
+	var displayIndices []int
+	if collapsed {
+		displayIndices = b.collapsedIndices()
+	} else {
+		displayIndices = make([]int, len(b.Items))
+		for i := range b.Items {
+			displayIndices[i] = i
+		}
+	}
+
+	x := bounds.X
+	lastItemIdx := len(b.Items) - 1
+
+	for di, origIdx := range displayIndices {
+		if di > 0 {
 			// Draw separator
 			if x+sepWidth <= bounds.X+bounds.Width {
 				ctx.Buffer.SetString(x, bounds.Y, sep, sepStyle)
@@ -119,11 +243,31 @@ func (b *Breadcrumb) Render(ctx runtime.RenderContext) {
 			}
 		}
 
-		// Draw item
+		if origIdx == -1 {
+			// Draw ellipsis
+			ellipsis := "\u2026"
+			ew := textWidth(ellipsis)
+			if x+ew <= bounds.X+bounds.Width {
+				ctx.Buffer.SetString(x, bounds.Y, ellipsis, normalStyle.Dim(true))
+				x += ew
+			}
+			continue
+		}
+
+		item := b.Items[origIdx]
+		isLast := origIdx == lastItemIdx
+		isFocused := b.focused && origIdx == b.selected
+
+		// Pick the appropriate style
 		style := normalStyle
-		if b.focused && i == b.selected {
+		if isLast && isFocused {
+			style = currentSelectedStyle
+		} else if isLast {
+			style = currentStyle
+		} else if isFocused {
 			style = selectedStyle
 		}
+
 		label := item.Label
 		available := bounds.X + bounds.Width - x
 		if textWidth(label) > available {
@@ -226,20 +370,36 @@ func (b *Breadcrumb) itemAtPosition(x, y int) int {
 		return -1
 	}
 
-	sep := b.separator
-	if sep == "" {
-		sep = " > "
-	}
+	sep := b.sep()
 	sepWidth := textWidth(sep)
 
+	collapsed := b.needsCollapse(bounds.Width)
+	var displayIndices []int
+	if collapsed {
+		displayIndices = b.collapsedIndices()
+	} else {
+		displayIndices = make([]int, len(b.Items))
+		for i := range b.Items {
+			displayIndices[i] = i
+		}
+	}
+
 	currentX := bounds.X
-	for i, item := range b.Items {
-		if i > 0 {
+	for di, origIdx := range displayIndices {
+		if di > 0 {
 			currentX += sepWidth
 		}
+
+		if origIdx == -1 {
+			// Ellipsis
+			currentX += textWidth("\u2026")
+			continue
+		}
+
+		item := b.Items[origIdx]
 		itemEnd := currentX + textWidth(item.Label)
 		if x >= currentX && x < itemEnd {
-			return i
+			return origIdx
 		}
 		currentX = itemEnd
 	}
@@ -264,6 +424,12 @@ func (b *Breadcrumb) syncA11y() {
 	} else {
 		b.Base.Value = nil
 	}
+	// Mark the last item as aria-current="page"
+	if len(b.Items) > 0 {
+		b.Base.Current = "page"
+	} else {
+		b.Base.Current = ""
+	}
 }
 
 func (b *Breadcrumb) pathString() string {
@@ -277,10 +443,7 @@ func (b *Breadcrumb) pathString() string {
 		}
 		parts = append(parts, item.Label)
 	}
-	sep := b.separator
-	if sep == "" {
-		sep = " > "
-	}
+	sep := b.sep()
 	return strings.Join(parts, sep)
 }
 

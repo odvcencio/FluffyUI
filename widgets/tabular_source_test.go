@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/odvcencio/fluffyui/runtime"
+	"github.com/odvcencio/fluffyui/terminal"
 	flufftest "github.com/odvcencio/fluffyui/testing"
 )
 
@@ -61,31 +62,31 @@ func TestTableDataSource(t *testing.T) {
 	}
 }
 
-func TestDataGridDataSourceEditable(t *testing.T) {
-	source := &testTabularSource{rows: [][]string{{"Alpha", "1"}}}
-	grid := NewDataGrid(TableColumn{Title: "Name"}, TableColumn{Title: "Value"})
-	grid.SetDataSource(source)
-	grid.SetSelected(0, 1)
+func TestDataGridCellEditing(t *testing.T) {
+	grid := NewDataGrid([]DataGridColumn{{Header: "Name", Width: 10}, {Header: "Value", Width: 10}})
+	grid.SetRows([][]string{{"Alpha", "1"}})
+	grid.SetSelectedCell(0, 1)
+	grid.Focus()
 
-	grid.StartEditing()
-	grid.editor.SetText("42")
-	grid.CommitEditing()
+	grid.StartEdit()
+	// Clear existing "1" with backspace, then type "42"
+	grid.HandleMessage(runtime.KeyMsg{Key: terminal.KeyBackspace})
+	grid.HandleMessage(runtime.KeyMsg{Key: terminal.KeyRune, Rune: '4'})
+	grid.HandleMessage(runtime.KeyMsg{Key: terminal.KeyRune, Rune: '2'})
+	grid.HandleMessage(runtime.KeyMsg{Key: terminal.KeyEnter}) // commits
 
-	if source.rows[0][1] != "42" {
-		t.Fatalf("expected data source updated, got %q", source.rows[0][1])
-	}
-	if source.setCalls == 0 {
-		t.Fatalf("expected SetCell to be called")
+	if grid.Cell(0, 1) != "42" {
+		t.Fatalf("expected cell updated, got %q", grid.Cell(0, 1))
 	}
 }
 
-func TestDataGridLargeDataSourceRender(t *testing.T) {
-	source := &testTabularSource{rows: make([][]string, 10000)}
-	for i := range source.rows {
-		source.rows[i] = []string{"Row", "Value"}
+func TestDataGridLargeDataSetRender(t *testing.T) {
+	rows := make([][]string, 10000)
+	for i := range rows {
+		rows[i] = []string{"Row", "Value"}
 	}
-	grid := NewDataGrid(TableColumn{Title: "Col1"}, TableColumn{Title: "Col2"})
-	grid.SetDataSource(source)
+	grid := NewDataGrid([]DataGridColumn{{Header: "Col1", Width: 10}, {Header: "Col2", Width: 10}})
+	grid.SetRows(rows)
 
 	output := flufftest.RenderToString(grid, 20, 6)
 	if output == "" {
