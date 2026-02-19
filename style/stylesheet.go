@@ -282,6 +282,25 @@ func (s *Stylesheet) ResolveWithContext(node Node, ancestors []Node, ctx MediaCo
 	return resolved
 }
 
+// classNode is a minimal Node implementation for ResolveClass.
+type classNode struct {
+	class string
+}
+
+func (n *classNode) StyleType() string        { return "" }
+func (n *classNode) StyleID() string           { return "" }
+func (n *classNode) StyleClasses() []string    { return []string{n.class} }
+func (n *classNode) StyleState() WidgetState   { return WidgetState{} }
+
+// ResolveClass resolves the style for a given class name.
+// This is useful for mapping syntax highlight captures to FSS styles.
+func (s *Stylesheet) ResolveClass(className string) Style {
+	if s == nil || className == "" {
+		return Style{}
+	}
+	return s.ResolveWithContext(&classNode{class: className}, nil, MediaContext{})
+}
+
 // RelayoutOnFocus reports whether focus-based rules can affect layout.
 func (s *Stylesheet) RelayoutOnFocus() bool {
 	if s == nil {

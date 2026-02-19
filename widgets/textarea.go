@@ -1,6 +1,7 @@
 package widgets
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -15,6 +16,14 @@ import (
 	"github.com/odvcencio/fluffyui/terminal"
 )
 
+// TextAreaHighlight defines a styled range within the TextArea content.
+// Ranges are in rune offsets (not byte offsets) to match TextArea's internal []rune storage.
+type TextAreaHighlight struct {
+	Start int           // rune offset, inclusive
+	End   int           // rune offset, exclusive
+	Style backend.Style // override style (typically just foreground color)
+}
+
 // textAreaState represents the state of a text area for undo/redo.
 type textAreaState struct {
 	text   []rune
@@ -28,6 +37,7 @@ type TextArea struct {
 	text        []rune
 	cursor      int
 	scrollY     int
+	scrollX     int
 	label       string
 	style       backend.Style
 	focusStyle  backend.Style
@@ -42,6 +52,18 @@ type TextArea struct {
 	// History (undo/redo)
 	history *state.History[textAreaState]
 
+	// Highlight ranges for syntax coloring
+	highlights []TextAreaHighlight
+
+	// Line numbers
+	showLineNumbers bool
+	gutterStyle     backend.Style
+	gutterStyleSet  bool
+
+	// Tab configuration
+	tabSize int
+	useTabs bool
+
 	// Line metadata cache
 	lineStarts     []int
 	lineLengths    []int
@@ -55,6 +77,7 @@ func NewTextArea() *TextArea {
 		label:      "Text Area",
 		style:      backend.DefaultStyle(),
 		focusStyle: backend.DefaultStyle().Reverse(true),
+		tabSize:    4,
 	}
 	ta.history = state.NewHistory(textAreaState{}, state.WithGroupWindow(300*time.Millisecond))
 	ta.Base.Role = accessibility.RoleTextbox
@@ -347,6 +370,59 @@ func (t *TextArea) SetFocusStyle(style backend.Style) {
 	t.focusSet = true
 }
 
+// SetHighlights replaces the highlight ranges. Ranges must be sorted by Start.
+// The TextArea does not sort them — the caller is responsible for ordering.
+func (t *TextArea) SetHighlights(highlights []TextAreaHighlight) {
+	if t == nil {
+		return
+	}
+	t.highlights = highlights
+}
+
+// ClearHighlights removes all highlight ranges.
+func (t *TextArea) ClearHighlights() {
+	if t == nil {
+		return
+	}
+	t.highlights = nil
+}
+
+// SetShowLineNumbers enables or disables the line number gutter.
+func (t *TextArea) SetShowLineNumbers(show bool) {
+	if t == nil {
+		return
+	}
+	t.showLineNumbers = show
+}
+
+// SetGutterStyle sets the style for the line number gutter.
+func (t *TextArea) SetGutterStyle(style backend.Style) {
+	if t == nil {
+		return
+	}
+	t.gutterStyle = style
+	t.gutterStyleSet = true
+}
+
+// SetTabSize sets the number of spaces for a tab. Default is 4.
+func (t *TextArea) SetTabSize(n int) {
+	if t == nil {
+		return
+	}
+	if n < 1 {
+		n = 1
+	}
+	t.tabSize = n
+}
+
+// SetTabMode controls whether Tab inserts a literal '\t' (true) or spaces (false).
+func (t *TextArea) SetTabMode(useTabs bool) {
+	if t == nil {
+		return
+	}
+	t.useTabs = useTabs
+}
+
 // StyleType returns the selector type name.
 func (t *TextArea) StyleType() string {
 	return "TextArea"
@@ -360,6 +436,41 @@ func (t *TextArea) Measure(constraints runtime.Constraints) runtime.Size {
 	return t.measureWithStyle(constraints, func(contentConstraints runtime.Constraints) runtime.Size {
 		return contentConstraints.Constrain(runtime.Size{Width: 1, Height: 1})
 	})
+}
+
+// mergeHighlightStyle merges a highlight's foreground and attributes onto a base style.
+func mergeHighlightStyle(base, highlight backend.Style) backend.Style {
+	fg, _, hAttrs := highlight.Decompose()
+	if fg != backend.ColorDefault {
+		base = base.Foreground(fg)
+	}
+	if hAttrs&backend.AttrBold != 0 {
+		base = base.Bold(true)
+	}
+	if hAttrs&backend.AttrItalic != 0 {
+		base = base.Italic(true)
+	}
+	return base
+}
+
+// gutterWidth returns the width of the line number gutter (0 if disabled).
+func (t *TextArea) gutterWidth(totalLines int) int {
+	if !t.showLineNumbers {
+		return 0
+	}
+	return digits(totalLines) + 1 // +1 for separator space
+}
+
+func digits(n int) int {
+	if n <= 0 {
+		return 1
+	}
+	d := 0
+	for n > 0 {
+		d++
+		n /= 10
+	}
+	return d
 }
 
 // Render draws the text area.
@@ -400,41 +511,101 @@ func (t *TextArea) Render(ctx runtime.RenderContext) {
 	} else if line >= t.scrollY+content.Height {
 		t.scrollY = line - content.Height + 1
 	}
-	scrollX := 0
-	if col >= content.Width {
-		scrollX = col - content.Width + 1
+
+	// Line number gutter
+	gw := t.gutterWidth(len(lineStarts))
+	textBounds := content
+	if gw > 0 && gw < content.Width {
+		textBounds.X += gw
+		textBounds.Width -= gw
 	}
+
+	// Persistent horizontal scroll
+	if col >= textBounds.Width {
+		t.scrollX = col - textBounds.Width + 1
+	} else if col < t.scrollX {
+		t.scrollX = col
+	}
+
+	// Gutter style: use explicit or dimmed base style
+	gs := t.gutterStyle
+	if !t.gutterStyleSet {
+		gs = style.Dim(true)
+	}
+
+	// Highlight cursor: index into t.highlights
+	hIdx := 0
 
 	for row := 0; row < content.Height; row++ {
 		lineIndex := t.scrollY + row
 		if lineIndex >= len(lineStarts) {
 			break
 		}
+
+		// Draw line number
+		if gw > 0 {
+			numStr := fmt.Sprintf("%*d", gw-1, lineIndex+1)
+			for i, ch := range numStr {
+				ctx.Buffer.Set(content.X+i, content.Y+row, ch, gs)
+			}
+			// Separator space
+			ctx.Buffer.Set(content.X+gw-1, content.Y+row, ' ', gs)
+		}
+
+		lineStart := lineStarts[lineIndex]
+		lineLen := lineLengths[lineIndex]
 		lineText := t.lineText(lineIndex, lineStarts, lineLengths)
 		dir := i18n.DetectDirection(lineText)
 		if dir == i18n.DirectionRTL {
 			lineText = i18n.BidiReorder(lineText, dir)
 		}
-		if scrollX < len(lineText) {
-			lineText = lineText[scrollX:]
-		} else {
-			lineText = ""
+
+		// Per-character rendering with highlights
+		visibleStart := t.scrollX
+		visibleEnd := t.scrollX + textBounds.Width
+		if visibleEnd > lineLen {
+			visibleEnd = lineLen
 		}
-		if len(lineText) > content.Width {
-			lineText = lineText[:content.Width]
+
+		// Advance highlight cursor to first potentially overlapping range
+		for hIdx > 0 && hIdx < len(t.highlights) && t.highlights[hIdx].Start > lineStart {
+			hIdx--
 		}
-		x := content.X
-		if dir == i18n.DirectionRTL && len(lineText) < content.Width {
-			x = content.X + content.Width - len(lineText)
+		for hIdx < len(t.highlights) && t.highlights[hIdx].End <= lineStart+visibleStart {
+			hIdx++
 		}
-		writePadded(ctx.Buffer, x, content.Y+row, content.Width, lineText, style)
+
+		xPos := textBounds.X
+		for c := visibleStart; c < visibleEnd && xPos < textBounds.X+textBounds.Width; c++ {
+			runeOffset := lineStart + c
+			ch := rune(lineText[c])
+
+			charStyle := style
+			// Check highlights
+			hi := hIdx
+			for hi < len(t.highlights) && t.highlights[hi].Start <= runeOffset {
+				if t.highlights[hi].End > runeOffset {
+					charStyle = mergeHighlightStyle(charStyle, t.highlights[hi].Style)
+					break
+				}
+				hi++
+			}
+
+			if dir == i18n.DirectionRTL && visibleEnd-visibleStart < textBounds.Width {
+				offset := textBounds.Width - (visibleEnd - visibleStart)
+				ctx.Buffer.Set(xPos+offset, content.Y+row, ch, charStyle)
+			} else {
+				ctx.Buffer.Set(xPos, content.Y+row, ch, charStyle)
+			}
+			xPos++
+		}
 	}
 
 	if t.focused {
 		cursorRow := line - t.scrollY
-		cursorCol := col - scrollX
-		if cursorRow >= 0 && cursorRow < content.Height && cursorCol >= 0 && cursorCol < content.Width {
-			cursorX := content.X + cursorCol
+		cursorCol := col - t.scrollX
+		if cursorRow >= 0 && cursorRow < content.Height && cursorCol >= 0 && cursorCol < textBounds.Width {
+			cursorX := textBounds.X + cursorCol
 			cursorY := content.Y + cursorRow
 			ch := ' '
 			lineText := t.lineText(line, lineStarts, lineLengths)
@@ -446,11 +617,17 @@ func (t *TextArea) Render(ctx runtime.RenderContext) {
 	}
 }
 
-// HandleMessage processes keyboard input.
+// HandleMessage processes keyboard and mouse input.
 func (t *TextArea) HandleMessage(msg runtime.Message) runtime.HandleResult {
 	if t == nil || !t.focused {
 		return runtime.Unhandled()
 	}
+
+	// Handle mouse events.
+	if mouse, ok := msg.(runtime.MouseMsg); ok {
+		return t.handleMouse(mouse)
+	}
+
 	key, ok := msg.(runtime.KeyMsg)
 	if !ok {
 		return runtime.Unhandled()
@@ -483,6 +660,16 @@ func (t *TextArea) HandleMessage(msg runtime.Message) runtime.HandleResult {
 		t.pushHistory(true)
 		t.insertRune('\n')
 		return runtime.Handled()
+	case terminal.KeyTab:
+		t.pushHistory(true)
+		if t.useTabs {
+			t.insertRune('\t')
+		} else {
+			for i := 0; i < t.tabSize; i++ {
+				t.insertRune(' ')
+			}
+		}
+		return runtime.Handled()
 	case terminal.KeyBackspace:
 		if t.cursor > 0 {
 			t.pushHistory(true)
@@ -511,11 +698,25 @@ func (t *TextArea) HandleMessage(msg runtime.Message) runtime.HandleResult {
 	case terminal.KeyDown:
 		t.moveVertical(1)
 		return runtime.Handled()
+	case terminal.KeyPageUp:
+		t.movePage(-1)
+		return runtime.Handled()
+	case terminal.KeyPageDown:
+		t.movePage(1)
+		return runtime.Handled()
 	case terminal.KeyHome:
-		t.moveLineBoundary(true)
+		if key.Ctrl {
+			t.cursor = 0
+		} else {
+			t.moveLineBoundary(true)
+		}
 		return runtime.Handled()
 	case terminal.KeyEnd:
-		t.moveLineBoundary(false)
+		if key.Ctrl {
+			t.cursor = len(t.text)
+		} else {
+			t.moveLineBoundary(false)
+		}
 		return runtime.Handled()
 	case terminal.KeyRune:
 		if key.Rune != 0 {
@@ -525,6 +726,60 @@ func (t *TextArea) HandleMessage(msg runtime.Message) runtime.HandleResult {
 		}
 	}
 	return runtime.Unhandled()
+}
+
+// movePage moves the cursor up or down by approximately one page.
+func (t *TextArea) movePage(direction int) {
+	content := t.ContentBounds()
+	lineStarts, _ := t.lineMeta()
+	gw := t.gutterWidth(len(lineStarts))
+	pageSize := content.Height
+	if pageSize <= 0 {
+		pageSize = 1
+	}
+	_ = gw // gutter doesn't affect vertical movement
+	t.moveVertical(direction * pageSize)
+}
+
+// handleMouse processes mouse click events to position the cursor.
+func (t *TextArea) handleMouse(mouse runtime.MouseMsg) runtime.HandleResult {
+	if mouse.Button != runtime.MouseLeft || mouse.Action != runtime.MousePress {
+		return runtime.Unhandled()
+	}
+
+	content := t.ContentBounds()
+	lineStarts, lineLengths := t.lineMeta()
+	gw := t.gutterWidth(len(lineStarts))
+
+	textX := content.X + gw
+	textW := content.Width - gw
+
+	// Check if click is within text bounds.
+	if mouse.X < textX || mouse.X >= textX+textW {
+		return runtime.Unhandled()
+	}
+	if mouse.Y < content.Y || mouse.Y >= content.Y+content.Height {
+		return runtime.Unhandled()
+	}
+
+	row := mouse.Y - content.Y
+	col := mouse.X - textX + t.scrollX
+	targetLine := t.scrollY + row
+	if targetLine >= len(lineStarts) {
+		targetLine = len(lineStarts) - 1
+	}
+	if targetLine < 0 {
+		targetLine = 0
+	}
+	lineLen := lineLengths[targetLine]
+	if col > lineLen {
+		col = lineLen
+	}
+	if col < 0 {
+		col = 0
+	}
+	t.cursor = lineStarts[targetLine] + col
+	return runtime.Handled()
 }
 
 func (t *TextArea) insertRune(r rune) {

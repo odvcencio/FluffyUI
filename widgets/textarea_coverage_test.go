@@ -1,6 +1,7 @@
 package widgets
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/odvcencio/fluffyui/backend"
@@ -124,4 +125,315 @@ func TestTextArea_UndoRedoNilSafety(t *testing.T) {
 		t.Fatal("expected CanRedo on nil to return false")
 	}
 	ta.ClearHistory() // should not panic
+}
+
+func TestTextArea_Highlights(t *testing.T) {
+	ta := NewTextArea()
+	ta.SetText("func main()")
+	ta.Focus()
+
+	kwStyle := backend.DefaultStyle().Foreground(backend.ColorRed)
+	fnStyle := backend.DefaultStyle().Foreground(backend.ColorGreen)
+
+	ta.SetHighlights([]TextAreaHighlight{
+		{Start: 0, End: 4, Style: kwStyle},   // "func"
+		{Start: 5, End: 9, Style: fnStyle},    // "main"
+	})
+
+	buf := flufftest.LayoutAndRender(ta, 20, 3)
+
+	// "func" (positions 0-3) should have red foreground
+	for i := 0; i < 4; i++ {
+		cell := buf.Get(i, 0)
+		fg, _, _ := cell.Style.Decompose()
+		if fg != backend.ColorRed {
+			t.Errorf("char %d: expected red foreground, got %v", i, fg)
+		}
+	}
+
+	// "main" (positions 5-8) should have green foreground
+	for i := 5; i < 9; i++ {
+		cell := buf.Get(i, 0)
+		fg, _, _ := cell.Style.Decompose()
+		if fg != backend.ColorGreen {
+			t.Errorf("char %d: expected green foreground, got %v", i, fg)
+		}
+	}
+
+	// Non-highlighted chars should have default foreground
+	cell := buf.Get(4, 0) // space between "func" and "main"
+	fg, _, _ := cell.Style.Decompose()
+	if fg == backend.ColorRed || fg == backend.ColorGreen {
+		t.Errorf("space at pos 4 should not be highlighted, got fg=%v", fg)
+	}
+
+	// ClearHighlights should remove all highlights
+	ta.ClearHighlights()
+	buf = flufftest.LayoutAndRender(ta, 20, 3)
+	cell = buf.Get(0, 0)
+	fg, _, _ = cell.Style.Decompose()
+	if fg == backend.ColorRed {
+		t.Error("after ClearHighlights, char 0 should not be red")
+	}
+}
+
+func TestTextArea_HighlightMergesAttributes(t *testing.T) {
+	ta := NewTextArea()
+	ta.SetText("bold")
+	ta.Focus()
+
+	hlStyle := backend.DefaultStyle().Bold(true).Foreground(backend.ColorBlue)
+	ta.SetHighlights([]TextAreaHighlight{
+		{Start: 0, End: 4, Style: hlStyle},
+	})
+
+	buf := flufftest.LayoutAndRender(ta, 20, 3)
+	cell := buf.Get(0, 0)
+	_, _, attrs := cell.Style.Decompose()
+	if attrs&backend.AttrBold == 0 {
+		t.Error("expected bold attribute on highlighted cell")
+	}
+	fg, _, _ := cell.Style.Decompose()
+	if fg != backend.ColorBlue {
+		t.Errorf("expected blue foreground, got %v", fg)
+	}
+}
+
+func TestTextArea_LineNumbers(t *testing.T) {
+	ta := NewTextArea()
+	ta.SetText("aaa\nbbb\nccc")
+	ta.SetShowLineNumbers(true)
+	ta.Focus()
+
+	// 3 lines → gutter width = digits(3) + 1 = 2
+	buf := flufftest.LayoutAndRender(ta, 20, 5)
+
+	// Check line numbers at left edge
+	// Line 1: "1 " at columns 0-1
+	c := buf.Get(0, 0)
+	if c.Rune != '1' {
+		t.Errorf("expected '1' at (0,0), got %q", c.Rune)
+	}
+	c = buf.Get(1, 0)
+	if c.Rune != ' ' {
+		t.Errorf("expected space separator at (1,0), got %q", c.Rune)
+	}
+
+	// Text starts at column 2
+	c = buf.Get(2, 0)
+	if c.Rune != 'a' {
+		t.Errorf("expected 'a' at (2,0), got %q", c.Rune)
+	}
+
+	// Line 2
+	c = buf.Get(0, 1)
+	if c.Rune != '2' {
+		t.Errorf("expected '2' at (0,1), got %q", c.Rune)
+	}
+	c = buf.Get(2, 1)
+	if c.Rune != 'b' {
+		t.Errorf("expected 'b' at (2,1), got %q", c.Rune)
+	}
+
+	// Line 3
+	c = buf.Get(0, 2)
+	if c.Rune != '3' {
+		t.Errorf("expected '3' at (0,2), got %q", c.Rune)
+	}
+}
+
+func TestTextArea_LineNumbersGutterStyle(t *testing.T) {
+	ta := NewTextArea()
+	ta.SetText("a\nb")
+	ta.SetShowLineNumbers(true)
+	gs := backend.DefaultStyle().Foreground(backend.ColorYellow)
+	ta.SetGutterStyle(gs)
+	ta.Focus()
+
+	buf := flufftest.LayoutAndRender(ta, 20, 5)
+	cell := buf.Get(0, 0)
+	fg, _, _ := cell.Style.Decompose()
+	if fg != backend.ColorYellow {
+		t.Errorf("gutter foreground: expected yellow, got %v", fg)
+	}
+}
+
+func TestTextArea_TabSpaces(t *testing.T) {
+	ta := NewTextArea()
+	ta.SetText("x")
+	ta.SetCursorOffset(1)
+	ta.Focus()
+	ta.Layout(runtime.Rect{X: 0, Y: 0, Width: 20, Height: 3})
+
+	ta.HandleMessage(runtime.KeyMsg{Key: terminal.KeyTab})
+	got := ta.Text()
+	if got != "x    " {
+		t.Fatalf("expected 4 spaces after tab, got %q", got)
+	}
+}
+
+func TestTextArea_TabLiteral(t *testing.T) {
+	ta := NewTextArea()
+	ta.SetText("x")
+	ta.SetCursorOffset(1)
+	ta.SetTabMode(true) // use literal tabs
+	ta.Focus()
+	ta.Layout(runtime.Rect{X: 0, Y: 0, Width: 20, Height: 3})
+
+	ta.HandleMessage(runtime.KeyMsg{Key: terminal.KeyTab})
+	got := ta.Text()
+	if got != "x\t" {
+		t.Fatalf("expected literal tab, got %q", got)
+	}
+}
+
+func TestTextArea_TabSize(t *testing.T) {
+	ta := NewTextArea()
+	ta.SetTabSize(2)
+	ta.Focus()
+	ta.Layout(runtime.Rect{X: 0, Y: 0, Width: 20, Height: 3})
+
+	ta.HandleMessage(runtime.KeyMsg{Key: terminal.KeyTab})
+	got := ta.Text()
+	if got != "  " {
+		t.Fatalf("expected 2 spaces, got %q", got)
+	}
+}
+
+func TestTextArea_PageUpDown(t *testing.T) {
+	// Build 20 lines
+	lines := make([]string, 20)
+	for i := range lines {
+		lines[i] = "line"
+	}
+	text := strings.Join(lines, "\n")
+
+	ta := NewTextArea()
+	ta.SetText(text)
+	ta.SetCursorOffset(0) // start at line 0
+	ta.Focus()
+	ta.Layout(runtime.Rect{X: 0, Y: 0, Width: 20, Height: 5})
+
+	// PageDown should move cursor down by page height (5)
+	ta.HandleMessage(runtime.KeyMsg{Key: terminal.KeyPageDown})
+	_, line := ta.CursorPosition()
+	if line != 5 {
+		t.Fatalf("after PageDown: expected line 5, got %d", line)
+	}
+
+	// Another PageDown
+	ta.HandleMessage(runtime.KeyMsg{Key: terminal.KeyPageDown})
+	_, line = ta.CursorPosition()
+	if line != 10 {
+		t.Fatalf("after 2nd PageDown: expected line 10, got %d", line)
+	}
+
+	// PageUp
+	ta.HandleMessage(runtime.KeyMsg{Key: terminal.KeyPageUp})
+	_, line = ta.CursorPosition()
+	if line != 5 {
+		t.Fatalf("after PageUp: expected line 5, got %d", line)
+	}
+}
+
+func TestTextArea_MouseClick(t *testing.T) {
+	ta := NewTextArea()
+	ta.SetText("hello\nworld\nfoo")
+	ta.Focus()
+	ta.Layout(runtime.Rect{X: 0, Y: 0, Width: 20, Height: 5})
+
+	// Click at (3, 1) should position cursor at line 1, col 3 = "rld" -> 'r' is at col 2
+	// Actually (3,1) = col 3 of "world" = 'l'
+	ta.HandleMessage(runtime.MouseMsg{
+		X:      3,
+		Y:      1,
+		Button: runtime.MouseLeft,
+		Action: runtime.MousePress,
+	})
+
+	col, line := ta.CursorPosition()
+	if line != 1 {
+		t.Fatalf("expected line 1, got %d", line)
+	}
+	if col != 3 {
+		t.Fatalf("expected col 3, got %d", col)
+	}
+}
+
+func TestTextArea_MouseClickWithLineNumbers(t *testing.T) {
+	ta := NewTextArea()
+	ta.SetText("ab\ncd")
+	ta.SetShowLineNumbers(true)
+	ta.Focus()
+	ta.Layout(runtime.Rect{X: 0, Y: 0, Width: 20, Height: 5})
+
+	// Gutter width for 2 lines = digits(2) + 1 = 2
+	// Click at (3, 0): text starts at x=2, so text col = 3 - 2 = 1
+	ta.HandleMessage(runtime.MouseMsg{
+		X:      3,
+		Y:      0,
+		Button: runtime.MouseLeft,
+		Action: runtime.MousePress,
+	})
+
+	col, line := ta.CursorPosition()
+	if line != 0 {
+		t.Fatalf("expected line 0, got %d", line)
+	}
+	if col != 1 {
+		t.Fatalf("expected col 1, got %d", col)
+	}
+}
+
+func TestTextArea_CtrlHome(t *testing.T) {
+	ta := NewTextArea()
+	ta.SetText("aaa\nbbb\nccc")
+	ta.SetCursorOffset(len([]rune("aaa\nbbb\nccc"))) // end of text
+	ta.Focus()
+	ta.Layout(runtime.Rect{X: 0, Y: 0, Width: 20, Height: 5})
+
+	ta.HandleMessage(runtime.KeyMsg{Key: terminal.KeyHome, Ctrl: true})
+	if ta.CursorOffset() != 0 {
+		t.Fatalf("expected cursor at 0, got %d", ta.CursorOffset())
+	}
+}
+
+func TestTextArea_CtrlEnd(t *testing.T) {
+	ta := NewTextArea()
+	ta.SetText("aaa\nbbb\nccc")
+	ta.SetCursorOffset(0)
+	ta.Focus()
+	ta.Layout(runtime.Rect{X: 0, Y: 0, Width: 20, Height: 5})
+
+	ta.HandleMessage(runtime.KeyMsg{Key: terminal.KeyEnd, Ctrl: true})
+	expected := len([]rune("aaa\nbbb\nccc"))
+	if ta.CursorOffset() != expected {
+		t.Fatalf("expected cursor at %d, got %d", expected, ta.CursorOffset())
+	}
+}
+
+func TestTextArea_NilSafetyNewMethods(t *testing.T) {
+	var ta *TextArea
+	// Should not panic
+	ta.SetHighlights(nil)
+	ta.ClearHighlights()
+	ta.SetShowLineNumbers(true)
+	ta.SetGutterStyle(backend.DefaultStyle())
+	ta.SetTabSize(8)
+	ta.SetTabMode(true)
+}
+
+func TestTextArea_ScrollXPersists(t *testing.T) {
+	ta := NewTextArea()
+	ta.SetText("abcdefghijklmnopqrstuvwxyz")
+	ta.SetCursorOffset(20) // well past a 10-col viewport
+	ta.Focus()
+
+	buf := flufftest.LayoutAndRender(ta, 10, 3)
+	_ = buf
+
+	// After render, scrollX should be set to show cursor
+	if ta.scrollX == 0 {
+		t.Fatal("expected scrollX > 0 for cursor at offset 20 in 10-col viewport")
+	}
 }

@@ -106,6 +106,37 @@ func TestResolveAttributeSelector(t *testing.T) {
 	}
 }
 
+func TestResolveClass(t *testing.T) {
+	sheet := NewStylesheet().
+		Add(Select("").Class("keyword"), Style{Foreground: RGB(203, 166, 247)}).
+		Add(Select("").Class("string"), Style{Foreground: RGB(166, 227, 161), Italic: Bool(true)})
+
+	resolved := sheet.ResolveClass("keyword")
+	if resolved.Foreground != RGB(203, 166, 247) {
+		t.Fatalf("keyword foreground = %#v, want %#v", resolved.Foreground, RGB(203, 166, 247))
+	}
+
+	resolved = sheet.ResolveClass("string")
+	if resolved.Foreground != RGB(166, 227, 161) {
+		t.Fatalf("string foreground = %#v, want %#v", resolved.Foreground, RGB(166, 227, 161))
+	}
+	if resolved.Italic == nil || !*resolved.Italic {
+		t.Fatal("string italic should be true")
+	}
+
+	// Unknown class returns zero style.
+	resolved = sheet.ResolveClass("nonexistent")
+	if !resolved.IsZero() {
+		t.Fatalf("nonexistent class should return zero style, got %#v", resolved)
+	}
+
+	// Empty class returns zero style.
+	resolved = sheet.ResolveClass("")
+	if !resolved.IsZero() {
+		t.Fatal("empty class should return zero style")
+	}
+}
+
 func TestHoverSelectorMatches(t *testing.T) {
 	// Create a stylesheet with a hover rule.
 	sheet := NewStylesheet().
