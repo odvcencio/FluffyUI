@@ -437,3 +437,221 @@ func TestTextArea_ScrollXPersists(t *testing.T) {
 		t.Fatal("expected scrollX > 0 for cursor at offset 20 in 10-col viewport")
 	}
 }
+
+func TestTextArea_SelectAll(t *testing.T) {
+	mem := &clipboard.MemoryClipboard{}
+	app := runtime.NewApp(runtime.AppConfig{Clipboard: mem})
+	ta := NewTextArea()
+	ta.Bind(app.Services())
+	ta.SetText("hello\nworld")
+	ta.SetCursorOffset(0)
+	ta.Focus()
+	ta.Layout(runtime.Rect{X: 0, Y: 0, Width: 20, Height: 5})
+
+	ta.HandleMessage(runtime.KeyMsg{Key: terminal.KeyCtrlA})
+	if !ta.HasSelection() {
+		t.Fatal("expected selection after Ctrl+A")
+	}
+	sel := ta.GetSelection()
+	if sel.Start != 0 || sel.End != len([]rune("hello\nworld")) {
+		t.Fatalf("expected full selection, got %d-%d", sel.Start, sel.End)
+	}
+	if ta.GetSelectedText() != "hello\nworld" {
+		t.Fatalf("expected selected text 'hello\\nworld', got %q", ta.GetSelectedText())
+	}
+}
+
+func TestTextArea_ShiftArrowSelection(t *testing.T) {
+	ta := NewTextArea()
+	ta.SetText("hello")
+	ta.SetCursorOffset(0)
+	ta.Focus()
+	ta.Layout(runtime.Rect{X: 0, Y: 0, Width: 20, Height: 3})
+
+	// Shift+Right three times to select "hel"
+	for i := 0; i < 3; i++ {
+		ta.HandleMessage(runtime.KeyMsg{Key: terminal.KeyRight, Shift: true})
+	}
+	if !ta.HasSelection() {
+		t.Fatal("expected selection after Shift+Right")
+	}
+	if ta.GetSelectedText() != "hel" {
+		t.Fatalf("expected 'hel', got %q", ta.GetSelectedText())
+	}
+
+	// Right without shift should collapse selection
+	ta.HandleMessage(runtime.KeyMsg{Key: terminal.KeyRight})
+	if ta.HasSelection() {
+		t.Fatal("expected no selection after Right without Shift")
+	}
+}
+
+func TestTextArea_SelectionDelete(t *testing.T) {
+	ta := NewTextArea()
+	ta.SetText("hello world")
+	ta.Focus()
+	ta.Layout(runtime.Rect{X: 0, Y: 0, Width: 20, Height: 3})
+
+	// Select "hello" (0-5)
+	ta.SetSelection(Selection{Start: 0, End: 5})
+	ta.SetCursorOffset(5)
+
+	// Backspace should delete selection
+	ta.HandleMessage(runtime.KeyMsg{Key: terminal.KeyBackspace})
+	if ta.Text() != " world" {
+		t.Fatalf("expected ' world', got %q", ta.Text())
+	}
+	if ta.HasSelection() {
+		t.Fatal("expected no selection after delete")
+	}
+}
+
+func TestTextArea_SelectionReplace(t *testing.T) {
+	ta := NewTextArea()
+	ta.SetText("hello world")
+	ta.Focus()
+	ta.Layout(runtime.Rect{X: 0, Y: 0, Width: 20, Height: 3})
+
+	// Select "hello" and type "hi"
+	ta.SetSelection(Selection{Start: 0, End: 5})
+	ta.SetCursorOffset(5)
+	ta.HandleMessage(runtime.KeyMsg{Key: terminal.KeyRune, Rune: 'H'})
+	if ta.Text() != "H world" {
+		t.Fatalf("expected 'H world', got %q", ta.Text())
+	}
+}
+
+func TestTextArea_ClipboardCopySelection(t *testing.T) {
+	mem := &clipboard.MemoryClipboard{}
+	app := runtime.NewApp(runtime.AppConfig{Clipboard: mem})
+	ta := NewTextArea()
+	ta.Bind(app.Services())
+	ta.SetText("hello world")
+	ta.Focus()
+	ta.Layout(runtime.Rect{X: 0, Y: 0, Width: 20, Height: 3})
+
+	// Select "world" (6-11)
+	ta.SetSelection(Selection{Start: 6, End: 11})
+
+	text, ok := ta.ClipboardCopy()
+	if !ok {
+		t.Fatal("expected ClipboardCopy to succeed")
+	}
+	if text != "world" {
+		t.Fatalf("expected 'world', got %q", text)
+	}
+}
+
+func TestTextArea_ClipboardCutSelection(t *testing.T) {
+	mem := &clipboard.MemoryClipboard{}
+	app := runtime.NewApp(runtime.AppConfig{Clipboard: mem})
+	ta := NewTextArea()
+	ta.Bind(app.Services())
+	ta.SetText("hello world")
+	ta.Focus()
+	ta.Layout(runtime.Rect{X: 0, Y: 0, Width: 20, Height: 3})
+
+	// Select "hello" (0-5)
+	ta.SetSelection(Selection{Start: 0, End: 5})
+
+	text, ok := ta.ClipboardCut()
+	if !ok {
+		t.Fatal("expected ClipboardCut to succeed")
+	}
+	if text != "hello" {
+		t.Fatalf("expected 'hello', got %q", text)
+	}
+	if ta.Text() != " world" {
+		t.Fatalf("expected ' world', got %q", ta.Text())
+	}
+}
+
+func TestTextArea_SelectionRendering(t *testing.T) {
+	ta := NewTextArea()
+	// Use non-reverse styles so selection reverse is distinguishable
+	plainStyle := backend.DefaultStyle().Foreground(backend.ColorWhite)
+	ta.SetStyle(plainStyle)
+	ta.SetFocusStyle(plainStyle)
+	ta.SetText("abcdef")
+	ta.SetCursorOffset(0)
+	ta.SetSelection(Selection{Start: 1, End: 4}) // select "bcd"
+	ta.Focus()
+
+	buf := flufftest.LayoutAndRender(ta, 20, 3)
+
+	// Characters in selection should have reverse style
+	for i := 1; i < 4; i++ {
+		cell := buf.Get(i, 0)
+		_, _, attrs := cell.Style.Decompose()
+		if attrs&backend.AttrReverse == 0 {
+			t.Errorf("char %d: expected reverse attribute for selection", i)
+		}
+	}
+
+	// Character before selection should not be reversed (cursor is at 0, which IS reversed for cursor)
+	// Check character after selection instead
+	cell := buf.Get(4, 0) // 'e' (outside selection)
+	_, _, attrs := cell.Style.Decompose()
+	if attrs&backend.AttrReverse != 0 {
+		t.Error("char 4 should not have reverse attribute")
+	}
+}
+
+func TestTextArea_SelectNone(t *testing.T) {
+	ta := NewTextArea()
+	app := runtime.NewApp(runtime.AppConfig{})
+	ta.Bind(app.Services())
+	ta.SetText("hello")
+	ta.SelectAll()
+	if !ta.HasSelection() {
+		t.Fatal("expected selection after SelectAll")
+	}
+	ta.SelectNone()
+	if ta.HasSelection() {
+		t.Fatal("expected no selection after SelectNone")
+	}
+}
+
+func TestTextArea_SelectWord(t *testing.T) {
+	ta := NewTextArea()
+	app := runtime.NewApp(runtime.AppConfig{})
+	ta.Bind(app.Services())
+	ta.SetText("hello world")
+	ta.SetCursorOffset(7) // inside "world"
+	ta.SelectWord()
+	got := ta.GetSelectedText()
+	if got != "world" {
+		t.Fatalf("expected 'world', got %q", got)
+	}
+}
+
+func TestTextArea_SelectLine(t *testing.T) {
+	ta := NewTextArea()
+	app := runtime.NewApp(runtime.AppConfig{})
+	ta.Bind(app.Services())
+	ta.SetText("hello\nworld\nfoo")
+	ta.SetCursorOffset(7) // inside "world" (line 1)
+	ta.SelectLine()
+	got := ta.GetSelectedText()
+	if got != "world" {
+		t.Fatalf("expected 'world', got %q", got)
+	}
+}
+
+func TestTextArea_SelectableInterface(t *testing.T) {
+	// Compile-time check is done with var _ Selectable = (*TextArea)(nil)
+	// This test verifies nil safety
+	var ta *TextArea
+	if ta.HasSelection() {
+		t.Fatal("nil HasSelection should return false")
+	}
+	if ta.GetSelectedText() != "" {
+		t.Fatal("nil GetSelectedText should return empty")
+	}
+	_ = ta.GetSelection()
+	ta.SetSelection(Selection{Start: 0, End: 5})
+	ta.SelectAll()
+	ta.SelectNone()
+	ta.SelectWord()
+	ta.SelectLine()
+}

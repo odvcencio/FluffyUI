@@ -158,7 +158,8 @@ func KeyPressFromTerminal(event terminal.KeyEvent) KeyPress {
 
 func isCtrlKey(key terminal.Key) bool {
 	switch key {
-	case terminal.KeyCtrlB,
+	case terminal.KeyCtrlA,
+		terminal.KeyCtrlB,
 		terminal.KeyCtrlC,
 		terminal.KeyCtrlD,
 		terminal.KeyCtrlF,

@@ -187,7 +187,7 @@ func (s *Session) handleInput(data []byte) {
 		case 0x09: // Tab
 			s.Backend.PostEvent(terminal.KeyEvent{Key: terminal.KeyTab})
 		case 0x01: // Ctrl+A
-			s.Backend.PostEvent(terminal.KeyEvent{Key: terminal.KeyRune, Rune: 'a', Ctrl: true})
+			s.Backend.PostEvent(terminal.KeyEvent{Key: terminal.KeyCtrlA})
 		case 0x02: // Ctrl+B
 			s.Backend.PostEvent(terminal.KeyEvent{Key: terminal.KeyCtrlB})
 		case 0x03: // Ctrl+C

@@ -126,6 +126,7 @@ var keyDisplayNameMap = map[terminal.Key]string{
 }
 
 var ctrlKeyName = map[terminal.Key]rune{
+	terminal.KeyCtrlA: 'a',
 	terminal.KeyCtrlB: 'b',
 	terminal.KeyCtrlC: 'c',
 	terminal.KeyCtrlD: 'd',

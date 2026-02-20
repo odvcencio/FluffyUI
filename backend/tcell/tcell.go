@@ -503,6 +503,8 @@ func convertKey(k tcell.Key) terminal.Key {
 		return terminal.KeyEnter
 	case tcell.KeyEscape:
 		return terminal.KeyEscape
+	case tcell.KeyCtrlA:
+		return terminal.KeyCtrlA
 	case tcell.KeyCtrlB:
 		return terminal.KeyCtrlB
 	case tcell.KeyCtrlC:
@@ -650,6 +652,8 @@ func reverseConvertKey(k terminal.Key) tcell.Key {
 		return tcell.KeyEnter
 	case terminal.KeyEscape:
 		return tcell.KeyEscape
+	case terminal.KeyCtrlA:
+		return tcell.KeyCtrlA
 	case terminal.KeyCtrlB:
 		return tcell.KeyCtrlB
 	case terminal.KeyCtrlC:

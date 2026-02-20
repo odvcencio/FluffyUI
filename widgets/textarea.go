@@ -26,8 +26,10 @@ type TextAreaHighlight struct {
 
 // textAreaState represents the state of a text area for undo/redo.
 type textAreaState struct {
-	text   []rune
-	cursor int
+	text           []rune
+	cursor         int
+	selectionStart int
+	selectionEnd   int
 }
 
 // TextArea is a multi-line text input widget.
@@ -36,6 +38,7 @@ type TextArea struct {
 
 	text        []rune
 	cursor      int
+	selection   Selection
 	scrollY     int
 	scrollX     int
 	label       string
@@ -124,6 +127,7 @@ func (t *TextArea) SetText(text string) {
 	}
 	t.text = []rune(text)
 	t.cursor = len(t.text)
+	t.selection = Selection{}
 	t.lineMetaDirty = true
 	t.syncValue()
 	t.pushHistory(false) // non-grouped: explicit set is a distinct operation
@@ -285,6 +289,7 @@ func (t *TextArea) Undo() bool {
 	}
 	t.text = s.text
 	t.cursor = s.cursor
+	t.selection = Selection{Start: s.selectionStart, End: s.selectionEnd}
 	t.lineMetaDirty = true
 	t.syncValue()
 	return true
@@ -302,6 +307,7 @@ func (t *TextArea) Redo() bool {
 	}
 	t.text = s.text
 	t.cursor = s.cursor
+	t.selection = Selection{Start: s.selectionStart, End: s.selectionEnd}
 	t.lineMetaDirty = true
 	t.syncValue()
 	return true
@@ -335,7 +341,12 @@ func (t *TextArea) pushHistory(grouped bool) {
 	if t.history == nil {
 		return
 	}
-	s := textAreaState{text: append([]rune(nil), t.text...), cursor: t.cursor}
+	s := textAreaState{
+		text:           append([]rune(nil), t.text...),
+		cursor:         t.cursor,
+		selectionStart: t.selection.Start,
+		selectionEnd:   t.selection.End,
+	}
 	if grouped {
 		t.history.PushGrouped(s)
 	} else {
@@ -536,6 +547,10 @@ func (t *TextArea) Render(ctx runtime.RenderContext) {
 	// Highlight cursor: index into t.highlights
 	hIdx := 0
 
+	// Precompute normalized selection range for rendering
+	sel := t.selection.Normalize()
+	hasSel := !t.selection.IsEmpty()
+
 	for row := 0; row < content.Height; row++ {
 		lineIndex := t.scrollY + row
 		if lineIndex >= len(lineStarts) {
@@ -591,6 +606,11 @@ func (t *TextArea) Render(ctx runtime.RenderContext) {
 				hi++
 			}
 
+			// Apply selection highlighting (reverse video) on top of syntax highlights
+			if hasSel && runeOffset >= sel.Start && runeOffset < sel.End {
+				charStyle = charStyle.Reverse(true)
+			}
+
 			if dir == i18n.DirectionRTL && visibleEnd-visibleStart < textBounds.Width {
 				offset := textBounds.Width - (visibleEnd - visibleStart)
 				ctx.Buffer.Set(xPos+offset, content.Y+row, ch, charStyle)
@@ -634,6 +654,9 @@ func (t *TextArea) HandleMessage(msg runtime.Message) runtime.HandleResult {
 	}
 
 	switch key.Key {
+	case terminal.KeyCtrlA:
+		t.SelectAll()
+		return runtime.Handled()
 	case terminal.KeyCtrlZ:
 		if key.Shift {
 			t.Redo()
@@ -658,10 +681,16 @@ func (t *TextArea) HandleMessage(msg runtime.Message) runtime.HandleResult {
 		}
 	case terminal.KeyEnter:
 		t.pushHistory(true)
+		if t.HasSelection() {
+			t.deleteSelection()
+		}
 		t.insertRune('\n')
 		return runtime.Handled()
 	case terminal.KeyTab:
 		t.pushHistory(true)
+		if t.HasSelection() {
+			t.deleteSelection()
+		}
 		if t.useTabs {
 			t.insertRune('\t')
 		} else {
@@ -671,56 +700,173 @@ func (t *TextArea) HandleMessage(msg runtime.Message) runtime.HandleResult {
 		}
 		return runtime.Handled()
 	case terminal.KeyBackspace:
-		if t.cursor > 0 {
+		if t.HasSelection() {
+			t.pushHistory(true)
+			t.deleteSelection()
+		} else if t.cursor > 0 {
 			t.pushHistory(true)
 			t.deleteRune(t.cursor - 1)
 		}
 		return runtime.Handled()
 	case terminal.KeyDelete:
-		if t.cursor < len(t.text) {
+		if t.HasSelection() {
+			t.pushHistory(true)
+			t.deleteSelection()
+		} else if t.cursor < len(t.text) {
 			t.pushHistory(true)
 			t.deleteRune(t.cursor)
 		}
 		return runtime.Handled()
 	case terminal.KeyLeft:
-		if t.cursor > 0 {
-			t.cursor--
+		if key.Shift {
+			anchor := t.cursor
+			if t.selection.IsEmpty() {
+				anchor = t.cursor
+			} else {
+				anchor = t.selection.Start
+			}
+			if key.Ctrl {
+				t.cursor = textAreaWordBoundaryLeft(t.text, t.cursor)
+			} else if t.cursor > 0 {
+				t.cursor--
+			}
+			t.extendSelection(anchor)
+		} else {
+			if !t.collapseSelection(true) {
+				if key.Ctrl {
+					t.cursor = textAreaWordBoundaryLeft(t.text, t.cursor)
+				} else if t.cursor > 0 {
+					t.cursor--
+				}
+			}
 		}
 		return runtime.Handled()
 	case terminal.KeyRight:
-		if t.cursor < len(t.text) {
-			t.cursor++
+		if key.Shift {
+			anchor := t.cursor
+			if t.selection.IsEmpty() {
+				anchor = t.cursor
+			} else {
+				anchor = t.selection.Start
+			}
+			if key.Ctrl {
+				t.cursor = textAreaWordBoundaryRight(t.text, t.cursor)
+			} else if t.cursor < len(t.text) {
+				t.cursor++
+			}
+			t.extendSelection(anchor)
+		} else {
+			if !t.collapseSelection(false) {
+				if key.Ctrl {
+					t.cursor = textAreaWordBoundaryRight(t.text, t.cursor)
+				} else if t.cursor < len(t.text) {
+					t.cursor++
+				}
+			}
 		}
 		return runtime.Handled()
 	case terminal.KeyUp:
-		t.moveVertical(-1)
+		if key.Shift {
+			anchor := t.cursor
+			if !t.selection.IsEmpty() {
+				anchor = t.selection.Start
+			}
+			t.moveVertical(-1)
+			t.extendSelection(anchor)
+		} else {
+			if !t.collapseSelection(true) {
+				t.moveVertical(-1)
+			}
+		}
 		return runtime.Handled()
 	case terminal.KeyDown:
-		t.moveVertical(1)
+		if key.Shift {
+			anchor := t.cursor
+			if !t.selection.IsEmpty() {
+				anchor = t.selection.Start
+			}
+			t.moveVertical(1)
+			t.extendSelection(anchor)
+		} else {
+			if !t.collapseSelection(false) {
+				t.moveVertical(1)
+			}
+		}
 		return runtime.Handled()
 	case terminal.KeyPageUp:
-		t.movePage(-1)
+		if key.Shift {
+			anchor := t.cursor
+			if !t.selection.IsEmpty() {
+				anchor = t.selection.Start
+			}
+			t.movePage(-1)
+			t.extendSelection(anchor)
+		} else {
+			t.selection = Selection{}
+			t.movePage(-1)
+		}
 		return runtime.Handled()
 	case terminal.KeyPageDown:
-		t.movePage(1)
+		if key.Shift {
+			anchor := t.cursor
+			if !t.selection.IsEmpty() {
+				anchor = t.selection.Start
+			}
+			t.movePage(1)
+			t.extendSelection(anchor)
+		} else {
+			t.selection = Selection{}
+			t.movePage(1)
+		}
 		return runtime.Handled()
 	case terminal.KeyHome:
-		if key.Ctrl {
-			t.cursor = 0
+		if key.Shift {
+			anchor := t.cursor
+			if !t.selection.IsEmpty() {
+				anchor = t.selection.Start
+			}
+			if key.Ctrl {
+				t.cursor = 0
+			} else {
+				t.moveLineBoundary(true)
+			}
+			t.extendSelection(anchor)
 		} else {
-			t.moveLineBoundary(true)
+			t.selection = Selection{}
+			if key.Ctrl {
+				t.cursor = 0
+			} else {
+				t.moveLineBoundary(true)
+			}
 		}
 		return runtime.Handled()
 	case terminal.KeyEnd:
-		if key.Ctrl {
-			t.cursor = len(t.text)
+		if key.Shift {
+			anchor := t.cursor
+			if !t.selection.IsEmpty() {
+				anchor = t.selection.Start
+			}
+			if key.Ctrl {
+				t.cursor = len(t.text)
+			} else {
+				t.moveLineBoundary(false)
+			}
+			t.extendSelection(anchor)
 		} else {
-			t.moveLineBoundary(false)
+			t.selection = Selection{}
+			if key.Ctrl {
+				t.cursor = len(t.text)
+			} else {
+				t.moveLineBoundary(false)
+			}
 		}
 		return runtime.Handled()
 	case terminal.KeyRune:
 		if key.Rune != 0 {
 			t.pushHistory(true)
+			if t.HasSelection() {
+				t.deleteSelection()
+			}
 			t.insertRune(key.Rune)
 			return runtime.Handled()
 		}
@@ -778,7 +924,22 @@ func (t *TextArea) handleMouse(mouse runtime.MouseMsg) runtime.HandleResult {
 	if col < 0 {
 		col = 0
 	}
-	t.cursor = lineStarts[targetLine] + col
+	newPos := lineStarts[targetLine] + col
+
+	if mouse.Shift && !t.selection.IsEmpty() {
+		// Shift+click: extend selection from anchor to click position
+		t.cursor = newPos
+		t.extendSelection(t.selection.Start)
+	} else if mouse.Shift {
+		// Shift+click with no selection: select from cursor to click
+		anchor := t.cursor
+		t.cursor = newPos
+		t.extendSelection(anchor)
+	} else {
+		// Normal click: position cursor, clear selection
+		t.cursor = newPos
+		t.selection = Selection{}
+	}
 	return runtime.Handled()
 }
 
@@ -954,24 +1115,177 @@ func (t *TextArea) syncA11y() {
 	t.Base.Value = &accessibility.ValueInfo{Text: t.Text()}
 }
 
-// ClipboardCopy returns the current text.
+// --- Selection support ---
+
+// GetSelection returns the current selection range.
+func (t *TextArea) GetSelection() Selection {
+	if t == nil {
+		return Selection{}
+	}
+	return t.selection
+}
+
+// SetSelection sets the selection range, clamping to valid bounds.
+func (t *TextArea) SetSelection(sel Selection) {
+	if t == nil {
+		return
+	}
+	textLen := len(t.text)
+	if sel.Start < 0 {
+		sel.Start = 0
+	}
+	if sel.End < 0 {
+		sel.End = 0
+	}
+	if sel.Start > textLen {
+		sel.Start = textLen
+	}
+	if sel.End > textLen {
+		sel.End = textLen
+	}
+	t.selection = sel
+	t.services.Invalidate()
+}
+
+// SelectAll selects all text.
+func (t *TextArea) SelectAll() {
+	if t == nil {
+		return
+	}
+	t.selection = Selection{Start: 0, End: len(t.text)}
+	t.cursor = len(t.text)
+	t.services.Invalidate()
+}
+
+// SelectNone clears the selection.
+func (t *TextArea) SelectNone() {
+	if t == nil {
+		return
+	}
+	t.selection = Selection{}
+	t.services.Invalidate()
+}
+
+// SelectWord selects the word at the cursor position.
+func (t *TextArea) SelectWord() {
+	if t == nil {
+		return
+	}
+	left := textAreaWordBoundaryLeft(t.text, t.cursor)
+	right := textAreaWordBoundaryRight(t.text, t.cursor)
+	t.selection = Selection{Start: left, End: right}
+	t.services.Invalidate()
+}
+
+// SelectLine selects the current line.
+func (t *TextArea) SelectLine() {
+	if t == nil {
+		return
+	}
+	lineStarts, lineLengths := t.lineMeta()
+	line, _ := t.cursorLineCol(lineStarts, lineLengths)
+	if line < 0 || line >= len(lineStarts) {
+		return
+	}
+	start := lineStarts[line]
+	end := start + lineLengths[line]
+	t.selection = Selection{Start: start, End: end}
+	t.services.Invalidate()
+}
+
+// HasSelection returns true if text is selected.
+func (t *TextArea) HasSelection() bool {
+	if t == nil {
+		return false
+	}
+	return !t.selection.IsEmpty()
+}
+
+// GetSelectedText returns the currently selected text.
+func (t *TextArea) GetSelectedText() string {
+	if t == nil || t.selection.IsEmpty() {
+		return ""
+	}
+	sel := t.selection.Normalize()
+	if sel.Start > len(t.text) {
+		sel.Start = len(t.text)
+	}
+	if sel.End > len(t.text) {
+		sel.End = len(t.text)
+	}
+	return string(t.text[sel.Start:sel.End])
+}
+
+// deleteSelection removes the selected text, sets cursor to selection start.
+func (t *TextArea) deleteSelection() {
+	if t == nil || t.selection.IsEmpty() {
+		return
+	}
+	sel := t.selection.Normalize()
+	if sel.End > len(t.text) {
+		sel.End = len(t.text)
+	}
+	if sel.Start > len(t.text) {
+		sel.Start = len(t.text)
+	}
+	t.text = append(t.text[:sel.Start], t.text[sel.End:]...)
+	t.cursor = sel.Start
+	t.selection = Selection{}
+	t.lineMetaDirty = true
+	t.syncValue()
+}
+
+// collapseSelection moves cursor to selection start or end, clears selection.
+// Returns true if there was a selection to collapse.
+func (t *TextArea) collapseSelection(toStart bool) bool {
+	if t == nil || t.selection.IsEmpty() {
+		return false
+	}
+	sel := t.selection.Normalize()
+	if toStart {
+		t.cursor = sel.Start
+	} else {
+		t.cursor = sel.End
+	}
+	t.selection = Selection{}
+	return true
+}
+
+// extendSelection sets up or extends selection from anchor to current cursor.
+// Call this after moving the cursor with shift held.
+func (t *TextArea) extendSelection(anchor int) {
+	t.selection = Selection{Start: anchor, End: t.cursor}
+}
+
+var _ Selectable = (*TextArea)(nil)
+
+// ClipboardCopy returns selected text, or all text if no selection.
 func (t *TextArea) ClipboardCopy() (string, bool) {
 	if t == nil {
 		return "", false
 	}
+	if t.HasSelection() {
+		return t.GetSelectedText(), true
+	}
 	return t.Text(), true
 }
 
-// ClipboardCut returns the current text and clears it.
+// ClipboardCut cuts selected text, or all text if no selection.
 func (t *TextArea) ClipboardCut() (string, bool) {
 	if t == nil {
 		return "", false
 	}
-	t.pushHistory(true)
+	t.pushHistory(false)
+	if t.HasSelection() {
+		text := t.GetSelectedText()
+		t.deleteSelection()
+		return text, true
+	}
 	text := t.Text()
 	t.text = nil
 	t.cursor = 0
 	t.scrollY = 0
+	t.selection = Selection{}
 	t.lineMetaDirty = true
 	t.syncValue()
 	if text != "" {
@@ -982,7 +1296,7 @@ func (t *TextArea) ClipboardCut() (string, bool) {
 	return text, true
 }
 
-// ClipboardPaste inserts text at the cursor.
+// ClipboardPaste inserts text at the cursor, replacing any selection.
 func (t *TextArea) ClipboardPaste(text string) bool {
 	if t == nil || text == "" {
 		return false
@@ -990,6 +1304,9 @@ func (t *TextArea) ClipboardPaste(text string) bool {
 	// Large pastes (> 100 chars) are not grouped
 	grouped := len(text) <= 100
 	t.pushHistory(grouped)
+	if t.HasSelection() {
+		t.deleteSelection()
+	}
 	t.insertText(text)
 	return true
 }

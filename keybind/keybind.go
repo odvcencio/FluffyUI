@@ -243,6 +243,7 @@ var keyNameMap = map[string]terminal.Key{
 }
 
 var ctrlKeyMap = map[rune]terminal.Key{
+	'a': terminal.KeyCtrlA,
 	'b': terminal.KeyCtrlB,
 	'c': terminal.KeyCtrlC,
 	'd': terminal.KeyCtrlD,

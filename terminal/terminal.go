@@ -97,6 +97,7 @@ const (
 	KeyF10
 	KeyF11
 	KeyF12
+	KeyCtrlA
 	KeyCtrlB
 	KeyCtrlC
 	KeyCtrlD
