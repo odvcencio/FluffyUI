@@ -177,7 +177,9 @@ func indexHTML(title, wsPath string, chromeless bool) []byte {
             term.loadAddon(new WebLinksAddon.WebLinksAddon());
 
             // Open terminal
-            term.open(document.getElementById('terminal-container'));
+            const container = document.getElementById('terminal-container');
+            term.open(container);
+            term.write('\x1b[?25l'); // Hide cursor by default
             fitAddon.fit();
 
             // WebSocket setup
@@ -196,16 +198,11 @@ func indexHTML(title, wsPath string, chromeless bool) []byte {
                     if (statusIndicator) statusIndicator.className = 'connected';
                     reconnectAttempts = 0;
 
-                    // Send terminal dimensions to server
-                    fitAddon.fit();
-                    const cols = term.cols;
-                    const rows = term.rows;
-                    if (dimensions) dimensions.textContent = cols + 'x' + rows;
-                    ws.send(JSON.stringify({
-                        type: 'resize',
-                        width: cols,
-                        height: rows
-                    }));
+                    // Send terminal dimensions after layout is stable
+                    requestAnimationFrame(function() {
+                        fitAddon.fit();
+                        sendResize();
+                    });
                 };
 
                 ws.onmessage = function(event) {
@@ -279,14 +276,11 @@ func indexHTML(title, wsPath string, chromeless bool) []byte {
                 }
             }, { passive: false });
 
-            // Handle resize
-            window.addEventListener('resize', function() {
-                fitAddon.fit();
+            // Resize helper
+            function sendResize() {
                 const cols = term.cols;
                 const rows = term.rows;
                 if (dimensions) dimensions.textContent = cols + 'x' + rows;
-
-                // Send resize message
                 if (ws && ws.readyState === WebSocket.OPEN) {
                     ws.send(JSON.stringify({
                         type: 'resize',
@@ -294,6 +288,18 @@ func indexHTML(title, wsPath string, chromeless bool) []byte {
                         height: rows
                     }));
                 }
+            }
+
+            // Handle resize via ResizeObserver for robust detection
+            new ResizeObserver(function() {
+                fitAddon.fit();
+                sendResize();
+            }).observe(container);
+
+            // Also handle window resize as fallback
+            window.addEventListener('resize', function() {
+                fitAddon.fit();
+                sendResize();
             });
 
             // Initial connection
