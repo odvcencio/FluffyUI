@@ -98,7 +98,7 @@ func indexHTML(title, wsPath string, chromeless bool) []byte {
             width: 100%%;
         }
         .xterm-viewport {
-            overflow-x: hidden !important;
+            overflow: hidden !important;
         }
         #footer {
             background: #2d2d2d;
@@ -262,19 +262,6 @@ func indexHTML(title, wsPath string, chromeless bool) []byte {
                     ws.send(encoder.encode(data));
                 }
             });
-
-            // Forward mouse wheel as scroll keys
-            document.getElementById('terminal-container').addEventListener('wheel', function(e) {
-                if (ws && ws.readyState === WebSocket.OPEN) {
-                    e.preventDefault();
-                    const encoder = new TextEncoder();
-                    const lines = Math.max(1, Math.abs(Math.round(e.deltaY / 40)));
-                    const key = e.deltaY < 0 ? '\x1b[A' : '\x1b[B'; // Up or Down arrow
-                    for (let i = 0; i < lines; i++) {
-                        ws.send(encoder.encode(key));
-                    }
-                }
-            }, { passive: false });
 
             // Resize helper
             function sendResize() {

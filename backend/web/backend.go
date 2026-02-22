@@ -438,7 +438,11 @@ func (b *Backend) renderFullANSI() []byte {
 func (b *Backend) renderFullANSILocked() []byte {
 	var buf []byte
 
-	// Clear screen and home cursor
+	// Enable mouse tracking (SGR 1006 extended mode) + clear screen + home cursor
+	buf = append(buf, "\x1b[?1000h"...) // Enable basic mouse tracking
+	buf = append(buf, "\x1b[?1002h"...) // Enable button-event tracking (drag)
+	buf = append(buf, "\x1b[?1006h"...) // Enable SGR extended mouse format
+	buf = append(buf, "\x1b[?25l"...)   // Hide cursor
 	buf = append(buf, "\x1b[2J\x1b[H"...) // ED2 + CUP
 
 	var lastFg, lastBg backend.Color
