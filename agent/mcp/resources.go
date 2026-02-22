@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	mcp "github.com/mark3labs/mcp-go/mcp"
 	"github.com/odvcencio/fluffyui/agent"
+	mcp "github.com/odvcencio/fluffyui/third_party/mcp-go/mcp"
 )
 
 const (

@@ -7,8 +7,8 @@ require (
 	github.com/ebitengine/purego v0.9.1
 	github.com/gdamore/tcell/v3 v3.1.2
 	github.com/gorilla/websocket v1.5.3
-	github.com/mark3labs/mcp-go v0.43.2
 	github.com/mattn/go-runewidth v0.0.19
+	github.com/odvcencio/fluffyui/third_party/mcp-go v0.43.2-fluffy.1
 	github.com/oklog/ulid/v2 v2.1.1
 	github.com/u2takey/ffmpeg-go v0.5.0
 	github.com/yuin/goldmark v1.7.16
@@ -40,4 +40,4 @@ require (
 	golang.org/x/text v0.34.0 // indirect
 )
 
-replace github.com/mark3labs/mcp-go => ./third_party/mcp-go
+replace github.com/odvcencio/fluffyui/third_party/mcp-go => ./third_party/mcp-go

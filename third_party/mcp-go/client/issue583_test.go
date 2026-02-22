@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mark3labs/mcp-go/client/transport"
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/odvcencio/fluffyui/third_party/mcp-go/client/transport"
+	"github.com/odvcencio/fluffyui/third_party/mcp-go/mcp"
 )
 
 // TestDirectTransportCreation tests the bug reported in issue #583

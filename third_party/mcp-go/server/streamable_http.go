@@ -18,8 +18,8 @@ import (
 	"unicode"
 
 	"github.com/google/uuid"
-	"github.com/mark3labs/mcp-go/mcp"
-	"github.com/mark3labs/mcp-go/util"
+	"github.com/odvcencio/fluffyui/third_party/mcp-go/mcp"
+	"github.com/odvcencio/fluffyui/third_party/mcp-go/util"
 )
 
 // StreamableHTTPOption defines a function type for configuring StreamableHTTPServer

@@ -8,8 +8,8 @@ import (
 	"os/signal"
 	"sync/atomic"
 
-	"github.com/mark3labs/mcp-go/mcp"
-	"github.com/mark3labs/mcp-go/server"
+	"github.com/odvcencio/fluffyui/third_party/mcp-go/mcp"
+	"github.com/odvcencio/fluffyui/third_party/mcp-go/server"
 )
 
 // demoElicitationHandler demonstrates how to use elicitation in a tool

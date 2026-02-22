@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	mcp "github.com/mark3labs/mcp-go/mcp"
-	mcpserver "github.com/mark3labs/mcp-go/server"
 	"github.com/odvcencio/fluffyui/runtime"
+	mcp "github.com/odvcencio/fluffyui/third_party/mcp-go/mcp"
+	mcpserver "github.com/odvcencio/fluffyui/third_party/mcp-go/server"
 )
 
 func TestResourceWatcherHandleWidgetResourceRemoved(t *testing.T) {

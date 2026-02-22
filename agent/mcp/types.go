@@ -31,17 +31,17 @@ type Rect struct {
 }
 
 type StateSet struct {
-	Focused  bool  `json:"focused,omitempty"`
-	Disabled bool  `json:"disabled,omitempty"`
-	Hidden   bool  `json:"hidden,omitempty"`
-	Checked  *bool `json:"checked,omitempty"`
-	Selected bool  `json:"selected,omitempty"`
-	Expanded *bool `json:"expanded,omitempty"`
-	Pressed  *bool `json:"pressed,omitempty"`
-	ReadOnly bool  `json:"readonly,omitempty"`
-	Required bool  `json:"required,omitempty"`
-	Invalid  bool  `json:"invalid,omitempty"`
-	Busy     bool  `json:"busy,omitempty"`
+	Focused         bool  `json:"focused,omitempty"`
+	Disabled        bool  `json:"disabled,omitempty"`
+	Hidden          bool  `json:"hidden,omitempty"`
+	Checked         *bool `json:"checked,omitempty"`
+	Selected        bool  `json:"selected,omitempty"`
+	Expanded        *bool `json:"expanded,omitempty"`
+	Pressed         *bool `json:"pressed,omitempty"`
+	ReadOnly        bool  `json:"readonly,omitempty"`
+	Required        bool  `json:"required,omitempty"`
+	Invalid         bool  `json:"invalid,omitempty"`
+	Busy            bool  `json:"busy,omitempty"`
 	Modal           bool  `json:"modal,omitempty"`
 	Multiline       bool  `json:"multiline,omitempty"`
 	Multiselectable bool  `json:"multiselectable,omitempty"`

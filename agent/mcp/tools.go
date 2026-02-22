@@ -9,8 +9,6 @@ import (
 	"strings"
 	"time"
 
-	mcp "github.com/mark3labs/mcp-go/mcp"
-	mcpserver "github.com/mark3labs/mcp-go/server"
 	"github.com/odvcencio/fluffyui/accessibility"
 	"github.com/odvcencio/fluffyui/agent"
 	"github.com/odvcencio/fluffyui/backend"
@@ -20,6 +18,8 @@ import (
 	"github.com/odvcencio/fluffyui/scroll"
 	"github.com/odvcencio/fluffyui/style"
 	"github.com/odvcencio/fluffyui/terminal"
+	mcp "github.com/odvcencio/fluffyui/third_party/mcp-go/mcp"
+	mcpserver "github.com/odvcencio/fluffyui/third_party/mcp-go/server"
 	"github.com/odvcencio/fluffyui/widgets"
 )
 
@@ -2475,16 +2475,16 @@ func (s *Server) findToolHandler(name string) mcpserver.ToolHandlerFunc {
 		"get_cell":        s.handleGetCell,
 
 		// Find tools
-		"find_by_label":   s.handleFindByLabel,
-		"find_by_role":    s.handleFindByRole,
-		"find_by_id":      s.handleFindByID,
-		"find_by_value":   s.handleFindByValue,
-		"find_by_state":   s.handleFindByState,
+		"find_by_label":    s.handleFindByLabel,
+		"find_by_role":     s.handleFindByRole,
+		"find_by_id":       s.handleFindByID,
+		"find_by_value":    s.handleFindByValue,
+		"find_by_state":    s.handleFindByState,
 		"find_at_position": s.handleFindAtPosition,
-		"find_focused":    s.handleFindFocused,
-		"find_all":        s.handleFindAll,
-		"find_focusable":  s.handleFindFocusable,
-		"find_actionable": s.handleFindActionable,
+		"find_focused":     s.handleFindFocused,
+		"find_all":         s.handleFindAll,
+		"find_focusable":   s.handleFindFocusable,
+		"find_actionable":  s.handleFindActionable,
 
 		// Tree traversal tools
 		"get_children":       s.handleGetChildren,
@@ -2512,21 +2512,21 @@ func (s *Server) findToolHandler(name string) mcpserver.ToolHandlerFunc {
 		"has_focus":       s.handleHasFocus,
 
 		// Action tools
-		"activate":      s.handleActivate,
-		"focus":         s.handleFocus,
-		"blur":          s.handleBlur,
-		"type_into":     s.handleTypeInto,
-		"clear":         s.handleClear,
-		"select_option": s.handleSelectOption,
-		"select_index":  s.handleSelectIndex,
-		"toggle":        s.handleToggle,
-		"check":         s.handleCheck,
-		"uncheck":       s.handleUncheck,
-		"expand":        s.handleExpand,
-		"collapse":      s.handleCollapse,
-		"scroll_to":     s.handleScrollTo,
-		"scroll_by":     s.handleScrollBy,
-		"scroll_to_top": s.handleScrollToTop,
+		"activate":         s.handleActivate,
+		"focus":            s.handleFocus,
+		"blur":             s.handleBlur,
+		"type_into":        s.handleTypeInto,
+		"clear":            s.handleClear,
+		"select_option":    s.handleSelectOption,
+		"select_index":     s.handleSelectIndex,
+		"toggle":           s.handleToggle,
+		"check":            s.handleCheck,
+		"uncheck":          s.handleUncheck,
+		"expand":           s.handleExpand,
+		"collapse":         s.handleCollapse,
+		"scroll_to":        s.handleScrollTo,
+		"scroll_by":        s.handleScrollBy,
+		"scroll_to_top":    s.handleScrollToTop,
 		"scroll_to_bottom": s.handleScrollToBottom,
 
 		// Key tools
@@ -2572,18 +2572,18 @@ func (s *Server) findToolHandler(name string) mcpserver.ToolHandlerFunc {
 		"clipboard_write_primary": s.handleClipboardWritePrimary,
 
 		// Selection tools
-		"select_all":          s.handleSelectAll,
-		"select_range":        s.handleSelectRange,
-		"select_word":         s.handleSelectWord,
-		"select_line":         s.handleSelectLine,
-		"select_none":         s.handleSelectNone,
-		"get_selection":       s.handleGetSelection,
+		"select_all":           s.handleSelectAll,
+		"select_range":         s.handleSelectRange,
+		"select_word":          s.handleSelectWord,
+		"select_line":          s.handleSelectLine,
+		"select_none":          s.handleSelectNone,
+		"get_selection":        s.handleGetSelection,
 		"get_selection_bounds": s.handleGetSelectionBounds,
-		"has_selection":       s.handleHasSelection,
-		"copy":                s.handleCopy,
-		"cut":                 s.handleCut,
-		"paste":               s.handlePaste,
-		"paste_text":          s.handlePasteText,
+		"has_selection":        s.handleHasSelection,
+		"copy":                 s.handleCopy,
+		"cut":                  s.handleCut,
+		"paste":                s.handlePaste,
+		"paste_text":           s.handlePasteText,
 
 		// Cursor tools
 		"get_cursor_position": s.handleGetCursorPosition,
@@ -2596,16 +2596,16 @@ func (s *Server) findToolHandler(name string) mcpserver.ToolHandlerFunc {
 		"cursor_word_right":   s.handleCursorWordRight,
 
 		// Wait tools
-		"tick":                s.handleTick,
-		"wait_ms":             s.handleWaitMS,
-		"wait_for_widget":     s.handleWaitForWidget,
+		"tick":                 s.handleTick,
+		"wait_ms":              s.handleWaitMS,
+		"wait_for_widget":      s.handleWaitForWidget,
 		"wait_for_widget_gone": s.handleWaitForWidgetGone,
-		"wait_for_text":       s.handleWaitForText,
-		"wait_for_text_gone":  s.handleWaitForTextGone,
-		"wait_for_focus":      s.handleWaitForFocus,
-		"wait_for_value":      s.handleWaitForValue,
-		"wait_for_enabled":    s.handleWaitForEnabled,
-		"wait_for_idle":       s.handleWaitForIdle,
+		"wait_for_text":        s.handleWaitForText,
+		"wait_for_text_gone":   s.handleWaitForTextGone,
+		"wait_for_focus":       s.handleWaitForFocus,
+		"wait_for_value":       s.handleWaitForValue,
+		"wait_for_enabled":     s.handleWaitForEnabled,
+		"wait_for_idle":        s.handleWaitForIdle,
 
 		// Resize tools
 		"resize":        s.handleResize,

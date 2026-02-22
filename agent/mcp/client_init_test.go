@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	mcpclient "github.com/mark3labs/mcp-go/client"
-	mcptr "github.com/mark3labs/mcp-go/client/transport"
-	mcp "github.com/mark3labs/mcp-go/mcp"
+	mcpclient "github.com/odvcencio/fluffyui/third_party/mcp-go/client"
+	mcptr "github.com/odvcencio/fluffyui/third_party/mcp-go/client/transport"
+	mcp "github.com/odvcencio/fluffyui/third_party/mcp-go/mcp"
 )
 
 type initTransport struct {

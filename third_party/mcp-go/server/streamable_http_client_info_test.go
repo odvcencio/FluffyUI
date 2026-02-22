@@ -3,7 +3,7 @@ package server
 import (
 	"testing"
 
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/odvcencio/fluffyui/third_party/mcp-go/mcp"
 )
 
 func TestStreamableHttpSessionImplementsSessionWithClientInfo(t *testing.T) {

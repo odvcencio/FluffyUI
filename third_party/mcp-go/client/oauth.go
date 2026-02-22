@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/mark3labs/mcp-go/client/transport"
+	"github.com/odvcencio/fluffyui/third_party/mcp-go/client/transport"
 )
 
 // OAuthConfig is a convenience type that wraps transport.OAuthConfig

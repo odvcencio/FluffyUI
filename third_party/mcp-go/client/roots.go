@@ -3,7 +3,7 @@ package client
 import (
 	"context"
 
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/odvcencio/fluffyui/third_party/mcp-go/mcp"
 )
 
 // RootsHandler defines the interface for handling roots requests from servers.

@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
-	mcp "github.com/mark3labs/mcp-go/mcp"
 	"github.com/odvcencio/fluffyui/agent"
 	"github.com/odvcencio/fluffyui/backend/sim"
 	"github.com/odvcencio/fluffyui/runtime"
+	mcp "github.com/odvcencio/fluffyui/third_party/mcp-go/mcp"
 )
 
 func newEnhancedTestServer(t *testing.T, opts EnhancedOptions) *EnhancedServer {

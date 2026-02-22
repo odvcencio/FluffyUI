@@ -13,7 +13,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/odvcencio/fluffyui/third_party/mcp-go/mcp"
 )
 
 // resourceEntry holds both a resource and its handler

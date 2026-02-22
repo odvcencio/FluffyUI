@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	mcp "github.com/mark3labs/mcp-go/mcp"
+	mcp "github.com/odvcencio/fluffyui/third_party/mcp-go/mcp"
 )
 
 type samplePayload struct {
