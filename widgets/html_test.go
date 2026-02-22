@@ -61,3 +61,28 @@ func TestSimpleWidget_RenderHTML_Custom(t *testing.T) {
 		t.Errorf("got %s", got)
 	}
 }
+
+func TestChip_RenderHTML(t *testing.T) {
+	c := NewChip("golang")
+	got := string(c.RenderHTML(runtime.HTMLContext{}))
+	if !strings.Contains(got, `class="fluffy-Chip"`) {
+		t.Errorf("missing class: %s", got)
+	}
+	if !strings.Contains(got, "golang") {
+		t.Errorf("missing label: %s", got)
+	}
+	if !strings.HasPrefix(got, "<button") {
+		t.Errorf("expected button element: %s", got)
+	}
+}
+
+func TestSearchWidget_RenderHTML(t *testing.T) {
+	s := NewSearchWidget()
+	got := string(s.RenderHTML(runtime.HTMLContext{}))
+	if !strings.Contains(got, `type="search"`) {
+		t.Errorf("missing type=search: %s", got)
+	}
+	if !strings.Contains(got, `class="fluffy-Search"`) {
+		t.Errorf("missing class: %s", got)
+	}
+}

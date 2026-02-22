@@ -2,6 +2,7 @@ package widgets
 
 import (
 	"fmt"
+	"html/template"
 
 	"github.com/odvcencio/fluffyui/accessibility"
 	"github.com/odvcencio/fluffyui/backend"
@@ -173,6 +174,12 @@ func (c *Chip) Render(ctx runtime.RenderContext) {
 	style := resolveBaseStyle(ctx, c, c.style, c.styleSet)
 	text := c.renderText()
 	writePadded(ctx.Buffer, bounds.X, bounds.Y, bounds.Width, truncateString(text, bounds.Width), style)
+}
+
+// RenderHTML renders the chip as a static HTML button.
+func (c *Chip) RenderHTML(ctx runtime.HTMLContext) runtime.HTML {
+	return runtime.HTML(fmt.Sprintf(`<button class="fluffy-Chip">%s</button>`,
+		template.HTMLEscapeString(c.label)))
 }
 
 func (c *Chip) renderText() string {

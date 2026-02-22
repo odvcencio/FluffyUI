@@ -217,6 +217,11 @@ func (s *SearchWidget) Render(ctx runtime.RenderContext) {
 	}
 }
 
+// RenderHTML renders the search widget as a static HTML search input.
+func (s *SearchWidget) RenderHTML(ctx runtime.HTMLContext) runtime.HTML {
+	return `<input type="search" class="fluffy-Search" placeholder="Search posts...">`
+}
+
 // HandleMessage processes keyboard input.
 func (s *SearchWidget) HandleMessage(msg runtime.Message) runtime.HandleResult {
 	if s == nil || !s.focused {
