@@ -37,7 +37,7 @@ func indexHTML(title, wsPath string, chromeless bool) []byte {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>%s</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
     <style>
@@ -117,12 +117,18 @@ func indexHTML(title, wsPath string, chromeless bool) []byte {
             const statusIndicator = document.getElementById('status-indicator');
             const dimensions = document.getElementById('dimensions');
 
+            // Responsive font size: smaller on narrow screens for more columns
+            const vw = window.innerWidth;
+            let fontSize = 14;
+            if (vw < 600) fontSize = 9;
+            else if (vw < 900) fontSize = 11;
+
             // Initialize terminal
             const term = new Terminal({
                 cursorBlink: true,
                 cursorStyle: 'block',
                 fontFamily: 'Consolas, "Courier New", monospace',
-                fontSize: 14,
+                fontSize: fontSize,
                 theme: {
                     background: '#1e1e1e',
                     foreground: '#cccccc',
