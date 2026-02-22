@@ -499,31 +499,101 @@ func wrapRichTextLine(line markdown.StyledLine, width int) []richTextLine {
 		prefix = truncateRichTextSpans(prefix, width)
 		prefixWidth = richTextSpanWidth(prefix)
 	}
+
+	// Collect all styled runes for word-boundary wrapping.
+	type styledRune struct {
+		r     rune
+		style backend.Style
+	}
+	var runes []styledRune
+	for _, span := range convertRichTextSpans(line.Spans) {
+		for _, r := range span.Text {
+			runes = append(runes, styledRune{r, span.Style})
+		}
+	}
+
 	var lines []richTextLine
 	current := newRichTextLine(prefix, line.Anchor)
 	curWidth := prefixWidth
-	appendLine := func() {
+	flush := func() {
 		lines = append(lines, current)
 		current = newRichTextLine(prefix, "")
 		curWidth = prefixWidth
 	}
-	for _, span := range convertRichTextSpans(line.Spans) {
-		for _, r := range span.Text {
-			if r == '\n' {
-				appendLine()
-				continue
-			}
-			rw := runewidth.RuneWidth(r)
-			if rw <= 0 {
-				continue
-			}
-			if curWidth+rw > width {
-				appendLine()
-			}
-			appendRichTextRune(&current, r, span.Style)
-			curWidth += rw
+
+	i := 0
+	for i < len(runes) {
+		r := runes[i]
+
+		if r.r == '\n' {
+			flush()
+			i++
+			continue
 		}
+
+		rw := runewidth.RuneWidth(r.r)
+		if rw <= 0 {
+			i++
+			continue
+		}
+
+		// Space: add if it fits, otherwise break
+		if r.r == ' ' {
+			if curWidth+rw <= width {
+				appendRichTextRune(&current, r.r, r.style)
+				curWidth += rw
+			} else {
+				flush()
+			}
+			i++
+			continue
+		}
+
+		// Collect the current word (non-space, non-newline)
+		wordStart := i
+		wordWidth := 0
+		j := i
+		for j < len(runes) && runes[j].r != ' ' && runes[j].r != '\n' {
+			wordWidth += runewidth.RuneWidth(runes[j].r)
+			j++
+		}
+
+		// Word fits on current line
+		if curWidth+wordWidth <= width {
+			for k := wordStart; k < j; k++ {
+				appendRichTextRune(&current, runes[k].r, runes[k].style)
+			}
+			curWidth += wordWidth
+			i = j
+			continue
+		}
+
+		// Word doesn't fit here but fits on a fresh line — wrap before it
+		if curWidth > prefixWidth && wordWidth <= width-prefixWidth {
+			flush()
+			for k := wordStart; k < j; k++ {
+				appendRichTextRune(&current, runes[k].r, runes[k].style)
+			}
+			curWidth += wordWidth
+			i = j
+			continue
+		}
+
+		// Word too long for any line — break character by character
+		for k := wordStart; k < j; k++ {
+			kw := runewidth.RuneWidth(runes[k].r)
+			if kw <= 0 {
+				continue
+			}
+			if curWidth+kw > width {
+				flush()
+			}
+			appendRichTextRune(&current, runes[k].r, runes[k].style)
+			curWidth += kw
+		}
+		i = j
 	}
+
 	if len(current.Spans) > 0 || prefixWidth > 0 || line.BlankLine {
 		lines = append(lines, current)
 	}

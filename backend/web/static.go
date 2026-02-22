@@ -27,7 +27,7 @@ func indexHTML(title, wsPath string, chromeless bool) []byte {
 	if chromeless {
 		headerCSS = `#header { display: none !important; }`
 		footerCSS = `#footer { display: none !important; }`
-		containerCSS = `padding: 0;`
+		containerCSS = `padding: 8px;`
 		headerHTML = `<div id="header" style="display:none"></div>`
 		footerHTML = `<div id="footer" style="display:none"><span id="dimensions"></span></div>`
 	}
