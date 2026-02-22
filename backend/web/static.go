@@ -163,7 +163,12 @@ func indexHTML(title, wsPath string, chromeless bool) []byte {
                     brightCyan: '#29b8db',
                     brightWhite: '#e5e5e5'
                 },
-                allowProposedApi: true
+                allowProposedApi: true,
+                linkHandler: {
+                    activate: function(event, text) {
+                        window.open(text, '_blank', 'noopener');
+                    }
+                }
             });
 
             // Add addons
