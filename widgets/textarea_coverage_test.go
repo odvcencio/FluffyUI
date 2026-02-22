@@ -136,8 +136,8 @@ func TestTextArea_Highlights(t *testing.T) {
 	fnStyle := backend.DefaultStyle().Foreground(backend.ColorGreen)
 
 	ta.SetHighlights([]TextAreaHighlight{
-		{Start: 0, End: 4, Style: kwStyle},   // "func"
-		{Start: 5, End: 9, Style: fnStyle},    // "main"
+		{Start: 0, End: 4, Style: kwStyle}, // "func"
+		{Start: 5, End: 9, Style: fnStyle}, // "main"
 	})
 
 	buf := flufftest.LayoutAndRender(ta, 20, 3)
@@ -382,6 +382,119 @@ func TestTextArea_MouseClickWithLineNumbers(t *testing.T) {
 	}
 	if col != 1 {
 		t.Fatalf("expected col 1, got %d", col)
+	}
+}
+
+func TestTextArea_WordWrapRendering(t *testing.T) {
+	ta := NewTextArea()
+	ta.SetText("abcdefghij")
+	ta.SetWordWrap(true)
+	ta.SetShowLineNumbers(false)
+	ta.Focus()
+
+	buf := flufftest.LayoutAndRender(ta, 4, 4)
+	if buf.Get(0, 0).Rune != 'a' || buf.Get(3, 0).Rune != 'd' {
+		t.Fatalf("expected first wrapped row to be 'abcd', got %q%q", buf.Get(0, 0).Rune, buf.Get(3, 0).Rune)
+	}
+	if buf.Get(0, 1).Rune != 'e' || buf.Get(3, 1).Rune != 'h' {
+		t.Fatalf("expected second wrapped row to be 'efgh', got %q%q", buf.Get(0, 1).Rune, buf.Get(3, 1).Rune)
+	}
+	if buf.Get(0, 2).Rune != 'i' || buf.Get(1, 2).Rune != 'j' {
+		t.Fatalf("expected third wrapped row to be 'ij', got %q%q", buf.Get(0, 2).Rune, buf.Get(1, 2).Rune)
+	}
+}
+
+func TestTextArea_WordWrapVerticalMovement(t *testing.T) {
+	ta := NewTextArea()
+	ta.SetText("abcdefghij")
+	ta.SetWordWrap(true)
+	ta.Focus()
+	ta.Layout(runtime.Rect{X: 0, Y: 0, Width: 4, Height: 4})
+
+	ta.SetCursorOffset(2)
+	ta.HandleMessage(runtime.KeyMsg{Key: terminal.KeyDown})
+	if ta.CursorOffset() != 6 {
+		t.Fatalf("expected cursor offset 6 after Down in wrapped row, got %d", ta.CursorOffset())
+	}
+
+	ta.HandleMessage(runtime.KeyMsg{Key: terminal.KeyUp})
+	if ta.CursorOffset() != 2 {
+		t.Fatalf("expected cursor offset 2 after Up in wrapped row, got %d", ta.CursorOffset())
+	}
+}
+
+func TestTextArea_WordWrapMouse(t *testing.T) {
+	ta := NewTextArea()
+	ta.SetText("abcdefghij")
+	ta.SetWordWrap(true)
+	ta.SetShowLineNumbers(false)
+	ta.Focus()
+	ta.Layout(runtime.Rect{X: 0, Y: 0, Width: 4, Height: 4})
+
+	// Click on row 1, col 1 => expected row1 segment "efgh", position 'f' (offset 5).
+	ta.HandleMessage(runtime.MouseMsg{
+		X:      1,
+		Y:      1,
+		Button: runtime.MouseLeft,
+		Action: runtime.MousePress,
+	})
+	if ta.CursorOffset() != 5 {
+		t.Fatalf("expected cursor at offset 5 after wrapped-line click, got %d", ta.CursorOffset())
+	}
+}
+
+func TestTextArea_WordWrapLineNumbers(t *testing.T) {
+	ta := NewTextArea()
+	ta.SetText("abcdefghij")
+	ta.SetWordWrap(true)
+	ta.SetShowLineNumbers(true)
+	ta.Focus()
+
+	buf := flufftest.LayoutAndRender(ta, 6, 4)
+	// Width 6 => gutter width = 2, text width = 4.
+	if buf.Get(0, 0).Rune != '1' {
+		t.Fatalf("expected first logical line number on wrapped line 0, got %q", buf.Get(0, 0).Rune)
+	}
+	if buf.Get(0, 1).Rune != ' ' {
+		t.Fatalf("expected continuation line to have blank gutter, got %q", buf.Get(0, 1).Rune)
+	}
+	if buf.Get(0, 1).Rune == '1' {
+		t.Fatalf("did not expect line number on wrapped continuation row")
+	}
+}
+
+func TestTextArea_VisibleLinesFilter(t *testing.T) {
+	ta := NewTextArea()
+	ta.SetText("line1\nline2\nline3")
+	ta.SetVisibleLines([]int{0, 2})
+	ta.Focus()
+
+	buf := flufftest.LayoutAndRender(ta, 10, 4)
+	if got := string([]rune{buf.Get(0, 0).Rune, buf.Get(1, 0).Rune, buf.Get(2, 0).Rune, buf.Get(3, 0).Rune, buf.Get(4, 0).Rune}); got != "line1" {
+		t.Fatalf("row 0 = %q, want %q", got, "line1")
+	}
+	if got := string([]rune{buf.Get(0, 1).Rune, buf.Get(1, 1).Rune, buf.Get(2, 1).Rune, buf.Get(3, 1).Rune, buf.Get(4, 1).Rune}); got != "line3" {
+		t.Fatalf("row 1 = %q, want %q", got, "line3")
+	}
+}
+
+func TestTextArea_VisibleLinesAffectVerticalMovement(t *testing.T) {
+	ta := NewTextArea()
+	ta.SetText("a\nb\nc\nd")
+	ta.SetVisibleLines([]int{0, 2, 3})
+	ta.SetCursorPosition(0, 0)
+	ta.Focus()
+	ta.Layout(runtime.Rect{X: 0, Y: 0, Width: 10, Height: 4})
+
+	ta.HandleMessage(runtime.KeyMsg{Key: terminal.KeyDown})
+	_, row := ta.CursorPosition()
+	if row != 2 {
+		t.Fatalf("cursor row after Down = %d, want 2", row)
+	}
+
+	ta.SetVisibleLines(nil)
+	if got := ta.VisibleLines(); got != nil {
+		t.Fatalf("VisibleLines() after reset = %v, want nil", got)
 	}
 }
 

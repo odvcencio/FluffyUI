@@ -185,6 +185,108 @@ func (s *Server) Close() error {
 	return err
 }
 
+// AddJSONTool registers an additional tool that receives raw JSON params and
+// returns structured JSON/text content. This is intended for app-level MCP
+// extensions.
+func (s *Server) AddJSONTool(
+	name string,
+	description string,
+	inputSchema json.RawMessage,
+	handler func(ctx context.Context, params json.RawMessage) (any, error),
+) error {
+	if s == nil || s.mcpServer == nil {
+		return errors.New("mcp server is not initialized")
+	}
+	if strings.TrimSpace(name) == "" {
+		return errors.New("tool name is required")
+	}
+	if handler == nil {
+		return errors.New("tool handler is required")
+	}
+
+	tool := mcp.NewToolWithRawSchema(name, description, inputSchema)
+	s.mcpServer.AddTool(tool, func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		raw, err := json.Marshal(req.Params.Arguments)
+		if err != nil {
+			result := mcp.NewToolResultError(fmt.Sprintf("invalid tool arguments: %v", err))
+			result.IsError = true
+			return result, nil
+		}
+
+		output, err := handler(ctx, raw)
+		if err != nil {
+			result := mcp.NewToolResultError(err.Error())
+			result.IsError = true
+			return result, nil
+		}
+
+		if output == nil {
+			return mcp.NewToolResultText("ok"), nil
+		}
+		switch v := output.(type) {
+		case string:
+			return mcp.NewToolResultText(v), nil
+		default:
+			result, marshalErr := mcp.NewToolResultJSON(output)
+			if marshalErr != nil {
+				errResult := mcp.NewToolResultError(fmt.Sprintf("failed to encode tool result: %v", marshalErr))
+				errResult.IsError = true
+				return errResult, nil
+			}
+			return result, nil
+		}
+	})
+	return nil
+}
+
+// AddTextResourceTemplate registers an additional text resource template.
+// The handler receives the concrete URI and should return textual content.
+func (s *Server) AddTextResourceTemplate(
+	uriTemplate string,
+	name string,
+	description string,
+	mimeType string,
+	handler func(ctx context.Context, uri string) (string, error),
+) error {
+	if s == nil || s.mcpServer == nil {
+		return errors.New("mcp server is not initialized")
+	}
+	if strings.TrimSpace(uriTemplate) == "" {
+		return errors.New("resource URI template is required")
+	}
+	if strings.TrimSpace(name) == "" {
+		return errors.New("resource name is required")
+	}
+	if handler == nil {
+		return errors.New("resource handler is required")
+	}
+
+	tpl := mcp.NewResourceTemplate(
+		uriTemplate,
+		name,
+		mcp.WithTemplateDescription(description),
+		mcp.WithTemplateMIMEType(mimeType),
+	)
+	s.mcpServer.AddResourceTemplate(
+		tpl,
+		func(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
+			uri := req.Params.URI
+			text, err := handler(ctx, uri)
+			if err != nil {
+				return nil, err
+			}
+			return []mcp.ResourceContents{
+				mcp.TextResourceContents{
+					URI:      uri,
+					MIMEType: mimeType,
+					Text:     text,
+				},
+			}, nil
+		},
+	)
+	return nil
+}
+
 func (s *Server) onRegisterSession(ctx context.Context, session mcpserver.ClientSession) {
 	if session == nil {
 		return

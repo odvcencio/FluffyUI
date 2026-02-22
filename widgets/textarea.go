@@ -68,9 +68,22 @@ type TextArea struct {
 	useTabs bool
 
 	// Line metadata cache
-	lineStarts     []int
-	lineLengths    []int
-	lineMetaDirty  bool
+	lineStarts    []int
+	lineLengths   []int
+	lineMetaDirty bool
+
+	// Wrapped line metadata cache.
+	wrappedLineStarts    []int
+	wrappedLineLengths   []int
+	wrappedLineMetaDirty bool
+	wrappedLineMetaWidth int
+
+	// Wrapping state.
+	wordWrap bool
+
+	// Optional logical line filter used by editors to hide ranges (for example,
+	// code folding). Nil means all logical lines are visible.
+	visibleLines []int
 }
 
 // NewTextArea creates a multi-line text editor with line wrapping, selection,
@@ -128,9 +141,102 @@ func (t *TextArea) SetText(text string) {
 	t.text = []rune(text)
 	t.cursor = len(t.text)
 	t.selection = Selection{}
-	t.lineMetaDirty = true
+	t.invalidateLineMeta()
 	t.syncValue()
 	t.pushHistory(false) // non-grouped: explicit set is a distinct operation
+}
+
+// SetWordWrap enables or disables soft wrapping for long lines.
+func (t *TextArea) SetWordWrap(enabled bool) {
+	if t == nil {
+		return
+	}
+	if t.wordWrap == enabled {
+		return
+	}
+	t.wordWrap = enabled
+	t.invalidateLineMeta()
+	t.services.Invalidate()
+}
+
+// SetVisibleLines limits the rendered/interactive display to the provided
+// logical line indices. Passing nil or an empty slice restores all lines.
+func (t *TextArea) SetVisibleLines(lines []int) {
+	if t == nil {
+		return
+	}
+
+	if len(lines) == 0 {
+		if t.visibleLines == nil {
+			return
+		}
+		t.visibleLines = nil
+		t.invalidateLineMeta()
+		t.services.Invalidate()
+		return
+	}
+
+	filtered := make([]int, 0, len(lines))
+	last := -1
+	for _, line := range lines {
+		if line < 0 || line == last {
+			continue
+		}
+		if line < last {
+			// Keep behavior deterministic for callers that accidentally pass an
+			// unsorted map: hide map is disabled until a sorted list is provided.
+			filtered = nil
+			break
+		}
+		filtered = append(filtered, line)
+		last = line
+	}
+
+	if len(filtered) == 0 {
+		if t.visibleLines == nil {
+			return
+		}
+		t.visibleLines = nil
+		t.invalidateLineMeta()
+		t.services.Invalidate()
+		return
+	}
+
+	unchanged := len(filtered) == len(t.visibleLines)
+	if unchanged {
+		for i := range filtered {
+			if filtered[i] != t.visibleLines[i] {
+				unchanged = false
+				break
+			}
+		}
+	}
+	if unchanged {
+		return
+	}
+
+	t.visibleLines = filtered
+	t.invalidateLineMeta()
+	t.services.Invalidate()
+}
+
+// VisibleLines returns the active logical line filter. Nil means all lines are
+// visible.
+func (t *TextArea) VisibleLines() []int {
+	if t == nil || len(t.visibleLines) == 0 {
+		return nil
+	}
+	out := make([]int, len(t.visibleLines))
+	copy(out, t.visibleLines)
+	return out
+}
+
+// WordWrap reports whether soft wrapping is enabled.
+func (t *TextArea) WordWrap() bool {
+	if t == nil {
+		return false
+	}
+	return t.wordWrap
 }
 
 // CursorOffset returns the cursor offset in the text.
@@ -164,6 +270,14 @@ func (t *TextArea) SetCursorOffset(offset int) {
 	}
 	t.cursor = offset
 	t.services.Invalidate()
+}
+
+func (t *TextArea) invalidateLineMeta() {
+	if t == nil {
+		return
+	}
+	t.lineMetaDirty = true
+	t.wrappedLineMetaDirty = true
 }
 
 // SetCursorPosition moves the cursor to the given coordinates.
@@ -290,7 +404,7 @@ func (t *TextArea) Undo() bool {
 	t.text = s.text
 	t.cursor = s.cursor
 	t.selection = Selection{Start: s.selectionStart, End: s.selectionEnd}
-	t.lineMetaDirty = true
+	t.invalidateLineMeta()
 	t.syncValue()
 	return true
 }
@@ -308,7 +422,7 @@ func (t *TextArea) Redo() bool {
 	t.text = s.text
 	t.cursor = s.cursor
 	t.selection = Selection{Start: s.selectionStart, End: s.selectionEnd}
-	t.lineMetaDirty = true
+	t.invalidateLineMeta()
 	t.syncValue()
 	return true
 }
@@ -514,7 +628,8 @@ func (t *TextArea) Render(ctx runtime.RenderContext) {
 		return
 	}
 
-	lineStarts, lineLengths := t.lineMeta()
+	logicalStarts, logicalLengths := t.lineMeta()
+	lineStarts, lineLengths := t.displayLineMeta()
 	line, col := t.cursorLineCol(lineStarts, lineLengths)
 	t.scrollY = min(max(t.scrollY, 0), max(0, len(lineStarts)-1))
 	if line < t.scrollY {
@@ -524,7 +639,7 @@ func (t *TextArea) Render(ctx runtime.RenderContext) {
 	}
 
 	// Line number gutter
-	gw := t.gutterWidth(len(lineStarts))
+	gw := t.gutterWidth(len(logicalStarts))
 	textBounds := content
 	if gw > 0 && gw < content.Width {
 		textBounds.X += gw
@@ -559,17 +674,26 @@ func (t *TextArea) Render(ctx runtime.RenderContext) {
 
 		// Draw line number
 		if gw > 0 {
-			numStr := fmt.Sprintf("%*d", gw-1, lineIndex+1)
-			for i, ch := range numStr {
-				ctx.Buffer.Set(content.X+i, content.Y+row, ch, gs)
+			lineStart := lineStarts[lineIndex]
+			logicalLine, logicalCol := t.cursorLineColForOffset(logicalStarts, logicalLengths, lineStart)
+
+			if logicalCol == 0 {
+				numStr := fmt.Sprintf("%*d", gw-1, logicalLine+1)
+				for i, ch := range numStr {
+					ctx.Buffer.Set(content.X+i, content.Y+row, ch, gs)
+				}
+				// Separator space
+				ctx.Buffer.Set(content.X+gw-1, content.Y+row, ' ', gs)
+			} else {
+				for i := 0; i < gw; i++ {
+					ctx.Buffer.Set(content.X+i, content.Y+row, ' ', gs)
+				}
 			}
-			// Separator space
-			ctx.Buffer.Set(content.X+gw-1, content.Y+row, ' ', gs)
 		}
 
 		lineStart := lineStarts[lineIndex]
 		lineLen := lineLengths[lineIndex]
-		lineText := t.lineText(lineIndex, lineStarts, lineLengths)
+		lineText := t.lineSlice(lineStart, lineLen)
 		dir := i18n.DetectDirection(lineText)
 		if dir == i18n.DirectionRTL {
 			lineText = i18n.BidiReorder(lineText, dir)
@@ -628,7 +752,7 @@ func (t *TextArea) Render(ctx runtime.RenderContext) {
 			cursorX := textBounds.X + cursorCol
 			cursorY := content.Y + cursorRow
 			ch := ' '
-			lineText := t.lineText(line, lineStarts, lineLengths)
+			lineText := t.lineSlice(lineStarts[line], lineLengths[line])
 			if col < len(lineText) {
 				ch = rune(lineText[col])
 			}
@@ -877,13 +1001,10 @@ func (t *TextArea) HandleMessage(msg runtime.Message) runtime.HandleResult {
 // movePage moves the cursor up or down by approximately one page.
 func (t *TextArea) movePage(direction int) {
 	content := t.ContentBounds()
-	lineStarts, _ := t.lineMeta()
-	gw := t.gutterWidth(len(lineStarts))
 	pageSize := content.Height
 	if pageSize <= 0 {
 		pageSize = 1
 	}
-	_ = gw // gutter doesn't affect vertical movement
 	t.moveVertical(direction * pageSize)
 }
 
@@ -894,8 +1015,9 @@ func (t *TextArea) handleMouse(mouse runtime.MouseMsg) runtime.HandleResult {
 	}
 
 	content := t.ContentBounds()
-	lineStarts, lineLengths := t.lineMeta()
-	gw := t.gutterWidth(len(lineStarts))
+	logicalStarts, _ := t.lineMeta()
+	lineStarts, lineLengths := t.displayLineMeta()
+	gw := t.gutterWidth(len(logicalStarts))
 
 	textX := content.X + gw
 	textW := content.Width - gw
@@ -946,7 +1068,7 @@ func (t *TextArea) handleMouse(mouse runtime.MouseMsg) runtime.HandleResult {
 func (t *TextArea) insertRune(r rune) {
 	t.text = append(t.text[:t.cursor], append([]rune{r}, t.text[t.cursor:]...)...)
 	t.cursor++
-	t.lineMetaDirty = true
+	t.invalidateLineMeta()
 	t.syncValue()
 }
 
@@ -957,7 +1079,7 @@ func (t *TextArea) insertText(text string) {
 	runes := []rune(text)
 	t.text = append(t.text[:t.cursor], append(runes, t.text[t.cursor:]...)...)
 	t.cursor += len(runes)
-	t.lineMetaDirty = true
+	t.invalidateLineMeta()
 	t.syncValue()
 }
 
@@ -969,12 +1091,12 @@ func (t *TextArea) deleteRune(index int) {
 	if t.cursor > index {
 		t.cursor--
 	}
-	t.lineMetaDirty = true
+	t.invalidateLineMeta()
 	t.syncValue()
 }
 
 func (t *TextArea) moveVertical(delta int) {
-	lineStarts, lineLengths := t.lineMeta()
+	lineStarts, lineLengths := t.displayLineMeta()
 	line, col := t.cursorLineCol(lineStarts, lineLengths)
 	target := line + delta
 	if target < 0 || target >= len(lineStarts) {
@@ -1023,6 +1145,135 @@ func (t *TextArea) lineMeta() ([]int, []int) {
 	return t.lineStarts, t.lineLengths
 }
 
+func (t *TextArea) displayWidth() int {
+	content := t.ContentBounds()
+	logicalStarts, _ := t.lineMeta()
+	gw := t.gutterWidth(len(logicalStarts))
+	textWidth := content.Width - gw
+	if textWidth <= 0 {
+		textWidth = 1
+	}
+	return min(textWidth, len(t.text)+1) // avoid excessive wrapping in empty/short lines
+}
+
+func (t *TextArea) displayLineMeta() ([]int, []int) {
+	width := t.displayWidth()
+	return t.lineMetaForWidth(width)
+}
+
+func (t *TextArea) lineMetaForWidth(width int) ([]int, []int) {
+	logicalStarts, logicalLengths := t.lineMeta()
+
+	if len(t.visibleLines) == 0 {
+		if !t.wordWrap {
+			return logicalStarts, logicalLengths
+		}
+		if width < 1 {
+			width = 1
+		}
+		if !t.wrappedLineMetaDirty && t.wrappedLineMetaWidth == width && t.wrappedLineStarts != nil {
+			return t.wrappedLineStarts, t.wrappedLineLengths
+		}
+
+		starts := make([]int, 0, len(t.text)+1)
+		lengths := make([]int, 0, len(t.text)+1)
+		for i, lineStart := range logicalStarts {
+			lineLen := logicalLengths[i]
+			if lineLen <= 0 {
+				starts = append(starts, lineStart)
+				lengths = append(lengths, 0)
+				continue
+			}
+			for lineOffset := 0; lineOffset < lineLen; lineOffset += width {
+				segLen := width
+				if remaining := lineLen - lineOffset; remaining < segLen {
+					segLen = remaining
+				}
+				starts = append(starts, lineStart+lineOffset)
+				lengths = append(lengths, segLen)
+			}
+		}
+
+		t.wrappedLineStarts = starts
+		t.wrappedLineLengths = lengths
+		t.wrappedLineMetaWidth = width
+		t.wrappedLineMetaDirty = false
+		return t.wrappedLineStarts, t.wrappedLineLengths
+	}
+
+	visibleLogical := t.visibleLogicalLines(len(logicalStarts))
+
+	if !t.wordWrap {
+		starts := make([]int, 0, len(visibleLogical))
+		lengths := make([]int, 0, len(visibleLogical))
+		for _, lineIdx := range visibleLogical {
+			starts = append(starts, logicalStarts[lineIdx])
+			lengths = append(lengths, logicalLengths[lineIdx])
+		}
+		if len(starts) == 0 {
+			return []int{0}, []int{0}
+		}
+		return starts, lengths
+	}
+	if width < 1 {
+		width = 1
+	}
+	if !t.wrappedLineMetaDirty && t.wrappedLineMetaWidth == width && t.wrappedLineStarts != nil {
+		return t.wrappedLineStarts, t.wrappedLineLengths
+	}
+
+	starts := make([]int, 0, len(t.text)+1)
+	lengths := make([]int, 0, len(t.text)+1)
+	for _, lineIdx := range visibleLogical {
+		lineStart := logicalStarts[lineIdx]
+		lineLen := logicalLengths[lineIdx]
+		if lineLen <= 0 {
+			starts = append(starts, lineStart)
+			lengths = append(lengths, 0)
+			continue
+		}
+		for lineOffset := 0; lineOffset < lineLen; lineOffset += width {
+			segLen := width
+			if remaining := lineLen - lineOffset; remaining < segLen {
+				segLen = remaining
+			}
+			starts = append(starts, lineStart+lineOffset)
+			lengths = append(lengths, segLen)
+		}
+	}
+
+	t.wrappedLineStarts = starts
+	t.wrappedLineLengths = lengths
+	t.wrappedLineMetaWidth = width
+	t.wrappedLineMetaDirty = false
+	return t.wrappedLineStarts, t.wrappedLineLengths
+}
+
+func (t *TextArea) visibleLogicalLines(totalLines int) []int {
+	if totalLines <= 0 {
+		return nil
+	}
+	if len(t.visibleLines) == 0 {
+		lines := make([]int, totalLines)
+		for i := 0; i < totalLines; i++ {
+			lines[i] = i
+		}
+		return lines
+	}
+
+	lines := make([]int, 0, len(t.visibleLines))
+	for _, line := range t.visibleLines {
+		if line < 0 || line >= totalLines {
+			continue
+		}
+		lines = append(lines, line)
+	}
+	if len(lines) == 0 {
+		lines = append(lines, 0)
+	}
+	return lines
+}
+
 func (t *TextArea) lineText(line int, starts []int, lengths []int) string {
 	if line < 0 || line >= len(starts) {
 		return ""
@@ -1032,6 +1283,17 @@ func (t *TextArea) lineText(line int, starts []int, lengths []int) string {
 	if start > len(t.text) || end > len(t.text) || start > end {
 		return ""
 	}
+	return t.lineSlice(start, end-start)
+}
+
+func (t *TextArea) lineSlice(start, length int) string {
+	if start < 0 || length < 0 || start > len(t.text) {
+		return ""
+	}
+	end := start + length
+	if end > len(t.text) {
+		end = len(t.text)
+	}
 	return string(t.text[start:end])
 }
 
@@ -1040,9 +1302,30 @@ func (t *TextArea) cursorLineCol(starts []int, lengths []int) (int, int) {
 		return 0, 0
 	}
 	for i, start := range starts {
+		if t.cursor < start {
+			if i == 0 {
+				return 0, 0
+			}
+			prev := i - 1
+			return prev, lengths[prev]
+		}
 		end := start + lengths[i]
 		if t.cursor <= end {
 			return i, t.cursor - start
+		}
+	}
+	last := len(starts) - 1
+	return last, lengths[last]
+}
+
+func (t *TextArea) cursorLineColForOffset(starts []int, lengths []int, offset int) (int, int) {
+	if len(starts) == 0 {
+		return 0, 0
+	}
+	for i, start := range starts {
+		end := start + lengths[i]
+		if offset <= end {
+			return i, offset - start
 		}
 	}
 	last := len(starts) - 1
@@ -1231,7 +1514,7 @@ func (t *TextArea) deleteSelection() {
 	t.text = append(t.text[:sel.Start], t.text[sel.End:]...)
 	t.cursor = sel.Start
 	t.selection = Selection{}
-	t.lineMetaDirty = true
+	t.invalidateLineMeta()
 	t.syncValue()
 }
 
@@ -1286,7 +1569,7 @@ func (t *TextArea) ClipboardCut() (string, bool) {
 	t.cursor = 0
 	t.scrollY = 0
 	t.selection = Selection{}
-	t.lineMetaDirty = true
+	t.invalidateLineMeta()
 	t.syncValue()
 	if text != "" {
 		if announcer := t.services.Announcer(); announcer != nil {
