@@ -322,20 +322,9 @@ func (b *Backend) Resize(width, height int) {
 		return
 	}
 
-	oldCells := b.cells
-	oldWidth := b.width
-	oldHeight := b.height
-
 	b.width = width
 	b.height = height
 	b.cells = make([]backend.Cell, width*height)
-
-	// Copy existing content
-	for y := 0; y < min(oldHeight, height); y++ {
-		for x := 0; x < min(oldWidth, width); x++ {
-			b.cells[y*width+x] = oldCells[y*oldWidth+x]
-		}
-	}
 	b.termMu.Unlock()
 
 	// Post resize event so FluffyUI re-renders
