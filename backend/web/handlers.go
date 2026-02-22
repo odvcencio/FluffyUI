@@ -5,6 +5,7 @@ package web
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -388,12 +389,26 @@ func (s *Session) parseMouseCSI(params []int, pressed bool, consumed int) (termi
 	}, consumed
 }
 
+// controlMessage is a JSON message from the client.
+type controlMessage struct {
+	Type   string `json:"type"`
+	Width  int    `json:"width"`
+	Height int    `json:"height"`
+}
+
 // handleControlMessage processes JSON control messages.
 func (s *Session) handleControlMessage(data []byte) {
-	// Parse JSON messages like resize, etc.
-	// For now, simplified handling
-	// Format: {"type":"resize","width":80,"height":24}
-	// This is a placeholder for future expansion
+	var msg controlMessage
+	if err := json.Unmarshal(data, &msg); err != nil {
+		return
+	}
+
+	switch msg.Type {
+	case "resize":
+		if msg.Width > 0 && msg.Height > 0 {
+			s.Backend.Resize(msg.Width, msg.Height)
+		}
+	}
 }
 
 // Send transmits data to the client.

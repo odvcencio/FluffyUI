@@ -173,10 +173,16 @@ func indexHTML(title, wsPath string, chromeless bool) []byte {
                     if (statusIndicator) statusIndicator.className = 'connected';
                     reconnectAttempts = 0;
 
-                    // Send terminal dimensions
+                    // Send terminal dimensions to server
+                    fitAddon.fit();
                     const cols = term.cols;
                     const rows = term.rows;
                     if (dimensions) dimensions.textContent = cols + 'x' + rows;
+                    ws.send(JSON.stringify({
+                        type: 'resize',
+                        width: cols,
+                        height: rows
+                    }));
                 };
 
                 ws.onmessage = function(event) {

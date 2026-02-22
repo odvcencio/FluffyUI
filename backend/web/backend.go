@@ -310,6 +310,38 @@ func (b *Backend) Beep() {
 	b.broadcast([]byte("\x07")) // BEL character
 }
 
+// Resize updates the terminal dimensions and reallocates the cell buffer.
+func (b *Backend) Resize(width, height int) {
+	if width <= 0 || height <= 0 {
+		return
+	}
+
+	b.termMu.Lock()
+	if width == b.width && height == b.height {
+		b.termMu.Unlock()
+		return
+	}
+
+	oldCells := b.cells
+	oldWidth := b.width
+	oldHeight := b.height
+
+	b.width = width
+	b.height = height
+	b.cells = make([]backend.Cell, width*height)
+
+	// Copy existing content
+	for y := 0; y < min(oldHeight, height); y++ {
+		for x := 0; x < min(oldWidth, width); x++ {
+			b.cells[y*width+x] = oldCells[y*oldWidth+x]
+		}
+	}
+	b.termMu.Unlock()
+
+	// Post resize event so FluffyUI re-renders
+	b.PostEvent(terminal.ResizeEvent{Width: width, Height: height})
+}
+
 // Sync forces a full redraw on next Show().
 func (b *Backend) Sync() {
 	// Full redraw happens automatically in Show()
