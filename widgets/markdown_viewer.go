@@ -1,6 +1,8 @@
 package widgets
 
 import (
+	"bytes"
+	"fmt"
 	"strings"
 
 	"github.com/odvcencio/fluffyui/accessibility"
@@ -10,6 +12,7 @@ import (
 	"github.com/odvcencio/fluffyui/scroll"
 	"github.com/odvcencio/fluffyui/terminal"
 	"github.com/odvcencio/fluffyui/theme"
+	"github.com/yuin/goldmark"
 )
 
 // MarkdownViewerOption configures a MarkdownViewer widget.
@@ -208,6 +211,14 @@ func (m *MarkdownViewer) Render(ctx runtime.RenderContext) {
 		}
 		drawScrollbar(ctx.Buffer, barBounds, m.scrollbar, len(m.wrapped), content.Height, m.offset)
 	}
+}
+
+// RenderHTML renders the markdown content as static HTML.
+func (m *MarkdownViewer) RenderHTML(ctx runtime.HTMLContext) runtime.HTML {
+	var buf bytes.Buffer
+	md := goldmark.New()
+	_ = md.Convert([]byte(m.content), &buf)
+	return runtime.HTML(fmt.Sprintf(`<article class="fluffy-MarkdownViewer">%s</article>`, buf.String()))
 }
 
 // HandleMessage handles scroll input.

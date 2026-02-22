@@ -2,6 +2,7 @@ package widgets
 
 import (
 	"fmt"
+	"html/template"
 	"strings"
 
 	"github.com/odvcencio/fluffyui/accessibility"
@@ -14,6 +15,9 @@ import (
 
 // RenderFunc renders an item.
 type RenderFunc[T any] func(item T, index int, selected bool, ctx runtime.RenderContext)
+
+// HTMLItemRenderer renders a list item as HTML.
+type HTMLItemRenderer[T any] func(item T, index int) runtime.HTML
 
 // ListAdapter provides data for list widgets.
 type ListAdapter[T any] interface {
@@ -162,7 +166,8 @@ type List[T any] struct {
 	style           backend.Style
 	selectedStyle   backend.Style
 	dragStyle       backend.Style
-	services        runtime.Services
+	services         runtime.Services
+	htmlItemRenderer HTMLItemRenderer[T]
 
 	// Drag-and-drop state
 	draggable  bool
@@ -293,6 +298,28 @@ func (l *List[T]) SetDragStyle(style backend.Style) {
 		return
 	}
 	l.dragStyle = style
+}
+
+// SetHTMLItemRenderer sets a custom HTML renderer for list items.
+func (l *List[T]) SetHTMLItemRenderer(r HTMLItemRenderer[T]) {
+	l.htmlItemRenderer = r
+}
+
+// RenderHTML renders the list as a static HTML unordered list.
+func (l *List[T]) RenderHTML(ctx runtime.HTMLContext) runtime.HTML {
+	var b strings.Builder
+	b.WriteString(`<ul class="fluffy-List">`)
+	for i := 0; i < l.adapter.Count(); i++ {
+		item := l.adapter.Item(i)
+		if l.htmlItemRenderer != nil {
+			b.WriteString(string(l.htmlItemRenderer(item, i)))
+		} else {
+			b.WriteString(fmt.Sprintf("<li>%s</li>",
+				template.HTMLEscapeString(fmt.Sprint(item))))
+		}
+	}
+	b.WriteString("</ul>")
+	return runtime.HTML(b.String())
 }
 
 // Measure returns the desired size.

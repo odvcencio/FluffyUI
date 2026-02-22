@@ -1,6 +1,7 @@
 package widgets
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -84,5 +85,46 @@ func TestSearchWidget_RenderHTML(t *testing.T) {
 	}
 	if !strings.Contains(got, `class="fluffy-Search"`) {
 		t.Errorf("missing class: %s", got)
+	}
+}
+
+func TestMarkdownViewer_RenderHTML(t *testing.T) {
+	m := NewMarkdownViewer("# Hello\n\nSome **bold** text.")
+	got := string(m.RenderHTML(runtime.HTMLContext{}))
+	if !strings.Contains(got, `class="fluffy-MarkdownViewer"`) {
+		t.Errorf("missing class: %s", got)
+	}
+	if !strings.Contains(got, "<h1>Hello</h1>") {
+		t.Errorf("missing h1: %s", got)
+	}
+	if !strings.Contains(got, "<strong>bold</strong>") {
+		t.Errorf("missing bold: %s", got)
+	}
+}
+
+func TestList_RenderHTML_Default(t *testing.T) {
+	adapter := NewSliceAdapter([]string{"Alpha", "Beta"}, nil)
+	l := NewList[string](adapter)
+	got := string(l.RenderHTML(runtime.HTMLContext{}))
+	if !strings.Contains(got, `class="fluffy-List"`) {
+		t.Errorf("missing class: %s", got)
+	}
+	if !strings.Contains(got, "<li>Alpha</li>") {
+		t.Errorf("missing Alpha: %s", got)
+	}
+	if !strings.Contains(got, "<li>Beta</li>") {
+		t.Errorf("missing Beta: %s", got)
+	}
+}
+
+func TestList_RenderHTML_CustomRenderer(t *testing.T) {
+	adapter := NewSliceAdapter([]string{"one", "two"}, nil)
+	l := NewList[string](adapter)
+	l.SetHTMLItemRenderer(func(item string, index int) runtime.HTML {
+		return runtime.HTML(fmt.Sprintf(`<li data-idx="%d">%s</li>`, index, item))
+	})
+	got := string(l.RenderHTML(runtime.HTMLContext{}))
+	if !strings.Contains(got, `data-idx="0"`) {
+		t.Errorf("missing custom attr: %s", got)
 	}
 }
