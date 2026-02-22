@@ -37,6 +37,18 @@ func NewStylesheet() *Stylesheet {
 	return &Stylesheet{}
 }
 
+// Rules returns a copy of all rules in the stylesheet.
+func (s *Stylesheet) Rules() []Rule {
+	if s == nil {
+		return nil
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	rules := make([]Rule, len(s.rules))
+	copy(rules, s.rules)
+	return rules
+}
+
 // SetVariable defines a stylesheet variable.
 func (s *Stylesheet) SetVariable(name, value string) *Stylesheet {
 	if s == nil {
