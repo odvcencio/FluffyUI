@@ -311,23 +311,24 @@ func (b *Backend) Beep() {
 }
 
 // Resize updates the terminal dimensions and reallocates the cell buffer.
+// Always posts a ResizeEvent so FluffyUI re-renders, even if dimensions match.
+// This is needed for the first resize after a client connects.
 func (b *Backend) Resize(width, height int) {
 	if width <= 0 || height <= 0 {
 		return
 	}
 
 	b.termMu.Lock()
-	if width == b.width && height == b.height {
-		b.termMu.Unlock()
-		return
+	changed := width != b.width || height != b.height
+	if changed {
+		b.width = width
+		b.height = height
+		b.cells = make([]backend.Cell, width*height)
 	}
-
-	b.width = width
-	b.height = height
-	b.cells = make([]backend.Cell, width*height)
 	b.termMu.Unlock()
 
-	// Post resize event so FluffyUI re-renders
+	// Always post resize event — even when dimensions match, this ensures
+	// the first resize from a new client triggers a render + broadcast.
 	b.PostEvent(terminal.ResizeEvent{Width: width, Height: height})
 }
 

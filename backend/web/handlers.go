@@ -106,13 +106,9 @@ func (s *Session) handle() {
 		return nil
 	})
 
-	// Send initial screen content so the user sees something immediately
-	initial := s.Backend.renderFullANSI()
-	if len(initial) > 0 {
-		s.Send(initial)
-	}
-
 	// Read messages from client
+	// Initial content is sent after the browser's first resize message
+	// to avoid rendering at the wrong dimensions (80x24 default).
 	for {
 		msgType, data, err := s.Conn.ReadMessage()
 		if err != nil {

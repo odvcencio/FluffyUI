@@ -241,6 +241,13 @@ func (r *Renderer) renderBlock(node ast.Node, state *renderState, tight bool) {
 			state.addSpacer()
 		}
 
+	case *ast.TextBlock:
+		r.renderInlineChildren(n, state, state.baseStyle)
+		state.flushLine(false, false, "")
+		if !tight {
+			state.addSpacer()
+		}
+
 	case *ast.Heading:
 		style := headingStyle(state.cfg, n.Level)
 		r.renderInlineChildren(n, state, style)
