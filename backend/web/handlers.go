@@ -106,8 +106,15 @@ func (s *Session) handle() {
 		return nil
 	})
 
+	// Send initial screen content (rendered at current backend dimensions)
+	s.Backend.sessionsMu.RLock()
+	initial := s.Backend.renderANSI()
+	s.Backend.sessionsMu.RUnlock()
+	if len(initial) > 0 {
+		s.Send(initial)
+	}
+
 	// Read messages from client
-	// Note: initial screen content is sent after client sends its resize dimensions
 	for {
 		msgType, data, err := s.Conn.ReadMessage()
 		if err != nil {

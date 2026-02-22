@@ -530,6 +530,12 @@ func (a *App) Run(ctx context.Context) error {
 		}
 	}()
 
+	// Initial render before entering event loop so the screen is drawn immediately.
+	if a.dirty {
+		a.render()
+		a.dirty = false
+	}
+
 	for a.running.Load() {
 		var msg Message
 		select {
