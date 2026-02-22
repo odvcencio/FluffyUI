@@ -47,8 +47,8 @@ func indexHTML(title, wsPath string, chromeless bool) []byte {
             box-sizing: border-box;
         }
         html, body {
-            width: 100%%%%;
-            height: 100%%%%;
+            width: 100%%;
+            height: 100%%;
             overflow: hidden;
         }
         body {
@@ -75,7 +75,7 @@ func indexHTML(title, wsPath string, chromeless bool) []byte {
         #status-indicator {
             width: 8px;
             height: 8px;
-            border-radius: 50%%%%;
+            border-radius: 50%%;
             background: #858585;
         }
         #status-indicator.connected {
@@ -90,12 +90,12 @@ func indexHTML(title, wsPath string, chromeless bool) []byte {
             overflow: hidden;
             min-height: 0;
             min-width: 0;
-            width: 100%%%%;
+            width: 100%%;
             position: relative;
         }
         .xterm {
-            height: 100%%%%;
-            width: 100%%%%;
+            height: 100%%;
+            width: 100%%;
         }
         .xterm-viewport {
             overflow-x: hidden !important;
