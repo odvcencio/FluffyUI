@@ -1,6 +1,7 @@
 package widgets
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/odvcencio/fluffyui/accessibility"
@@ -135,6 +136,36 @@ func (s *Splitter) Render(ctx runtime.RenderContext) {
 	s.syncA11y()
 	runtime.RenderChild(ctx, s.First)
 	runtime.RenderChild(ctx, s.Second)
+}
+
+// RenderHTML renders the splitter as a static HTML flexbox layout.
+func (s *Splitter) RenderHTML(ctx runtime.HTMLContext) runtime.HTML {
+	dir := "row"
+	if s.Orientation == SplitVertical {
+		dir = "column"
+	}
+	firstPct := int(s.Ratio * 100)
+
+	var b strings.Builder
+	fmt.Fprintf(&b, `<div class="fluffy-Splitter" style="display:flex;flex-direction:%s;height:100%%">`, dir)
+	childCtx := ctx.Child()
+
+	// First pane
+	fmt.Fprintf(&b, `<div class="fluffy-Splitter-first" style="flex:0 0 %d%%;overflow-y:auto">`, firstPct)
+	if hr, ok := s.First.(runtime.HTMLRenderer); ok {
+		b.WriteString(string(hr.RenderHTML(childCtx)))
+	}
+	b.WriteString("</div>")
+
+	// Second pane
+	b.WriteString(`<div class="fluffy-Splitter-second" style="flex:1 1 auto;overflow-y:auto">`)
+	if hr, ok := s.Second.(runtime.HTMLRenderer); ok {
+		b.WriteString(string(hr.RenderHTML(childCtx)))
+	}
+	b.WriteString("</div>")
+
+	b.WriteString("</div>")
+	return runtime.HTML(b.String())
 }
 
 // HandleMessage forwards messages to child panes.

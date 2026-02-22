@@ -3,6 +3,7 @@ package runtime
 
 import (
 	"html/template"
+	"strings"
 	"testing"
 )
 
@@ -30,5 +31,26 @@ func TestHTMLRenderer_Interface(t *testing.T) {
 	got := r.RenderHTML(HTMLContext{})
 	if got != template.HTML("<span>hello</span>") {
 		t.Errorf("RenderHTML = %q, want <span>hello</span>", got)
+	}
+}
+
+func TestFlex_RenderHTML_Column(t *testing.T) {
+	child := &mockHTMLWidget{html: "<span>child</span>"}
+	f := VBox(Fixed(child))
+	got := string(f.RenderHTML(HTMLContext{}))
+	if !strings.Contains(got, "flex-direction:column") {
+		t.Errorf("missing column direction: %s", got)
+	}
+	if !strings.Contains(got, "<span>child</span>") {
+		t.Errorf("missing child content: %s", got)
+	}
+}
+
+func TestFlex_RenderHTML_Row(t *testing.T) {
+	child := &mockHTMLWidget{html: "<span>item</span>"}
+	f := HBox(Fixed(child))
+	got := string(f.RenderHTML(HTMLContext{}))
+	if !strings.Contains(got, "flex-direction:row") {
+		t.Errorf("missing row direction: %s", got)
 	}
 }

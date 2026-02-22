@@ -1,8 +1,10 @@
 package runtime
 
 import (
+	"fmt"
 	"math"
 	"strconv"
+	"strings"
 )
 
 // FlexDirection specifies the main axis of a flex container.
@@ -449,6 +451,37 @@ func (f *Flex) Render(ctx RenderContext) {
 			child.Widget.Render(childCtx)
 		}
 	}
+}
+
+// RenderHTML renders the flex layout as static HTML.
+func (f *Flex) RenderHTML(ctx HTMLContext) HTML {
+	dir := "column"
+	if f.Direction == Row {
+		dir = "row"
+	}
+	var b strings.Builder
+	fmt.Fprintf(&b, `<div class="fluffy-Flex" style="display:flex;flex-direction:%s`, dir)
+	if f.Gap > 0 {
+		fmt.Fprintf(&b, `;gap:%dch`, f.Gap)
+	}
+	b.WriteString(`">`)
+	childCtx := ctx.Child()
+	for _, child := range f.Children {
+		if child.Widget == nil {
+			continue
+		}
+		basis := "auto"
+		if child.Basis >= 0 {
+			basis = fmt.Sprintf("%dch", child.Basis)
+		}
+		fmt.Fprintf(&b, `<div style="flex:%g %g %s">`, child.Grow, child.Shrink, basis)
+		if hr, ok := child.Widget.(HTMLRenderer); ok {
+			b.WriteString(string(hr.RenderHTML(childCtx)))
+		}
+		b.WriteString("</div>")
+	}
+	b.WriteString("</div>")
+	return HTML(b.String())
 }
 
 // HandleMessage dispatches to children.

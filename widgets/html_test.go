@@ -128,3 +128,27 @@ func TestList_RenderHTML_CustomRenderer(t *testing.T) {
 		t.Errorf("missing custom attr: %s", got)
 	}
 }
+
+func TestSplitter_RenderHTML(t *testing.T) {
+	first := NewLabel("sidebar")
+	second := NewLabel("content")
+	s := NewSplitter(first, second)
+	s.Orientation = SplitHorizontal
+	s.Ratio = 0.25
+	got := string(s.RenderHTML(runtime.HTMLContext{}))
+	if !strings.Contains(got, `class="fluffy-Splitter"`) {
+		t.Errorf("missing class: %s", got)
+	}
+	if !strings.Contains(got, "flex-direction:row") {
+		t.Errorf("missing row direction: %s", got)
+	}
+	if !strings.Contains(got, "25%") {
+		t.Errorf("missing ratio: %s", got)
+	}
+	if !strings.Contains(got, "sidebar") {
+		t.Errorf("missing first pane: %s", got)
+	}
+	if !strings.Contains(got, "content") {
+		t.Errorf("missing second pane: %s", got)
+	}
+}
