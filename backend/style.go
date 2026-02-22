@@ -65,6 +65,7 @@ type Style struct {
 	fg    Color
 	bg    Color
 	attrs AttrMask
+	url   string // OSC-8 hyperlink URL (empty = no link)
 }
 
 // DefaultStyle returns the default style (default colors, no attributes).
@@ -177,6 +178,17 @@ func (s Style) FG() Color {
 // BG returns the background color.
 func (s Style) BG() Color {
 	return s.bg
+}
+
+// Hyperlink sets the OSC-8 hyperlink URL.
+func (s Style) Hyperlink(url string) Style {
+	s.url = url
+	return s
+}
+
+// HyperlinkURL returns the OSC-8 hyperlink URL.
+func (s Style) HyperlinkURL() string {
+	return s.url
 }
 
 // Decompose returns the foreground, background, and attributes.

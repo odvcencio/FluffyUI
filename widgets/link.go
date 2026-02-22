@@ -34,8 +34,8 @@ func NewLink(label, url string) *Link {
 	l := &Link{
 		url:        url,
 		label:      label,
-		style:      backend.DefaultStyle().Underline(true),
-		focusStyle: backend.DefaultStyle().Underline(true).Reverse(true),
+		style:      backend.DefaultStyle().Underline(true).Hyperlink(url),
+		focusStyle: backend.DefaultStyle().Underline(true).Reverse(true).Hyperlink(url),
 	}
 	l.Base.Role = accessibility.RoleLink
 	l.Base.Label = label
@@ -73,6 +73,8 @@ func (l *Link) URL() string {
 func (l *Link) SetURL(url string) {
 	l.url = url
 	l.Base.Description = url
+	l.style = l.style.Hyperlink(url)
+	l.focusStyle = l.focusStyle.Hyperlink(url)
 }
 
 // SetLabel updates the link text.

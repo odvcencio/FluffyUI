@@ -46,9 +46,13 @@ func indexHTML(title, wsPath string, chromeless bool) []byte {
             padding: 0;
             box-sizing: border-box;
         }
+        html, body {
+            width: 100%%%%;
+            height: 100%%%%;
+            overflow: hidden;
+        }
         body {
             background: #1e1e1e;
-            height: 100vh;
             display: flex;
             flex-direction: column;
         }
@@ -84,9 +88,17 @@ func indexHTML(title, wsPath string, chromeless bool) []byte {
             flex: 1;
             %s
             overflow: hidden;
+            min-height: 0;
+            min-width: 0;
+            width: 100%%%%;
+            position: relative;
         }
         .xterm {
             height: 100%%%%;
+            width: 100%%%%;
+        }
+        .xterm-viewport {
+            overflow-x: hidden !important;
         }
         #footer {
             background: #2d2d2d;

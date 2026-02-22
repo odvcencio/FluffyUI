@@ -454,11 +454,13 @@ func (b *Backend) renderFullANSILocked() []byte {
 
 	var lastFg, lastBg backend.Color
 	var lastAttrs backend.AttrMask
+	var lastURL string
 
 	for y := 0; y < b.height; y++ {
 		for x := 0; x < b.width; x++ {
 			cell := b.cells[y*b.width+x]
 			fg, bg, attrs := cell.Style.Decompose()
+			url := cell.Style.HyperlinkURL()
 
 			// Output style changes
 			if fg != lastFg || bg != lastBg || attrs != lastAttrs {
@@ -466,6 +468,16 @@ func (b *Backend) renderFullANSILocked() []byte {
 				lastFg = fg
 				lastBg = bg
 				lastAttrs = attrs
+			}
+
+			// Output OSC-8 hyperlink changes
+			if url != lastURL {
+				if url != "" {
+					buf = append(buf, fmt.Sprintf("\x1b]8;;%s\x1b\\", url)...)
+				} else {
+					buf = append(buf, "\x1b]8;;\x1b\\"...)
+				}
+				lastURL = url
 			}
 
 			// Output rune

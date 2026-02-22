@@ -67,9 +67,6 @@ func (b *Backend) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 	// Handle the connection
 	go session.handle()
-
-	// Send initial resize to set terminal size
-	session.Send([]byte(fmt.Sprintf("\x1b[8;%d;%dt", b.height, b.width)))
 }
 
 // checkAuth verifies authentication for the request.
@@ -109,15 +106,8 @@ func (s *Session) handle() {
 		return nil
 	})
 
-	// Send initial screen content
-	s.Backend.sessionsMu.RLock()
-	initial := s.Backend.renderANSI()
-	s.Backend.sessionsMu.RUnlock()
-	if len(initial) > 0 {
-		s.Send(initial)
-	}
-
 	// Read messages from client
+	// Note: initial screen content is sent after client sends its resize dimensions
 	for {
 		msgType, data, err := s.Conn.ReadMessage()
 		if err != nil {
