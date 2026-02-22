@@ -108,4 +108,15 @@ const (
 	KeyCtrlX
 	KeyCtrlY
 	KeyCtrlZ
+	KeyCtrlE
+	KeyCtrlK
+	KeyCtrlL
+	KeyCtrlN
+	KeyCtrlO
+	KeyCtrlQ
+	KeyCtrlR
+	KeyCtrlS
+	KeyCtrlT
+	KeyCtrlU
+	KeyCtrlW
 )
