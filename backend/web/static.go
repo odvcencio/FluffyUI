@@ -4,11 +4,36 @@ package web
 
 import (
 	"fmt"
+	"strings"
 )
 
 // indexHTML generates the terminal HTML page.
-func indexHTML(title, wsPath string) []byte {
-	return []byte(fmt.Sprintf(`<!DOCTYPE html>
+func indexHTML(title, wsPath string, chromeless bool) []byte {
+	headerCSS := ""
+	footerCSS := ""
+	containerCSS := `padding: 8px;`
+	headerHTML := fmt.Sprintf(`<div id="header">
+        <div>%s</div>
+        <div id="status">
+            <span id="status-text">Connecting...</span>
+            <div id="status-indicator"></div>
+        </div>
+    </div>`, title)
+	footerHTML := `<div id="footer">
+        <span>FluffyUI Web Terminal</span>
+        <span id="dimensions">80x24</span>
+    </div>`
+
+	if chromeless {
+		headerCSS = `#header { display: none !important; }`
+		footerCSS = `#footer { display: none !important; }`
+		containerCSS = `padding: 0;`
+		headerHTML = `<div id="header" style="display:none"></div>`
+		footerHTML = `<div id="footer" style="display:none"><span id="dimensions"></span></div>`
+	}
+
+	var b strings.Builder
+	b.WriteString(fmt.Sprintf(`<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -46,7 +71,7 @@ func indexHTML(title, wsPath string) []byte {
         #status-indicator {
             width: 8px;
             height: 8px;
-            border-radius: 50%%;
+            border-radius: 50%%%%;
             background: #858585;
         }
         #status-indicator.connected {
@@ -57,11 +82,11 @@ func indexHTML(title, wsPath string) []byte {
         }
         #terminal-container {
             flex: 1;
-            padding: 8px;
+            %s
             overflow: hidden;
         }
         .xterm {
-            height: 100%%;
+            height: 100%%%%;
         }
         #footer {
             background: #2d2d2d;
@@ -73,21 +98,14 @@ func indexHTML(title, wsPath string) []byte {
             display: flex;
             justify-content: space-between;
         }
+        %s
+        %s
     </style>
 </head>
 <body>
-    <div id="header">
-        <div>%s</div>
-        <div id="status">
-            <span id="status-text">Connecting...</span>
-            <div id="status-indicator"></div>
-        </div>
-    </div>
+    %s
     <div id="terminal-container"></div>
-    <div id="footer">
-        <span>FluffyUI Web Terminal</span>
-        <span id="dimensions">80x24</span>
-    </div>
+    %s
 
     <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
@@ -98,7 +116,7 @@ func indexHTML(title, wsPath string) []byte {
             const statusText = document.getElementById('status-text');
             const statusIndicator = document.getElementById('status-indicator');
             const dimensions = document.getElementById('dimensions');
-            
+
             // Initialize terminal
             const term = new Terminal({
                 cursorBlink: true,
@@ -151,14 +169,14 @@ func indexHTML(title, wsPath string) []byte {
                 ws.binaryType = 'arraybuffer';
 
                 ws.onopen = function() {
-                    statusText.textContent = 'Connected';
-                    statusIndicator.className = 'connected';
+                    if (statusText) statusText.textContent = 'Connected';
+                    if (statusIndicator) statusIndicator.className = 'connected';
                     reconnectAttempts = 0;
-                    
+
                     // Send terminal dimensions
                     const cols = term.cols;
                     const rows = term.rows;
-                    dimensions.textContent = cols + 'x' + rows;
+                    if (dimensions) dimensions.textContent = cols + 'x' + rows;
                 };
 
                 ws.onmessage = function(event) {
@@ -178,21 +196,21 @@ func indexHTML(title, wsPath string) []byte {
                 };
 
                 ws.onclose = function() {
-                    statusText.textContent = 'Disconnected';
-                    statusIndicator.className = 'disconnected';
-                    
+                    if (statusText) statusText.textContent = 'Disconnected';
+                    if (statusIndicator) statusIndicator.className = 'disconnected';
+
                     // Attempt reconnection
                     if (reconnectAttempts < maxReconnectAttempts) {
                         reconnectAttempts++;
-                        statusText.textContent = 'Reconnecting... (' + reconnectAttempts + '/' + maxReconnectAttempts + ')';
+                        if (statusText) statusText.textContent = 'Reconnecting... (' + reconnectAttempts + '/' + maxReconnectAttempts + ')';
                         setTimeout(connect, 1000 * reconnectAttempts);
                     }
                 };
 
                 ws.onerror = function(error) {
                     console.error('WebSocket error:', error);
-                    statusText.textContent = 'Error';
-                    statusIndicator.className = 'disconnected';
+                    if (statusText) statusText.textContent = 'Error';
+                    if (statusIndicator) statusIndicator.className = 'disconnected';
                 };
             }
 
@@ -204,7 +222,7 @@ func indexHTML(title, wsPath string) []byte {
                     case 'resize':
                         if (msg.width && msg.height) {
                             term.resize(msg.width, msg.height);
-                            dimensions.textContent = msg.width + 'x' + msg.height;
+                            if (dimensions) dimensions.textContent = msg.width + 'x' + msg.height;
                         }
                         break;
                 }
@@ -219,13 +237,26 @@ func indexHTML(title, wsPath string) []byte {
                 }
             });
 
+            // Forward mouse wheel as scroll keys
+            document.getElementById('terminal-container').addEventListener('wheel', function(e) {
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    e.preventDefault();
+                    const encoder = new TextEncoder();
+                    const lines = Math.max(1, Math.abs(Math.round(e.deltaY / 40)));
+                    const key = e.deltaY < 0 ? '\x1b[A' : '\x1b[B'; // Up or Down arrow
+                    for (let i = 0; i < lines; i++) {
+                        ws.send(encoder.encode(key));
+                    }
+                }
+            }, { passive: false });
+
             // Handle resize
             window.addEventListener('resize', function() {
                 fitAddon.fit();
                 const cols = term.cols;
                 const rows = term.rows;
-                dimensions.textContent = cols + 'x' + rows;
-                
+                if (dimensions) dimensions.textContent = cols + 'x' + rows;
+
                 // Send resize message
                 if (ws && ws.readyState === WebSocket.OPEN) {
                     ws.send(JSON.stringify({
@@ -249,5 +280,7 @@ func indexHTML(title, wsPath string) []byte {
     </script>
 </body>
 </html>
-`, title, title, wsPath))
+`, title, containerCSS, headerCSS, footerCSS, headerHTML, footerHTML, wsPath))
+
+	return []byte(b.String())
 }

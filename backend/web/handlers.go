@@ -23,7 +23,7 @@ func (b *Backend) handleIndex(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Write(indexHTML(b.config.Title, b.config.WSPath))
+	w.Write(indexHTML(b.config.Title, b.config.WSPath, b.config.Chromeless))
 }
 
 // handleWebSocket handles WebSocket connections.
@@ -206,6 +206,28 @@ func (s *Session) handleInput(data []byte) {
 			s.Backend.PostEvent(terminal.KeyEvent{Key: terminal.KeyCtrlY})
 		case 0x1a: // Ctrl+Z
 			s.Backend.PostEvent(terminal.KeyEvent{Key: terminal.KeyCtrlZ})
+		case 0x05: // Ctrl+E
+			s.Backend.PostEvent(terminal.KeyEvent{Key: terminal.KeyCtrlE})
+		case 0x0B: // Ctrl+K
+			s.Backend.PostEvent(terminal.KeyEvent{Key: terminal.KeyCtrlK})
+		case 0x0C: // Ctrl+L
+			s.Backend.PostEvent(terminal.KeyEvent{Key: terminal.KeyCtrlL})
+		case 0x0E: // Ctrl+N
+			s.Backend.PostEvent(terminal.KeyEvent{Key: terminal.KeyCtrlN})
+		case 0x0F: // Ctrl+O
+			s.Backend.PostEvent(terminal.KeyEvent{Key: terminal.KeyCtrlO})
+		case 0x11: // Ctrl+Q
+			s.Backend.PostEvent(terminal.KeyEvent{Key: terminal.KeyCtrlQ})
+		case 0x12: // Ctrl+R
+			s.Backend.PostEvent(terminal.KeyEvent{Key: terminal.KeyCtrlR})
+		case 0x13: // Ctrl+S
+			s.Backend.PostEvent(terminal.KeyEvent{Key: terminal.KeyCtrlS})
+		case 0x14: // Ctrl+T
+			s.Backend.PostEvent(terminal.KeyEvent{Key: terminal.KeyCtrlT})
+		case 0x15: // Ctrl+U
+			s.Backend.PostEvent(terminal.KeyEvent{Key: terminal.KeyCtrlU})
+		case 0x17: // Ctrl+W
+			s.Backend.PostEvent(terminal.KeyEvent{Key: terminal.KeyCtrlW})
 		default:
 			if b >= 32 && b < 127 {
 				s.Backend.PostEvent(terminal.KeyEvent{

@@ -63,6 +63,10 @@ type Config struct {
 	// TLS enables HTTPS/WSS.
 	TLS TLSConfig
 
+	// Chromeless hides the header, footer, and status indicators,
+	// making the terminal fill the entire browser window.
+	Chromeless bool
+
 	// OnConnect is called when a client connects.
 	OnConnect func(sessionID string)
 
