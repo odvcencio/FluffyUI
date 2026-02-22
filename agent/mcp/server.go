@@ -287,6 +287,22 @@ func (s *Server) AddTextResourceTemplate(
 	return nil
 }
 
+// SendResourceUpdated notifies subscribed clients that the given resource URI changed.
+func (s *Server) SendResourceUpdated(uri string) {
+	if s == nil || s.mcpServer == nil {
+		return
+	}
+	s.mcpServer.SendResourceUpdated(uri)
+}
+
+// SendResourceUpdatedWithParams notifies subscribed clients with extra payload fields.
+func (s *Server) SendResourceUpdatedWithParams(uri string, params map[string]any) {
+	if s == nil || s.mcpServer == nil {
+		return
+	}
+	s.mcpServer.SendResourceUpdatedWithParams(uri, params)
+}
+
 func (s *Server) onRegisterSession(ctx context.Context, session mcpserver.ClientSession) {
 	if session == nil {
 		return
