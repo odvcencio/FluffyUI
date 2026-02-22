@@ -10,6 +10,7 @@ type SimpleWidget struct {
 	LayoutFunc        func(runtime.Rect)
 	RenderFunc        func(runtime.RenderContext)
 	HandleMessageFunc func(runtime.Message) runtime.HandleResult
+	HTMLRenderFunc    func(runtime.HTMLContext) runtime.HTML
 	services          runtime.Services
 }
 
@@ -49,6 +50,14 @@ func (s *SimpleWidget) HandleMessage(msg runtime.Message) runtime.HandleResult {
 		return runtime.Unhandled()
 	}
 	return s.HandleMessageFunc(msg)
+}
+
+// RenderHTML returns a static HTML representation of the widget.
+func (s *SimpleWidget) RenderHTML(ctx runtime.HTMLContext) runtime.HTML {
+	if s == nil || s.HTMLRenderFunc == nil {
+		return ""
+	}
+	return s.HTMLRenderFunc(ctx)
 }
 
 // Bind attaches app services.

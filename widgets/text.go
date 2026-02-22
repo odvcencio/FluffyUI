@@ -1,6 +1,8 @@
 package widgets
 
 import (
+	"fmt"
+	"html/template"
 	"strings"
 
 	"github.com/odvcencio/fluffyui/accessibility"
@@ -429,6 +431,12 @@ func (l *Label) Render(ctx runtime.RenderContext) {
 		style = final.ToBackend()
 	}
 	ctx.Buffer.SetString(x, bounds.Y, text, style)
+}
+
+// RenderHTML returns a static HTML representation of the label.
+func (l *Label) RenderHTML(ctx runtime.HTMLContext) runtime.HTML {
+	return runtime.HTML(fmt.Sprintf(`<span class="fluffy-Label">%s</span>`,
+		template.HTMLEscapeString(l.text)))
 }
 
 func (l *Label) syncA11y() {

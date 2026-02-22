@@ -55,6 +55,9 @@ func Divider() runtime.Widget {
 		line := strings.Repeat("─", b.Width)
 		ctx.Buffer.SetString(b.X, b.Y, line, backend.DefaultStyle().Dim(true))
 	}
+	w.HTMLRenderFunc = func(ctx runtime.HTMLContext) runtime.HTML {
+		return `<hr class="fluffy-Divider">`
+	}
 	return w
 }
 
@@ -77,6 +80,9 @@ func VDivider() runtime.Widget {
 		for y := 0; y < b.Height; y++ {
 			ctx.Buffer.SetString(b.X, b.Y+y, "│", s)
 		}
+	}
+	w.HTMLRenderFunc = func(ctx runtime.HTMLContext) runtime.HTML {
+		return `<div class="fluffy-VDivider"></div>`
 	}
 	return w
 }

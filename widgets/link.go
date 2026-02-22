@@ -2,6 +2,7 @@ package widgets
 
 import (
 	"fmt"
+	"html/template"
 
 	"github.com/odvcencio/fluffyui/accessibility"
 	"github.com/odvcencio/fluffyui/backend"
@@ -121,6 +122,13 @@ func (l *Link) Render(ctx runtime.RenderContext) {
 
 	text := clipString(l.label, bounds.Width)
 	writePadded(ctx.Buffer, bounds.X, bounds.Y, bounds.Width, text, style)
+}
+
+// RenderHTML returns a static HTML representation of the link.
+func (l *Link) RenderHTML(ctx runtime.HTMLContext) runtime.HTML {
+	return runtime.HTML(fmt.Sprintf(`<a href="%s" target="_blank" rel="noopener" class="fluffy-Link">%s</a>`,
+		template.HTMLEscapeString(l.url),
+		template.HTMLEscapeString(l.label)))
 }
 
 // HandleMessage processes input events.
