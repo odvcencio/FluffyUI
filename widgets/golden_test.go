@@ -604,6 +604,10 @@ func TestGolden_DateRangePicker(t *testing.T) {
 			func() *DateRangePicker {
 				drp := NewDateRangePicker()
 				drp.calendar.now = func() time.Time { return fixedNow }
+				// NewCalendar reads time.Now() directly to seed displayedMonth
+				// before our now-override is applied. Pin the displayed month
+				// explicitly so the snapshot is deterministic.
+				drp.calendar.SetDisplayedMonth(fixedNow)
 				return drp
 			},
 			34, 10,

@@ -844,9 +844,7 @@ func (t *TextArea) HandleMessage(msg runtime.Message) runtime.HandleResult {
 	case terminal.KeyLeft:
 		if key.Shift {
 			anchor := t.cursor
-			if t.selection.IsEmpty() {
-				anchor = t.cursor
-			} else {
+			if !t.selection.IsEmpty() {
 				anchor = t.selection.Start
 			}
 			if key.Ctrl {
@@ -868,9 +866,7 @@ func (t *TextArea) HandleMessage(msg runtime.Message) runtime.HandleResult {
 	case terminal.KeyRight:
 		if key.Shift {
 			anchor := t.cursor
-			if t.selection.IsEmpty() {
-				anchor = t.cursor
-			} else {
+			if !t.selection.IsEmpty() {
 				anchor = t.selection.Start
 			}
 			if key.Ctrl {
@@ -1272,18 +1268,6 @@ func (t *TextArea) visibleLogicalLines(totalLines int) []int {
 		lines = append(lines, 0)
 	}
 	return lines
-}
-
-func (t *TextArea) lineText(line int, starts []int, lengths []int) string {
-	if line < 0 || line >= len(starts) {
-		return ""
-	}
-	start := starts[line]
-	end := start + lengths[line]
-	if start > len(t.text) || end > len(t.text) || start > end {
-		return ""
-	}
-	return t.lineSlice(start, end-start)
 }
 
 func (t *TextArea) lineSlice(start, length int) string {
