@@ -22,13 +22,26 @@ type KeyPress struct {
 
 // Equal reports whether two key presses match.
 func (k KeyPress) Equal(other KeyPress) bool {
-	if k.Key != other.Key || k.Alt != other.Alt || k.Ctrl != other.Ctrl || k.Shift != other.Shift {
+	if k.Alt != other.Alt || k.Ctrl != other.Ctrl || k.Shift != other.Shift {
 		return false
 	}
-	if k.Key == terminal.KeyRune {
+	if k.Key == terminal.KeyRune && other.Key == terminal.KeyRune {
 		return k.Rune == other.Rune
 	}
-	return true
+	if k.Key == terminal.KeyRune && isCtrlKey(other.Key) {
+		if r, ok := ctrlKeyName[other.Key]; ok {
+			return r == k.Rune
+		}
+		return false
+	}
+	if other.Key == terminal.KeyRune && isCtrlKey(k.Key) && other.Rune != 0 {
+		if r, ok := ctrlKeyName[k.Key]; ok {
+			return r == other.Rune
+		}
+		return false
+	}
+
+	return k.Key == other.Key
 }
 
 // Key describes a key sequence (single key or chord).
@@ -247,9 +260,20 @@ var ctrlKeyMap = map[rune]terminal.Key{
 	'b': terminal.KeyCtrlB,
 	'c': terminal.KeyCtrlC,
 	'd': terminal.KeyCtrlD,
+	'e': terminal.KeyCtrlE,
 	'f': terminal.KeyCtrlF,
+	'k': terminal.KeyCtrlK,
+	'l': terminal.KeyCtrlL,
+	'n': terminal.KeyCtrlN,
+	'o': terminal.KeyCtrlO,
 	'p': terminal.KeyCtrlP,
+	'q': terminal.KeyCtrlQ,
+	'r': terminal.KeyCtrlR,
+	's': terminal.KeyCtrlS,
+	't': terminal.KeyCtrlT,
+	'u': terminal.KeyCtrlU,
 	'v': terminal.KeyCtrlV,
+	'w': terminal.KeyCtrlW,
 	'x': terminal.KeyCtrlX,
 	'y': terminal.KeyCtrlY,
 	'z': terminal.KeyCtrlZ,

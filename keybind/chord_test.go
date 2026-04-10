@@ -53,6 +53,20 @@ func TestChordHandler_TwoKeyChord(t *testing.T) {
 	}
 }
 
+func TestKeyPressEqualHandlesCtrlAliases(t *testing.T) {
+	a := KeyPress{Key: terminal.KeyCtrlK, Ctrl: true}
+	b := terminal.KeyEvent{Key: terminal.KeyRune, Rune: 'k', Ctrl: true}
+
+	press := KeyPressFromTerminal(b)
+
+	if !a.Equal(press) {
+		t.Fatalf("expected KeyPress alias match for ctrl+k rune/constant forms")
+	}
+	if !press.Equal(a) {
+		t.Fatalf("expected reverse alias match for ctrl+k constant/rune forms")
+	}
+}
+
 func TestChordHandler_ThreeKeyChord(t *testing.T) {
 	h := NewChordHandler()
 	callCount := 0

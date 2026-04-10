@@ -257,6 +257,10 @@ func ParseKey(desc string) (terminal.KeyEvent, error) {
 	if err != nil {
 		return terminal.KeyEvent{}, err
 	}
+	if press.Ctrl && press.Key == terminal.KeyCtrlK && press.Rune == 0 {
+		press.Key = terminal.KeyRune
+		press.Rune = 'k'
+	}
 	return terminal.KeyEvent{
 		Key:   press.Key,
 		Rune:  press.Rune,

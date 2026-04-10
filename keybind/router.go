@@ -162,10 +162,22 @@ func isCtrlKey(key terminal.Key) bool {
 		terminal.KeyCtrlB,
 		terminal.KeyCtrlC,
 		terminal.KeyCtrlD,
+		terminal.KeyCtrlE,
 		terminal.KeyCtrlF,
+		terminal.KeyCtrlK,
+		terminal.KeyCtrlL,
+		terminal.KeyCtrlN,
+		terminal.KeyCtrlO,
 		terminal.KeyCtrlP,
+		terminal.KeyCtrlQ,
+		terminal.KeyCtrlR,
+		terminal.KeyCtrlS,
+		terminal.KeyCtrlT,
+		terminal.KeyCtrlU,
 		terminal.KeyCtrlV,
+		terminal.KeyCtrlW,
 		terminal.KeyCtrlX,
+		terminal.KeyCtrlY,
 		terminal.KeyCtrlZ:
 		return true
 	default:

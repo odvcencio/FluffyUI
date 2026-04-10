@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync/atomic"
 
 	"github.com/gdamore/tcell/v3"
 	"github.com/odvcencio/fluffyui/backend"
@@ -18,7 +19,9 @@ type Backend struct {
 	screen tcell.Screen
 	raw    *rawTty
 	// Inline rendering mode (no alternate screen, bounded viewport).
-	inlineMode   bool
+	// atomic.Bool because SetInlineMode and the read sites are called
+	// from different goroutines (test harness, runtime event loop).
+	inlineMode   atomic.Bool
 	inlineHeight int
 
 	// Bracketed paste state
@@ -59,7 +62,7 @@ func (b *Backend) SetInlineMode(enabled bool) {
 	if b == nil {
 		return
 	}
-	b.inlineMode = enabled
+	b.inlineMode.Store(enabled)
 	if b.raw != nil {
 		b.raw.SetInlineMode(enabled)
 	}
@@ -95,7 +98,7 @@ func (b *Backend) Size() (width, height int) {
 		return 0, 0
 	}
 	width, fullHeight := b.screen.Size()
-	if !b.inlineMode {
+	if !b.inlineMode.Load() {
 		return width, fullHeight
 	}
 	return width, b.inlineViewportHeight(fullHeight)
@@ -110,7 +113,7 @@ func (b *Backend) SetContent(x, y int, mainc rune, comb []rune, style backend.St
 	if x < 0 || x >= width || y < 0 {
 		return
 	}
-	if b.inlineMode {
+	if b.inlineMode.Load() {
 		y += b.inlineOffsetY()
 	}
 	if y < 0 || y >= fullHeight {
@@ -129,7 +132,7 @@ func (b *Backend) SetRow(y int, startX int, cells []backend.Cell) {
 	if startX >= width {
 		return
 	}
-	if b.inlineMode {
+	if b.inlineMode.Load() {
 		y += b.inlineOffsetY()
 	}
 	if y < 0 || y >= fullHeight {
@@ -155,7 +158,7 @@ func (b *Backend) SetRect(x, y, width, height int, cells []backend.Cell) {
 
 	screenWidth, fullHeight := b.screen.Size()
 	offsetY := 0
-	if b.inlineMode {
+	if b.inlineMode.Load() {
 		offsetY = b.inlineOffsetY()
 	}
 
@@ -197,7 +200,7 @@ func (b *Backend) Clear() {
 	if b == nil || b.screen == nil {
 		return
 	}
-	if b.inlineMode {
+	if b.inlineMode.Load() {
 		width, fullHeight := b.screen.Size()
 		top := b.inlineOffsetY()
 		height := b.inlineViewportHeight(fullHeight)
@@ -225,7 +228,7 @@ func (b *Backend) ShowCursor() {
 
 // SetCursorPos sets the cursor position.
 func (b *Backend) SetCursorPos(x, y int) {
-	if b.inlineMode {
+	if b.inlineMode.Load() {
 		y += b.inlineOffsetY()
 	}
 	b.screen.ShowCursor(x, y)
@@ -284,7 +287,7 @@ func (b *Backend) PollEvent() terminal.Event {
 
 // PostEvent injects an event into the queue.
 func (b *Backend) PostEvent(ev terminal.Event) error {
-	if b.inlineMode {
+	if b.inlineMode.Load() {
 		if mouse, ok := ev.(terminal.MouseEvent); ok {
 			mouse.Y += b.inlineOffsetY()
 			ev = mouse
@@ -331,7 +334,7 @@ func (b *Backend) inlineViewportHeight(fullHeight int) int {
 }
 
 func (b *Backend) inlineOffsetY() int {
-	if b == nil || b.screen == nil || !b.inlineMode {
+	if b == nil || b.screen == nil || !b.inlineMode.Load() {
 		return 0
 	}
 	_, fullHeight := b.screen.Size()
@@ -343,7 +346,7 @@ func (b *Backend) inlineOffsetY() int {
 }
 
 func (b *Backend) mapInlineEvent(ev terminal.Event) terminal.Event {
-	if !b.inlineMode || ev == nil {
+	if !b.inlineMode.Load() || ev == nil {
 		return ev
 	}
 	switch e := ev.(type) {
@@ -523,6 +526,28 @@ func convertKey(k tcell.Key) terminal.Key {
 		return terminal.KeyCtrlY
 	case tcell.KeyCtrlZ:
 		return terminal.KeyCtrlZ
+	case tcell.KeyCtrlE:
+		return terminal.KeyCtrlE
+	case tcell.KeyCtrlK:
+		return terminal.KeyCtrlK
+	case tcell.KeyCtrlL:
+		return terminal.KeyCtrlL
+	case tcell.KeyCtrlN:
+		return terminal.KeyCtrlN
+	case tcell.KeyCtrlO:
+		return terminal.KeyCtrlO
+	case tcell.KeyCtrlQ:
+		return terminal.KeyCtrlQ
+	case tcell.KeyCtrlR:
+		return terminal.KeyCtrlR
+	case tcell.KeyCtrlS:
+		return terminal.KeyCtrlS
+	case tcell.KeyCtrlT:
+		return terminal.KeyCtrlT
+	case tcell.KeyCtrlU:
+		return terminal.KeyCtrlU
+	case tcell.KeyCtrlW:
+		return terminal.KeyCtrlW
 	case tcell.KeyF1:
 		return terminal.KeyF1
 	case tcell.KeyF2:
@@ -672,6 +697,28 @@ func reverseConvertKey(k terminal.Key) tcell.Key {
 		return tcell.KeyCtrlY
 	case terminal.KeyCtrlZ:
 		return tcell.KeyCtrlZ
+	case terminal.KeyCtrlE:
+		return tcell.KeyCtrlE
+	case terminal.KeyCtrlK:
+		return tcell.KeyCtrlK
+	case terminal.KeyCtrlL:
+		return tcell.KeyCtrlL
+	case terminal.KeyCtrlN:
+		return tcell.KeyCtrlN
+	case terminal.KeyCtrlO:
+		return tcell.KeyCtrlO
+	case terminal.KeyCtrlQ:
+		return tcell.KeyCtrlQ
+	case terminal.KeyCtrlR:
+		return tcell.KeyCtrlR
+	case terminal.KeyCtrlS:
+		return tcell.KeyCtrlS
+	case terminal.KeyCtrlT:
+		return tcell.KeyCtrlT
+	case terminal.KeyCtrlU:
+		return tcell.KeyCtrlU
+	case terminal.KeyCtrlW:
+		return tcell.KeyCtrlW
 	case terminal.KeyF1:
 		return tcell.KeyF1
 	case terminal.KeyF2:
