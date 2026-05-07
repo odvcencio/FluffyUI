@@ -12,6 +12,10 @@
   <img src="docs/demos/hero.gif" alt="FluffyUI Demo" width="640">
 </p>
 
+## Agent Skill
+
+Agents working with FluffyUI should use the [using-fluffyui](https://github.com/odvcencio/m31labs-skills/blob/main/skills/using-fluffyui/SKILL.md) skill.
+
 ## How does FluffyUI compare?
 
 | Feature | FluffyUI | Bubble Tea | Textual | Ratatui |
