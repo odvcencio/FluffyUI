@@ -1,4 +1,4 @@
-module github.com/odvcencio/fluffyui/third_party/mcp-go
+module m31labs.dev/fluffyui/third_party/mcp-go
 
 go 1.22
 
