@@ -1,9 +1,9 @@
 package keybind
 
 import (
-	"github.com/odvcencio/fluffyui/clipboard"
-	"github.com/odvcencio/fluffyui/runtime"
-	"github.com/odvcencio/fluffyui/scroll"
+	"m31labs.dev/fluffyui/clipboard"
+	"m31labs.dev/fluffyui/runtime"
+	"m31labs.dev/fluffyui/scroll"
 )
 
 // RegisterStandardCommands registers common runtime commands.

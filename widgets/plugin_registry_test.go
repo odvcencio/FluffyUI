@@ -3,7 +3,7 @@ package widgets
 import (
 	"testing"
 
-	"github.com/odvcencio/fluffyui/runtime"
+	"m31labs.dev/fluffyui/runtime"
 )
 
 func TestWidgetPluginRegistry(t *testing.T) {

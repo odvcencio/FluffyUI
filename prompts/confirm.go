@@ -3,9 +3,9 @@ package prompts
 import (
 	"context"
 
-	"github.com/odvcencio/fluffyui/fluffy"
-	"github.com/odvcencio/fluffyui/runtime"
-	"github.com/odvcencio/fluffyui/terminal"
+	"m31labs.dev/fluffyui/fluffy"
+	"m31labs.dev/fluffyui/runtime"
+	"m31labs.dev/fluffyui/terminal"
 )
 
 // Confirm displays a yes/no prompt and returns the user's choice.

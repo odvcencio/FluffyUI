@@ -20,7 +20,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/odvcencio/fluffyui/runtime"
+	"m31labs.dev/fluffyui/runtime"
 )
 
 // EnhancedServerOptions configures the enhanced agent interaction server.

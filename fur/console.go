@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/odvcencio/fluffyui/compositor"
+	"m31labs.dev/fluffyui/compositor"
 	"golang.org/x/term"
 )
 

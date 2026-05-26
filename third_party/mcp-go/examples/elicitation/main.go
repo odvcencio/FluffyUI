@@ -8,8 +8,8 @@ import (
 	"os/signal"
 	"sync/atomic"
 
-	"github.com/odvcencio/fluffyui/third_party/mcp-go/mcp"
-	"github.com/odvcencio/fluffyui/third_party/mcp-go/server"
+	"m31labs.dev/fluffyui/third_party/mcp-go/mcp"
+	"m31labs.dev/fluffyui/third_party/mcp-go/server"
 )
 
 // demoElicitationHandler demonstrates how to use elicitation in a tool

@@ -7,13 +7,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/odvcencio/fluffyui/animation"
-	"github.com/odvcencio/fluffyui/backend"
-	"github.com/odvcencio/fluffyui/graphics"
-	"github.com/odvcencio/fluffyui/i18n"
-	"github.com/odvcencio/fluffyui/runtime"
-	"github.com/odvcencio/fluffyui/terminal"
-	flufftest "github.com/odvcencio/fluffyui/testing"
+	"m31labs.dev/fluffyui/animation"
+	"m31labs.dev/fluffyui/backend"
+	"m31labs.dev/fluffyui/graphics"
+	"m31labs.dev/fluffyui/i18n"
+	"m31labs.dev/fluffyui/runtime"
+	"m31labs.dev/fluffyui/terminal"
+	flufftest "m31labs.dev/fluffyui/testing"
 )
 
 func TestAccordionToggleAndNavigation(t *testing.T) {

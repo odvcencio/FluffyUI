@@ -8,7 +8,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/odvcencio/fluffyui/state"
+	"m31labs.dev/fluffyui/state"
 )
 
 // Values is a map of form field values.

@@ -4,10 +4,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/odvcencio/fluffyui/accessibility"
-	"github.com/odvcencio/fluffyui/runtime"
-	"github.com/odvcencio/fluffyui/terminal"
-	fluffytest "github.com/odvcencio/fluffyui/testing"
+	"m31labs.dev/fluffyui/accessibility"
+	"m31labs.dev/fluffyui/runtime"
+	"m31labs.dev/fluffyui/terminal"
+	fluffytest "m31labs.dev/fluffyui/testing"
 )
 
 func TestSegmentedControl_New(t *testing.T) {

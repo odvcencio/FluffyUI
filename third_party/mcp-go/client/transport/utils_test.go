@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/odvcencio/fluffyui/third_party/mcp-go/mcp"
+	"m31labs.dev/fluffyui/third_party/mcp-go/mcp"
 )
 
 func TestNewJSONRPCErrorResponse(t *testing.T) {

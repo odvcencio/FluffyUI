@@ -8,7 +8,7 @@ import (
 	"runtime/debug"
 	"strings"
 
-	"github.com/odvcencio/fluffyui/accessibility"
+	"m31labs.dev/fluffyui/accessibility"
 )
 
 // ErrorReporter formats widget errors with context.

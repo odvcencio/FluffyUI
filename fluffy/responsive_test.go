@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/odvcencio/fluffyui/runtime"
-	"github.com/odvcencio/fluffyui/widgets"
+	"m31labs.dev/fluffyui/runtime"
+	"m31labs.dev/fluffyui/widgets"
 )
 
 // testLabel creates a simple label widget for testing that renders a known string.

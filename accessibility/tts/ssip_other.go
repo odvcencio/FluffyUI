@@ -5,7 +5,7 @@ package tts
 import (
 	"fmt"
 
-	"github.com/odvcencio/fluffyui/accessibility"
+	"m31labs.dev/fluffyui/accessibility"
 )
 
 func newSSIPSpeaker(_ float64) (accessibility.Speaker, error) {

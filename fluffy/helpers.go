@@ -3,10 +3,10 @@ package fluffy
 import (
 	"strings"
 
-	"github.com/odvcencio/fluffyui/backend"
-	"github.com/odvcencio/fluffyui/runtime"
-	"github.com/odvcencio/fluffyui/style"
-	"github.com/odvcencio/fluffyui/widgets"
+	"m31labs.dev/fluffyui/backend"
+	"m31labs.dev/fluffyui/runtime"
+	"m31labs.dev/fluffyui/style"
+	"m31labs.dev/fluffyui/widgets"
 )
 
 // Spacer returns a flexible spacer widget that fills available space.

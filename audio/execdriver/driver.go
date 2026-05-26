@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/odvcencio/fluffyui/audio"
+	"m31labs.dev/fluffyui/audio"
 )
 
 // Command describes the command used to play an audio cue.

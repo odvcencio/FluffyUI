@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/odvcencio/fluffyui/backend"
-	"github.com/odvcencio/fluffyui/backend/sim"
+	"m31labs.dev/fluffyui/backend"
+	"m31labs.dev/fluffyui/backend/sim"
 )
 
 func BenchmarkRenderPipelineDepth10(b *testing.B) {

@@ -9,12 +9,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/odvcencio/fluffyui/audio"
-	"github.com/odvcencio/fluffyui/audio/execdriver"
-	"github.com/odvcencio/fluffyui/fluffy"
-	"github.com/odvcencio/fluffyui/runtime"
-	"github.com/odvcencio/fluffyui/state"
-	"github.com/odvcencio/fluffyui/widgets"
+	"m31labs.dev/fluffyui/audio"
+	"m31labs.dev/fluffyui/audio/execdriver"
+	"m31labs.dev/fluffyui/fluffy"
+	"m31labs.dev/fluffyui/runtime"
+	"m31labs.dev/fluffyui/state"
+	"m31labs.dev/fluffyui/widgets"
 )
 
 func main() {

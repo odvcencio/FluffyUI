@@ -4,8 +4,8 @@ import (
 	"strings"
 
 	"github.com/mattn/go-runewidth"
-	"github.com/odvcencio/fluffyui/compositor"
-	"github.com/odvcencio/fluffyui/theme"
+	"m31labs.dev/fluffyui/compositor"
+	"m31labs.dev/fluffyui/theme"
 	extast "github.com/yuin/goldmark/extension/ast"
 )
 

@@ -5,7 +5,7 @@ package server
 import (
 	"context"
 
-	"github.com/odvcencio/fluffyui/third_party/mcp-go/mcp"
+	"m31labs.dev/fluffyui/third_party/mcp-go/mcp"
 )
 
 // OnRegisterSessionHookFunc is a hook that will be called when a new session is registered.

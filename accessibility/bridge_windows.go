@@ -3,7 +3,7 @@
 package accessibility
 
 import (
-	"github.com/odvcencio/fluffyui/accessibility/uiautomation"
+	"m31labs.dev/fluffyui/accessibility/uiautomation"
 )
 
 // NewBridge returns a UI Automation bridge for Windows.

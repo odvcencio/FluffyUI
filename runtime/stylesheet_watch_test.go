@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/odvcencio/fluffyui/backend/sim"
+	"m31labs.dev/fluffyui/backend/sim"
 )
 
 func TestWatchStylesheetFile(t *testing.T) {

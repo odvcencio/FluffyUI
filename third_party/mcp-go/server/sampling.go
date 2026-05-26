@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/odvcencio/fluffyui/third_party/mcp-go/mcp"
+	"m31labs.dev/fluffyui/third_party/mcp-go/mcp"
 )
 
 // EnableSampling enables sampling capabilities for the server.

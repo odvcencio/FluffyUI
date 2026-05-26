@@ -4,13 +4,13 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/odvcencio/fluffyui/accessibility"
-	"github.com/odvcencio/fluffyui/backend"
-	"github.com/odvcencio/fluffyui/clipboard"
-	"github.com/odvcencio/fluffyui/forms"
-	"github.com/odvcencio/fluffyui/runtime"
-	uistyle "github.com/odvcencio/fluffyui/style"
-	"github.com/odvcencio/fluffyui/terminal"
+	"m31labs.dev/fluffyui/accessibility"
+	"m31labs.dev/fluffyui/backend"
+	"m31labs.dev/fluffyui/clipboard"
+	"m31labs.dev/fluffyui/forms"
+	"m31labs.dev/fluffyui/runtime"
+	uistyle "m31labs.dev/fluffyui/style"
+	"m31labs.dev/fluffyui/terminal"
 )
 
 // MaskedInput is a text input widget with a format mask.

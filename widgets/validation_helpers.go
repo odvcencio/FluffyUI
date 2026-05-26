@@ -3,7 +3,7 @@ package widgets
 import (
 	"strings"
 
-	"github.com/odvcencio/fluffyui/forms"
+	"m31labs.dev/fluffyui/forms"
 )
 
 func validateValue(value any, validators []forms.Validator) ([]forms.ValidationError, []string) {

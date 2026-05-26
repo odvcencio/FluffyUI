@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/odvcencio/fluffyui/backend"
+	"m31labs.dev/fluffyui/backend"
 )
 
 // ---------------------------------------------------------------------------

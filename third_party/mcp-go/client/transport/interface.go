@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/odvcencio/fluffyui/third_party/mcp-go/mcp"
+	"m31labs.dev/fluffyui/third_party/mcp-go/mcp"
 )
 
 // HTTPHeaderFunc is a function that extracts header entries from the given context

@@ -3,14 +3,14 @@ package runtime
 import (
 	"time"
 
-	"github.com/odvcencio/fluffyui/accessibility"
-	"github.com/odvcencio/fluffyui/animation"
-	"github.com/odvcencio/fluffyui/audio"
-	"github.com/odvcencio/fluffyui/clipboard"
-	"github.com/odvcencio/fluffyui/i18n"
-	"github.com/odvcencio/fluffyui/state"
-	"github.com/odvcencio/fluffyui/style"
-	"github.com/odvcencio/fluffyui/theme"
+	"m31labs.dev/fluffyui/accessibility"
+	"m31labs.dev/fluffyui/animation"
+	"m31labs.dev/fluffyui/audio"
+	"m31labs.dev/fluffyui/clipboard"
+	"m31labs.dev/fluffyui/i18n"
+	"m31labs.dev/fluffyui/state"
+	"m31labs.dev/fluffyui/style"
+	"m31labs.dev/fluffyui/theme"
 )
 
 // Services exposes app-level scheduling and messaging helpers.

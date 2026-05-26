@@ -5,13 +5,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/odvcencio/fluffyui/animation"
-	"github.com/odvcencio/fluffyui/backend"
-	"github.com/odvcencio/fluffyui/runtime"
-	"github.com/odvcencio/fluffyui/state"
-	"github.com/odvcencio/fluffyui/style"
-	"github.com/odvcencio/fluffyui/terminal"
-	flufftest "github.com/odvcencio/fluffyui/testing"
+	"m31labs.dev/fluffyui/animation"
+	"m31labs.dev/fluffyui/backend"
+	"m31labs.dev/fluffyui/runtime"
+	"m31labs.dev/fluffyui/state"
+	"m31labs.dev/fluffyui/style"
+	"m31labs.dev/fluffyui/terminal"
+	flufftest "m31labs.dev/fluffyui/testing"
 )
 
 func TestAutoCompleteFlow(t *testing.T) {

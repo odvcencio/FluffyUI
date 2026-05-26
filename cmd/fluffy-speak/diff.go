@@ -1,7 +1,7 @@
 package main
 
 import (
-	mcp "github.com/odvcencio/fluffyui/agent/mcp"
+	mcp "m31labs.dev/fluffyui/agent/mcp"
 )
 
 // diffSnapshots compares two snapshots and returns the changes.

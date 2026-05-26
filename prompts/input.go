@@ -3,10 +3,10 @@ package prompts
 import (
 	"context"
 
-	"github.com/odvcencio/fluffyui/fluffy"
-	"github.com/odvcencio/fluffyui/runtime"
-	"github.com/odvcencio/fluffyui/terminal"
-	"github.com/odvcencio/fluffyui/widgets"
+	"m31labs.dev/fluffyui/fluffy"
+	"m31labs.dev/fluffyui/runtime"
+	"m31labs.dev/fluffyui/terminal"
+	"m31labs.dev/fluffyui/widgets"
 )
 
 // Input displays a text prompt and returns the user's input.

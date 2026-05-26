@@ -3,11 +3,11 @@ package a11ytest_test
 import (
 	"testing"
 
-	"github.com/odvcencio/fluffyui/accessibility"
-	"github.com/odvcencio/fluffyui/runtime"
-	"github.com/odvcencio/fluffyui/terminal"
-	"github.com/odvcencio/fluffyui/testing/a11ytest"
-	"github.com/odvcencio/fluffyui/widgets"
+	"m31labs.dev/fluffyui/accessibility"
+	"m31labs.dev/fluffyui/runtime"
+	"m31labs.dev/fluffyui/terminal"
+	"m31labs.dev/fluffyui/testing/a11ytest"
+	"m31labs.dev/fluffyui/widgets"
 )
 
 // ---------------------------------------------------------------------------

@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/odvcencio/fluffyui/third_party/mcp-go/mcp"
+	"m31labs.dev/fluffyui/third_party/mcp-go/mcp"
 )
 
 // TestStdio_StartIdempotency tests that calling Start() multiple times is safe

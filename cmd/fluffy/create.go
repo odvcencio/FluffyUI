@@ -210,7 +210,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/odvcencio/fluffyui/fluffy"
+	"m31labs.dev/fluffyui/fluffy"
 )
 
 func main() {
@@ -235,11 +235,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/odvcencio/fluffyui/backend"
-	"github.com/odvcencio/fluffyui/fluffy"
-	"github.com/odvcencio/fluffyui/runtime"
-	"github.com/odvcencio/fluffyui/state"
-	ui "github.com/odvcencio/fluffyui/widgets"
+	"m31labs.dev/fluffyui/backend"
+	"m31labs.dev/fluffyui/fluffy"
+	"m31labs.dev/fluffyui/runtime"
+	"m31labs.dev/fluffyui/state"
+	ui "m31labs.dev/fluffyui/widgets"
 )
 
 func main() {
@@ -361,10 +361,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/odvcencio/fluffyui/backend"
-	"github.com/odvcencio/fluffyui/fluffy"
-	"github.com/odvcencio/fluffyui/runtime"
-	ui "github.com/odvcencio/fluffyui/widgets"
+	"m31labs.dev/fluffyui/backend"
+	"m31labs.dev/fluffyui/fluffy"
+	"m31labs.dev/fluffyui/runtime"
+	ui "m31labs.dev/fluffyui/widgets"
 )
 
 func main() {
@@ -454,11 +454,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/odvcencio/fluffyui/backend"
-	"github.com/odvcencio/fluffyui/fluffy"
-	"github.com/odvcencio/fluffyui/runtime"
-	"github.com/odvcencio/fluffyui/state"
-	ui "github.com/odvcencio/fluffyui/widgets"
+	"m31labs.dev/fluffyui/backend"
+	"m31labs.dev/fluffyui/fluffy"
+	"m31labs.dev/fluffyui/runtime"
+	"m31labs.dev/fluffyui/state"
+	ui "m31labs.dev/fluffyui/widgets"
 )
 
 func main() {
@@ -522,11 +522,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/odvcencio/fluffyui/backend"
-	"github.com/odvcencio/fluffyui/fluffy"
-	"github.com/odvcencio/fluffyui/forms"
-	"github.com/odvcencio/fluffyui/runtime"
-	ui "github.com/odvcencio/fluffyui/widgets"
+	"m31labs.dev/fluffyui/backend"
+	"m31labs.dev/fluffyui/fluffy"
+	"m31labs.dev/fluffyui/forms"
+	"m31labs.dev/fluffyui/runtime"
+	ui "m31labs.dev/fluffyui/widgets"
 )
 
 func main() {
@@ -603,10 +603,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/odvcencio/fluffyui/backend"
-	"github.com/odvcencio/fluffyui/fluffy"
-	"github.com/odvcencio/fluffyui/runtime"
-	ui "github.com/odvcencio/fluffyui/widgets"
+	"m31labs.dev/fluffyui/backend"
+	"m31labs.dev/fluffyui/fluffy"
+	"m31labs.dev/fluffyui/runtime"
+	ui "m31labs.dev/fluffyui/widgets"
 )
 
 func main() {

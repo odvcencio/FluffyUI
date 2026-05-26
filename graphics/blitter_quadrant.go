@@ -1,6 +1,6 @@
 package graphics
 
-import "github.com/odvcencio/fluffyui/backend"
+import "m31labs.dev/fluffyui/backend"
 
 // QuadrantBlitter renders 2x2 pixels per cell using block quadrants.
 type QuadrantBlitter struct{}

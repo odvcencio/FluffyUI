@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/odvcencio/fluffyui/accessibility"
+	"m31labs.dev/fluffyui/accessibility"
 )
 
 // Option configures TTS auto-detection.

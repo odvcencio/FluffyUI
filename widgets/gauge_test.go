@@ -3,7 +3,7 @@ package widgets
 import (
 	"testing"
 
-	"github.com/odvcencio/fluffyui/backend"
+	"m31labs.dev/fluffyui/backend"
 )
 
 func TestDrawGaugeString(t *testing.T) {

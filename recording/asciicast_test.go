@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/odvcencio/fluffyui/backend"
-	"github.com/odvcencio/fluffyui/runtime"
+	"m31labs.dev/fluffyui/backend"
+	"m31labs.dev/fluffyui/runtime"
 )
 
 func TestAsciicastRecorder(t *testing.T) {

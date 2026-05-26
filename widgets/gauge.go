@@ -1,8 +1,8 @@
 package widgets
 
 import (
-	"github.com/odvcencio/fluffyui/backend"
-	"github.com/odvcencio/fluffyui/runtime"
+	"m31labs.dev/fluffyui/backend"
+	"m31labs.dev/fluffyui/runtime"
 )
 
 // GaugeStyle defines the visual appearance of a gauge.

@@ -4,11 +4,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/odvcencio/fluffyui/accessibility"
-	"github.com/odvcencio/fluffyui/backend"
-	"github.com/odvcencio/fluffyui/runtime"
-	"github.com/odvcencio/fluffyui/state"
-	"github.com/odvcencio/fluffyui/testing/widgettest"
+	"m31labs.dev/fluffyui/accessibility"
+	"m31labs.dev/fluffyui/backend"
+	"m31labs.dev/fluffyui/runtime"
+	"m31labs.dev/fluffyui/state"
+	"m31labs.dev/fluffyui/testing/widgettest"
 )
 
 func TestHeatMap_Basic(t *testing.T) {

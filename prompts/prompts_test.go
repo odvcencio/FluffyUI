@@ -4,9 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/odvcencio/fluffyui/backend/sim"
-	"github.com/odvcencio/fluffyui/fluffy"
-	"github.com/odvcencio/fluffyui/terminal"
+	"m31labs.dev/fluffyui/backend/sim"
+	"m31labs.dev/fluffyui/fluffy"
+	"m31labs.dev/fluffyui/terminal"
 )
 
 // simBackend creates a sim backend and returns it along with a fluffy.AppOption

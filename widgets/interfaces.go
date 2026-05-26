@@ -1,6 +1,6 @@
 package widgets
 
-import "github.com/odvcencio/fluffyui/forms"
+import "m31labs.dev/fluffyui/forms"
 
 // Searchable represents widgets that expose a searchable query.
 type Searchable interface {

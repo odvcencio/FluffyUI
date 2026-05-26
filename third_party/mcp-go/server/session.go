@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/odvcencio/fluffyui/third_party/mcp-go/mcp"
+	"m31labs.dev/fluffyui/third_party/mcp-go/mcp"
 )
 
 // ClientSession represents an active session that can be used by MCPServer to interact with client.

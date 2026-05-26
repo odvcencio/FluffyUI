@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/odvcencio/fluffyui/backend"
-	"github.com/odvcencio/fluffyui/terminal"
+	"m31labs.dev/fluffyui/backend"
+	"m31labs.dev/fluffyui/terminal"
 )
 
 func TestBackend_BasicRendering(t *testing.T) {

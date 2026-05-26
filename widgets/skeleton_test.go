@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/odvcencio/fluffyui/runtime"
+	"m31labs.dev/fluffyui/runtime"
 )
 
 func TestSkeleton_NewSkeleton(t *testing.T) {

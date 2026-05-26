@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/odvcencio/fluffyui/toast"
+	"m31labs.dev/fluffyui/toast"
 )
 
 // GameToasts manages toast notifications for game events.

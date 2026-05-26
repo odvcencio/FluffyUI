@@ -3,7 +3,7 @@ package widgets
 import (
 	"time"
 
-	"github.com/odvcencio/fluffyui/animation"
+	"m31labs.dev/fluffyui/animation"
 )
 
 // SlideDirection indicates a slide direction.

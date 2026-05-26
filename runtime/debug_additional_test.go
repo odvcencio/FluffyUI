@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/odvcencio/fluffyui/accessibility"
+	"m31labs.dev/fluffyui/accessibility"
 )
 
 type debugWidget struct {

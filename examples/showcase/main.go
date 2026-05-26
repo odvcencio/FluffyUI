@@ -3,10 +3,10 @@ package main
 import (
 	"log"
 
-	"github.com/odvcencio/fluffyui/backend"
-	"github.com/odvcencio/fluffyui/fluffy"
-	"github.com/odvcencio/fluffyui/state"
-	"github.com/odvcencio/fluffyui/widgets"
+	"m31labs.dev/fluffyui/backend"
+	"m31labs.dev/fluffyui/fluffy"
+	"m31labs.dev/fluffyui/state"
+	"m31labs.dev/fluffyui/widgets"
 )
 
 func main() {

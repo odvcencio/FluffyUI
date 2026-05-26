@@ -3,7 +3,7 @@ package runtime
 import (
 	"fmt"
 
-	"github.com/odvcencio/fluffyui/backend"
+	"m31labs.dev/fluffyui/backend"
 )
 
 // ErrorBoundary wraps a widget and catches panics during Render and HandleMessage.

@@ -10,8 +10,8 @@ import (
 	"sync/atomic"
 
 	"github.com/gdamore/tcell/v3"
-	"github.com/odvcencio/fluffyui/backend"
-	"github.com/odvcencio/fluffyui/terminal"
+	"m31labs.dev/fluffyui/backend"
+	"m31labs.dev/fluffyui/terminal"
 )
 
 // Backend implements backend.Backend using tcell.

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/odvcencio/fluffyui/fluffy"
+	"m31labs.dev/fluffyui/fluffy"
 )
 
 func main() {

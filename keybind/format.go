@@ -5,7 +5,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/odvcencio/fluffyui/terminal"
+	"m31labs.dev/fluffyui/terminal"
 )
 
 // String returns a formatted key press.

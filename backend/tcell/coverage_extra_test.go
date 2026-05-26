@@ -8,8 +8,8 @@ import (
 
 	"github.com/gdamore/tcell/v3"
 	tcellcolor "github.com/gdamore/tcell/v3/color"
-	"github.com/odvcencio/fluffyui/backend"
-	"github.com/odvcencio/fluffyui/terminal"
+	"m31labs.dev/fluffyui/backend"
+	"m31labs.dev/fluffyui/terminal"
 )
 
 type fakeTty struct {

@@ -3,11 +3,11 @@ package widgets
 import (
 	"image/color"
 
-	"github.com/odvcencio/fluffyui/backend"
-	"github.com/odvcencio/fluffyui/gpu"
-	"github.com/odvcencio/fluffyui/graphics"
-	"github.com/odvcencio/fluffyui/runtime"
-	"github.com/odvcencio/fluffyui/terminal"
+	"m31labs.dev/fluffyui/backend"
+	"m31labs.dev/fluffyui/gpu"
+	"m31labs.dev/fluffyui/graphics"
+	"m31labs.dev/fluffyui/runtime"
+	"m31labs.dev/fluffyui/terminal"
 )
 
 // GPUCanvasWidget draws using a GPU canvas and image protocols.

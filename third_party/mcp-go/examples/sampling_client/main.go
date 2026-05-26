@@ -8,9 +8,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/odvcencio/fluffyui/third_party/mcp-go/client"
-	"github.com/odvcencio/fluffyui/third_party/mcp-go/client/transport"
-	"github.com/odvcencio/fluffyui/third_party/mcp-go/mcp"
+	"m31labs.dev/fluffyui/third_party/mcp-go/client"
+	"m31labs.dev/fluffyui/third_party/mcp-go/client/transport"
+	"m31labs.dev/fluffyui/third_party/mcp-go/mcp"
 )
 
 // MockSamplingHandler implements the SamplingHandler interface for demonstration.

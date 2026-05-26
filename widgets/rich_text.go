@@ -5,13 +5,13 @@ import (
 
 	"github.com/mattn/go-runewidth"
 
-	"github.com/odvcencio/fluffyui/accessibility"
-	"github.com/odvcencio/fluffyui/backend"
-	"github.com/odvcencio/fluffyui/markdown"
-	"github.com/odvcencio/fluffyui/runtime"
-	"github.com/odvcencio/fluffyui/scroll"
-	uistyle "github.com/odvcencio/fluffyui/style"
-	"github.com/odvcencio/fluffyui/terminal"
+	"m31labs.dev/fluffyui/accessibility"
+	"m31labs.dev/fluffyui/backend"
+	"m31labs.dev/fluffyui/markdown"
+	"m31labs.dev/fluffyui/runtime"
+	"m31labs.dev/fluffyui/scroll"
+	uistyle "m31labs.dev/fluffyui/style"
+	"m31labs.dev/fluffyui/terminal"
 )
 
 // RichTextOption configures a RichText widget.

@@ -4,10 +4,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/odvcencio/fluffyui/backend"
-	"github.com/odvcencio/fluffyui/runtime"
-	"github.com/odvcencio/fluffyui/terminal"
-	flufftest "github.com/odvcencio/fluffyui/testing"
+	"m31labs.dev/fluffyui/backend"
+	"m31labs.dev/fluffyui/runtime"
+	"m31labs.dev/fluffyui/terminal"
+	flufftest "m31labs.dev/fluffyui/testing"
 )
 
 func TestListSelectionRender(t *testing.T) {

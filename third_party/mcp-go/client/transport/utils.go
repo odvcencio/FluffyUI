@@ -3,7 +3,7 @@ package transport
 import (
 	"encoding/json"
 
-	"github.com/odvcencio/fluffyui/third_party/mcp-go/mcp"
+	"m31labs.dev/fluffyui/third_party/mcp-go/mcp"
 )
 
 // NewJSONRPCErrorResponse creates a new JSONRPCResponse with an error.

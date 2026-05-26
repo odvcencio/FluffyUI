@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	mcpclient "github.com/odvcencio/fluffyui/third_party/mcp-go/client"
-	mcptr "github.com/odvcencio/fluffyui/third_party/mcp-go/client/transport"
-	mcp "github.com/odvcencio/fluffyui/third_party/mcp-go/mcp"
+	mcpclient "m31labs.dev/fluffyui/third_party/mcp-go/client"
+	mcptr "m31labs.dev/fluffyui/third_party/mcp-go/client/transport"
+	mcp "m31labs.dev/fluffyui/third_party/mcp-go/mcp"
 )
 
 type mockTransport struct {

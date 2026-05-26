@@ -6,13 +6,13 @@ import (
 	"os"
 	"time"
 
-	"github.com/odvcencio/fluffyui/backend"
-	"github.com/odvcencio/fluffyui/examples/internal/demo"
-	"github.com/odvcencio/fluffyui/runtime"
-	"github.com/odvcencio/fluffyui/state"
-	"github.com/odvcencio/fluffyui/terminal"
-	"github.com/odvcencio/fluffyui/toast"
-	"github.com/odvcencio/fluffyui/widgets"
+	"m31labs.dev/fluffyui/backend"
+	"m31labs.dev/fluffyui/examples/internal/demo"
+	"m31labs.dev/fluffyui/runtime"
+	"m31labs.dev/fluffyui/state"
+	"m31labs.dev/fluffyui/terminal"
+	"m31labs.dev/fluffyui/toast"
+	"m31labs.dev/fluffyui/widgets"
 )
 
 func main() {

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	flufftest "github.com/odvcencio/fluffyui/testing"
+	flufftest "m31labs.dev/fluffyui/testing"
 )
 
 // buildLargeTree creates a tree with the given branching factor and depth.

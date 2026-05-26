@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/odvcencio/fluffyui/terminal"
+	"m31labs.dev/fluffyui/terminal"
 )
 
 // handleIndex serves the terminal HTML page.

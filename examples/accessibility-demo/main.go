@@ -6,11 +6,11 @@ import (
 	"os"
 	"strings"
 
-	"github.com/odvcencio/fluffyui/accessibility"
-	"github.com/odvcencio/fluffyui/backend"
-	"github.com/odvcencio/fluffyui/examples/internal/demo"
-	"github.com/odvcencio/fluffyui/runtime"
-	"github.com/odvcencio/fluffyui/widgets"
+	"m31labs.dev/fluffyui/accessibility"
+	"m31labs.dev/fluffyui/backend"
+	"m31labs.dev/fluffyui/examples/internal/demo"
+	"m31labs.dev/fluffyui/runtime"
+	"m31labs.dev/fluffyui/widgets"
 )
 
 func main() {

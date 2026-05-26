@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/odvcencio/fluffyui/third_party/mcp-go/client/transport"
+	"m31labs.dev/fluffyui/third_party/mcp-go/client/transport"
 )
 
 func TestNewOAuthStreamableHttpClient(t *testing.T) {

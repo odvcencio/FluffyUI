@@ -7,7 +7,7 @@ import (
 	"unsafe"
 
 	"github.com/ebitengine/purego"
-	"github.com/odvcencio/fluffyui/gpu/opengl/gl"
+	"m31labs.dev/fluffyui/gpu/opengl/gl"
 )
 
 const (

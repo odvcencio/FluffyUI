@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	fluffyssh "github.com/odvcencio/fluffyui/ssh"
+	fluffyssh "m31labs.dev/fluffyui/ssh"
 )
 
 func runSSH(args []string) error {

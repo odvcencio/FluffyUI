@@ -1,6 +1,6 @@
 package runtime
 
-import "github.com/odvcencio/fluffyui/state"
+import "m31labs.dev/fluffyui/state"
 
 // AutoBind observes multiple signals and invalidates the widget when any change.
 // Nil signals in the variadic list are silently skipped.

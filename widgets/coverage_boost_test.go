@@ -6,13 +6,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/odvcencio/fluffyui/backend"
-	"github.com/odvcencio/fluffyui/keybind"
-	"github.com/odvcencio/fluffyui/runtime"
-	"github.com/odvcencio/fluffyui/state"
-	"github.com/odvcencio/fluffyui/terminal"
-	"github.com/odvcencio/fluffyui/video"
-	fluffytest "github.com/odvcencio/fluffyui/testing"
+	"m31labs.dev/fluffyui/backend"
+	"m31labs.dev/fluffyui/keybind"
+	"m31labs.dev/fluffyui/runtime"
+	"m31labs.dev/fluffyui/state"
+	"m31labs.dev/fluffyui/terminal"
+	"m31labs.dev/fluffyui/video"
+	fluffytest "m31labs.dev/fluffyui/testing"
 )
 
 // ---------------------------------------------------------------------------

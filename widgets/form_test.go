@@ -3,11 +3,11 @@ package widgets
 import (
 	"testing"
 
-	"github.com/odvcencio/fluffyui/accessibility"
-	"github.com/odvcencio/fluffyui/forms"
-	"github.com/odvcencio/fluffyui/runtime"
-	"github.com/odvcencio/fluffyui/terminal"
-	"github.com/odvcencio/fluffyui/testing/a11ytest"
+	"m31labs.dev/fluffyui/accessibility"
+	"m31labs.dev/fluffyui/forms"
+	"m31labs.dev/fluffyui/runtime"
+	"m31labs.dev/fluffyui/terminal"
+	"m31labs.dev/fluffyui/testing/a11ytest"
 )
 
 func TestForm_Basic(t *testing.T) {

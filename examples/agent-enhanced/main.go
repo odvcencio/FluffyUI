@@ -35,11 +35,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/odvcencio/fluffyui/agent"
-	"github.com/odvcencio/fluffyui/backend/tcell"
-	"github.com/odvcencio/fluffyui/runtime"
-	"github.com/odvcencio/fluffyui/state"
-	"github.com/odvcencio/fluffyui/widgets"
+	"m31labs.dev/fluffyui/agent"
+	"m31labs.dev/fluffyui/backend/tcell"
+	"m31labs.dev/fluffyui/runtime"
+	"m31labs.dev/fluffyui/state"
+	"m31labs.dev/fluffyui/widgets"
 )
 
 func main() {

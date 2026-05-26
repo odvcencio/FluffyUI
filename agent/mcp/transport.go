@@ -13,8 +13,8 @@ import (
 	"sync"
 	"sync/atomic"
 
-	mcp "github.com/odvcencio/fluffyui/third_party/mcp-go/mcp"
-	mcpserver "github.com/odvcencio/fluffyui/third_party/mcp-go/server"
+	mcp "m31labs.dev/fluffyui/third_party/mcp-go/mcp"
+	mcpserver "m31labs.dev/fluffyui/third_party/mcp-go/server"
 )
 
 func (s *Server) startTransport() error {

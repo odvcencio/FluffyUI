@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/odvcencio/fluffyui/backend"
-	"github.com/odvcencio/fluffyui/compositor"
-	"github.com/odvcencio/fluffyui/runtime"
+	"m31labs.dev/fluffyui/backend"
+	"m31labs.dev/fluffyui/compositor"
+	"m31labs.dev/fluffyui/runtime"
 )
 
 func TestANSIEncoderEncodeEmpty(t *testing.T) {

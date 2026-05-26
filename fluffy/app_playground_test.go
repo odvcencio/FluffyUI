@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/odvcencio/fluffyui/backend/web"
+	"m31labs.dev/fluffyui/backend/web"
 )
 
 func TestBuildBackendWebAddrFile(t *testing.T) {

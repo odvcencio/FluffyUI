@@ -3,8 +3,8 @@ package fluffy
 import (
 	"sort"
 
-	"github.com/odvcencio/fluffyui/runtime"
-	"github.com/odvcencio/fluffyui/widgets"
+	"m31labs.dev/fluffyui/runtime"
+	"m31labs.dev/fluffyui/widgets"
 )
 
 // Breakpoint defines a width threshold and its associated layout.

@@ -10,8 +10,8 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/odvcencio/fluffyui/third_party/mcp-go/mcp"
-	"github.com/odvcencio/fluffyui/third_party/mcp-go/server"
+	"m31labs.dev/fluffyui/third_party/mcp-go/mcp"
+	"m31labs.dev/fluffyui/third_party/mcp-go/server"
 )
 
 // authKey is a custom context key for storing the auth token.

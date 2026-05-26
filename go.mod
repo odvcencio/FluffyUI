@@ -1,4 +1,4 @@
-module github.com/odvcencio/fluffyui
+module m31labs.dev/fluffyui
 
 go 1.24.0
 

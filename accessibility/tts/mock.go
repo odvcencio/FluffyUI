@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/odvcencio/fluffyui/accessibility"
+	"m31labs.dev/fluffyui/accessibility"
 )
 
 // Mock records spoken text for testing. It implements accessibility.Speaker.

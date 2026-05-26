@@ -1,10 +1,10 @@
 package fluffy
 
 import (
-	"github.com/odvcencio/fluffyui/runtime"
-	"github.com/odvcencio/fluffyui/state"
-	"github.com/odvcencio/fluffyui/style"
-	"github.com/odvcencio/fluffyui/widgets"
+	"m31labs.dev/fluffyui/runtime"
+	"m31labs.dev/fluffyui/state"
+	"m31labs.dev/fluffyui/style"
+	"m31labs.dev/fluffyui/widgets"
 )
 
 // Button creates a button with a label and click handler.

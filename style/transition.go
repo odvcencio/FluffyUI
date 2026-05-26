@@ -4,7 +4,7 @@ import (
 	"math"
 	"time"
 
-	"github.com/odvcencio/fluffyui/compositor"
+	"m31labs.dev/fluffyui/compositor"
 )
 
 // TransitionManager tracks active transitions and interpolates between old

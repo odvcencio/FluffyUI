@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/odvcencio/fluffyui/backend/sim"
-	"github.com/odvcencio/fluffyui/runtime"
-	"github.com/odvcencio/fluffyui/widgets"
+	"m31labs.dev/fluffyui/backend/sim"
+	"m31labs.dev/fluffyui/runtime"
+	"m31labs.dev/fluffyui/widgets"
 )
 
 func TestServerServeAndHandleRequests(t *testing.T) {

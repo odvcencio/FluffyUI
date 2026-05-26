@@ -3,7 +3,7 @@ package runtime
 import (
 	"testing"
 
-	"github.com/odvcencio/fluffyui/backend"
+	"m31labs.dev/fluffyui/backend"
 )
 
 func TestBuffer_New(t *testing.T) {

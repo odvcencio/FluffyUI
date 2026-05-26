@@ -7,11 +7,11 @@ import (
 	"os"
 	"time"
 
-	"github.com/odvcencio/fluffyui/agent"
-	"github.com/odvcencio/fluffyui/backend"
-	"github.com/odvcencio/fluffyui/examples/internal/demo"
-	"github.com/odvcencio/fluffyui/runtime"
-	"github.com/odvcencio/fluffyui/widgets"
+	"m31labs.dev/fluffyui/agent"
+	"m31labs.dev/fluffyui/backend"
+	"m31labs.dev/fluffyui/examples/internal/demo"
+	"m31labs.dev/fluffyui/runtime"
+	"m31labs.dev/fluffyui/widgets"
 )
 
 const defaultAgentAddr = "tcp:127.0.0.1:7777"

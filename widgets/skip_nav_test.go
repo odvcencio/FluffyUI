@@ -4,9 +4,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/odvcencio/fluffyui/runtime"
-	fluffytest "github.com/odvcencio/fluffyui/testing"
-	"github.com/odvcencio/fluffyui/terminal"
+	"m31labs.dev/fluffyui/runtime"
+	fluffytest "m31labs.dev/fluffyui/testing"
+	"m31labs.dev/fluffyui/terminal"
 )
 
 func TestSkipNav_NewSkipNav(t *testing.T) {

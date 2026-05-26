@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/odvcencio/fluffyui/terminal"
+	"m31labs.dev/fluffyui/terminal"
 )
 
 // Chord represents a multi-key sequence (e.g., Ctrl+K followed by Ctrl+C).

@@ -11,7 +11,7 @@ package runtime
 
 import (
 	"github.com/mattn/go-runewidth"
-	"github.com/odvcencio/fluffyui/backend"
+	"m31labs.dev/fluffyui/backend"
 )
 
 // Cell represents a single character cell in the buffer.

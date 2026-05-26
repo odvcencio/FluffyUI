@@ -7,7 +7,7 @@ import (
 	"io"
 	"sync"
 
-	"github.com/odvcencio/fluffyui/terminal"
+	"m31labs.dev/fluffyui/terminal"
 )
 
 // OSC52Clipboard writes to the system clipboard using the OSC-52 escape

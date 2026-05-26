@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/odvcencio/fluffyui/runtime"
-	"github.com/odvcencio/fluffyui/style"
+	"m31labs.dev/fluffyui/runtime"
+	"m31labs.dev/fluffyui/style"
 )
 
 // WatchStyles parses an FSS stylesheet file and starts watching it for

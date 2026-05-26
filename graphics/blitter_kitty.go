@@ -1,6 +1,6 @@
 package graphics
 
-import "github.com/odvcencio/fluffyui/backend"
+import "m31labs.dev/fluffyui/backend"
 
 // Default Kitty cell dimensions (typical for most terminal fonts)
 const (

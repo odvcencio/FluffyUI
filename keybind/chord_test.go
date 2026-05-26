@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/odvcencio/fluffyui/terminal"
+	"m31labs.dev/fluffyui/terminal"
 )
 
 func ctrlK() terminal.KeyEvent {

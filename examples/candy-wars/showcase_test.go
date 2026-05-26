@@ -4,9 +4,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/odvcencio/fluffyui/runtime"
-	fluffytest "github.com/odvcencio/fluffyui/testing"
-	"github.com/odvcencio/fluffyui/widgets"
+	"m31labs.dev/fluffyui/runtime"
+	fluffytest "m31labs.dev/fluffyui/testing"
+	"m31labs.dev/fluffyui/widgets"
 )
 
 func TestShowcaseTabRender(t *testing.T) {

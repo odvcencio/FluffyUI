@@ -3,8 +3,8 @@ package widgets
 import (
 	"testing"
 
-	"github.com/odvcencio/fluffyui/runtime"
-	"github.com/odvcencio/fluffyui/terminal"
+	"m31labs.dev/fluffyui/runtime"
+	"m31labs.dev/fluffyui/terminal"
 )
 
 // ftTestFocusable is a simple focusable widget for focus trap/skip nav testing.

@@ -3,8 +3,8 @@ package html
 import (
 	"fmt"
 
-	"github.com/odvcencio/fluffyui/runtime"
-	"github.com/odvcencio/fluffyui/style"
+	"m31labs.dev/fluffyui/runtime"
+	"m31labs.dev/fluffyui/style"
 )
 
 // Options configures HTML page generation.

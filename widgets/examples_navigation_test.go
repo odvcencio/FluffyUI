@@ -1,8 +1,8 @@
 package widgets_test
 
 import (
-	"github.com/odvcencio/fluffyui/keybind"
-	"github.com/odvcencio/fluffyui/widgets"
+	"m31labs.dev/fluffyui/keybind"
+	"m31labs.dev/fluffyui/widgets"
 )
 
 func ExampleTabs() {

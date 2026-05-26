@@ -6,7 +6,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/odvcencio/fluffyui/state"
+	"m31labs.dev/fluffyui/state"
 )
 
 // Game State

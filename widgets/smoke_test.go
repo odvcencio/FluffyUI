@@ -6,14 +6,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/odvcencio/fluffyui/graphics"
-	"github.com/odvcencio/fluffyui/gpu"
-	"github.com/odvcencio/fluffyui/keybind"
-	"github.com/odvcencio/fluffyui/backend"
-	"github.com/odvcencio/fluffyui/runtime"
-	"github.com/odvcencio/fluffyui/state"
-	flufftest "github.com/odvcencio/fluffyui/testing"
-	"github.com/odvcencio/fluffyui/toast"
+	"m31labs.dev/fluffyui/graphics"
+	"m31labs.dev/fluffyui/gpu"
+	"m31labs.dev/fluffyui/keybind"
+	"m31labs.dev/fluffyui/backend"
+	"m31labs.dev/fluffyui/runtime"
+	"m31labs.dev/fluffyui/state"
+	flufftest "m31labs.dev/fluffyui/testing"
+	"m31labs.dev/fluffyui/toast"
 )
 
 func renderSmoke(t *testing.T, name string, w runtime.Widget, width, height int) {

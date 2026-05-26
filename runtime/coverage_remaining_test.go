@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/odvcencio/fluffyui/animation"
-	"github.com/odvcencio/fluffyui/backend"
-	"github.com/odvcencio/fluffyui/i18n"
-	"github.com/odvcencio/fluffyui/style"
-	"github.com/odvcencio/fluffyui/theme"
+	"m31labs.dev/fluffyui/animation"
+	"m31labs.dev/fluffyui/backend"
+	"m31labs.dev/fluffyui/i18n"
+	"m31labs.dev/fluffyui/style"
+	"m31labs.dev/fluffyui/theme"
 )
 
 type renderChildWidget struct {

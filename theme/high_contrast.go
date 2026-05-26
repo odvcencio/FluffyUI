@@ -1,7 +1,7 @@
 package theme
 
 import (
-	"github.com/odvcencio/fluffyui/compositor"
+	"m31labs.dev/fluffyui/compositor"
 )
 
 // HighContrastTheme returns a theme using only the 16 ANSI colors for maximum

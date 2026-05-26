@@ -5,12 +5,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/odvcencio/fluffyui/backend"
-	"github.com/odvcencio/fluffyui/keybind"
-	"github.com/odvcencio/fluffyui/runtime"
-	"github.com/odvcencio/fluffyui/state"
-	testing2 "github.com/odvcencio/fluffyui/testing"
-	"github.com/odvcencio/fluffyui/toast"
+	"m31labs.dev/fluffyui/backend"
+	"m31labs.dev/fluffyui/keybind"
+	"m31labs.dev/fluffyui/runtime"
+	"m31labs.dev/fluffyui/state"
+	testing2 "m31labs.dev/fluffyui/testing"
+	"m31labs.dev/fluffyui/toast"
 )
 
 // goldenPath returns the path to a golden file.

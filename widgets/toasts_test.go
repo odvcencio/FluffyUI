@@ -3,8 +3,8 @@ package widgets
 import (
 	"testing"
 
-	"github.com/odvcencio/fluffyui/runtime"
-	"github.com/odvcencio/fluffyui/toast"
+	"m31labs.dev/fluffyui/runtime"
+	"m31labs.dev/fluffyui/toast"
 )
 
 func TestToastStackDismissOnClick(t *testing.T) {

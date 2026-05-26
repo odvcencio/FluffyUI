@@ -19,9 +19,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/odvcencio/fluffyui/agent"
-	"github.com/odvcencio/fluffyui/examples/internal/demo"
-	"github.com/odvcencio/fluffyui/runtime"
+	"m31labs.dev/fluffyui/agent"
+	"m31labs.dev/fluffyui/examples/internal/demo"
+	"m31labs.dev/fluffyui/runtime"
 )
 
 func main() {

@@ -3,7 +3,7 @@ package client
 import (
 	"fmt"
 
-	"github.com/odvcencio/fluffyui/third_party/mcp-go/client/transport"
+	"m31labs.dev/fluffyui/third_party/mcp-go/client/transport"
 )
 
 // NewStreamableHttpClient is a convenience method that creates a new streamable-http-based MCP client

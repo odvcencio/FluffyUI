@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/odvcencio/fluffyui/agent"
-	mcp "github.com/odvcencio/fluffyui/third_party/mcp-go/mcp"
+	"m31labs.dev/fluffyui/agent"
+	mcp "m31labs.dev/fluffyui/third_party/mcp-go/mcp"
 )
 
 const (

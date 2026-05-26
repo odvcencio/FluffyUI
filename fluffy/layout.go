@@ -1,6 +1,6 @@
 package fluffy
 
-import "github.com/odvcencio/fluffyui/runtime"
+import "m31labs.dev/fluffyui/runtime"
 
 // Flex is a container that lays out children along a horizontal or vertical axis.
 type Flex = runtime.Flex

@@ -19,13 +19,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/odvcencio/fluffyui/backend"
-	"github.com/odvcencio/fluffyui/backend/sim"
-	"github.com/odvcencio/fluffyui/graphics"
-	"github.com/odvcencio/fluffyui/recording"
-	"github.com/odvcencio/fluffyui/runtime"
-	"github.com/odvcencio/fluffyui/state"
-	"github.com/odvcencio/fluffyui/widgets"
+	"m31labs.dev/fluffyui/backend"
+	"m31labs.dev/fluffyui/backend/sim"
+	"m31labs.dev/fluffyui/graphics"
+	"m31labs.dev/fluffyui/recording"
+	"m31labs.dev/fluffyui/runtime"
+	"m31labs.dev/fluffyui/state"
+	"m31labs.dev/fluffyui/widgets"
 )
 
 var (

@@ -9,8 +9,8 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/odvcencio/fluffyui/third_party/mcp-go/client/transport"
-	"github.com/odvcencio/fluffyui/third_party/mcp-go/mcp"
+	"m31labs.dev/fluffyui/third_party/mcp-go/client/transport"
+	"m31labs.dev/fluffyui/third_party/mcp-go/mcp"
 )
 
 // Client implements the MCP client.

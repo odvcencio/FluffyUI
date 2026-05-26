@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	mcp "github.com/odvcencio/fluffyui/agent/mcp"
+	mcp "m31labs.dev/fluffyui/agent/mcp"
 )
 
 func boolPtr(v bool) *bool { return &v }

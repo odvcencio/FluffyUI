@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/odvcencio/fluffyui/runtime"
+	"m31labs.dev/fluffyui/runtime"
 )
 
 // VideoRecorderOptions configures cast capture and video export.

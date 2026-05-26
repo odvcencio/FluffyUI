@@ -12,10 +12,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/odvcencio/fluffyui/third_party/mcp-go/client"
-	"github.com/odvcencio/fluffyui/third_party/mcp-go/client/transport"
-	"github.com/odvcencio/fluffyui/third_party/mcp-go/mcp"
-	"github.com/odvcencio/fluffyui/third_party/mcp-go/server"
+	"m31labs.dev/fluffyui/third_party/mcp-go/client"
+	"m31labs.dev/fluffyui/third_party/mcp-go/client/transport"
+	"m31labs.dev/fluffyui/third_party/mcp-go/mcp"
+	"m31labs.dev/fluffyui/third_party/mcp-go/server"
 )
 
 // TestSamplingHandler implements client.SamplingHandler for e2e testing

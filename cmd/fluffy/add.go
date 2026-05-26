@@ -67,9 +67,9 @@ func addPage(root, name string, force bool) error {
 const widgetTemplate = `package widgets
 
 import (
-	"github.com/odvcencio/fluffyui/backend"
-	"github.com/odvcencio/fluffyui/runtime"
-	ui "github.com/odvcencio/fluffyui/widgets"
+	"m31labs.dev/fluffyui/backend"
+	"m31labs.dev/fluffyui/runtime"
+	ui "m31labs.dev/fluffyui/widgets"
 )
 
 type {{.TypeName}} struct {
@@ -106,9 +106,9 @@ var _ runtime.Widget = (*{{.TypeName}})(nil)
 const pageTemplate = `package pages
 
 import (
-	"github.com/odvcencio/fluffyui/backend"
-	"github.com/odvcencio/fluffyui/runtime"
-	ui "github.com/odvcencio/fluffyui/widgets"
+	"m31labs.dev/fluffyui/backend"
+	"m31labs.dev/fluffyui/runtime"
+	ui "m31labs.dev/fluffyui/widgets"
 )
 
 type {{.TypeName}} struct {

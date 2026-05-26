@@ -9,8 +9,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/odvcencio/fluffyui/markdown"
-	"github.com/odvcencio/fluffyui/theme"
+	"m31labs.dev/fluffyui/markdown"
+	"m31labs.dev/fluffyui/theme"
 	"github.com/yuin/goldmark/ast"
 	"gopkg.in/yaml.v3"
 )

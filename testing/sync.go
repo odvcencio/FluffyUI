@@ -8,8 +8,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/odvcencio/fluffyui/runtime"
-	"github.com/odvcencio/fluffyui/terminal"
+	"m31labs.dev/fluffyui/runtime"
+	"m31labs.dev/fluffyui/terminal"
 )
 
 // ErrTimeout is returned when a wait operation times out.

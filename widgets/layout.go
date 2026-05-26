@@ -1,8 +1,8 @@
 package widgets
 
 import (
-	"github.com/odvcencio/fluffyui/runtime"
-	"github.com/odvcencio/fluffyui/style"
+	"m31labs.dev/fluffyui/runtime"
+	"m31labs.dev/fluffyui/style"
 )
 
 type layoutMetrics struct {

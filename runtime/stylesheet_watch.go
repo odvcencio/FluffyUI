@@ -3,7 +3,7 @@ package runtime
 import (
 	"time"
 
-	"github.com/odvcencio/fluffyui/style"
+	"m31labs.dev/fluffyui/style"
 )
 
 // WatchStylesheetFile watches a stylesheet file and applies updates on the app loop.

@@ -4,8 +4,8 @@ package main
 import (
 	"log"
 
-	"github.com/odvcencio/fluffyui/fluffy"
-	"github.com/odvcencio/fluffyui/widgets"
+	"m31labs.dev/fluffyui/fluffy"
+	"m31labs.dev/fluffyui/widgets"
 )
 
 func main() {

@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	flufftest "github.com/odvcencio/fluffyui/testing"
+	flufftest "m31labs.dev/fluffyui/testing"
 )
 
 func TestTable_SortAsc(t *testing.T) {

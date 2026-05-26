@@ -4,8 +4,8 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/odvcencio/fluffyui/accessibility"
-	"github.com/odvcencio/fluffyui/style"
+	"m31labs.dev/fluffyui/accessibility"
+	"m31labs.dev/fluffyui/style"
 )
 
 // StyleTypeProvider overrides the selector type for a widget.

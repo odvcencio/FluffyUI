@@ -9,9 +9,9 @@ import (
 
 	"github.com/gdamore/tcell/v3"
 	tcellcolor "github.com/gdamore/tcell/v3/color"
-	"github.com/odvcencio/fluffyui/backend"
-	backendtcell "github.com/odvcencio/fluffyui/backend/tcell"
-	"github.com/odvcencio/fluffyui/terminal"
+	"m31labs.dev/fluffyui/backend"
+	backendtcell "m31labs.dev/fluffyui/backend/tcell"
+	"m31labs.dev/fluffyui/terminal"
 )
 
 // simCell represents a single cell in the simulation screen.

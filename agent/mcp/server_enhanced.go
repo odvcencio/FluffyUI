@@ -8,9 +8,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/odvcencio/fluffyui/agent"
-	"github.com/odvcencio/fluffyui/runtime"
-	mcp "github.com/odvcencio/fluffyui/third_party/mcp-go/mcp"
+	"m31labs.dev/fluffyui/agent"
+	"m31labs.dev/fluffyui/runtime"
+	mcp "m31labs.dev/fluffyui/third_party/mcp-go/mcp"
 )
 
 // EnhancedServer extends the MCP server with advanced session management,

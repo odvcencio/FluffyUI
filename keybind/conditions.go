@@ -1,9 +1,9 @@
 package keybind
 
 import (
-	"github.com/odvcencio/fluffyui/accessibility"
-	"github.com/odvcencio/fluffyui/clipboard"
-	"github.com/odvcencio/fluffyui/runtime"
+	"m31labs.dev/fluffyui/accessibility"
+	"m31labs.dev/fluffyui/clipboard"
+	"m31labs.dev/fluffyui/runtime"
 )
 
 // WhenFocused returns true when a widget is focused.

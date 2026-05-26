@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/odvcencio/fluffyui/accessibility"
-	"github.com/odvcencio/fluffyui/runtime"
+	"m31labs.dev/fluffyui/accessibility"
+	"m31labs.dev/fluffyui/runtime"
 )
 
 // TreeCheck is an accessibility assertion that operates on a widget tree

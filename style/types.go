@@ -3,8 +3,8 @@ package style
 import (
 	"time"
 
-	"github.com/odvcencio/fluffyui/backend"
-	"github.com/odvcencio/fluffyui/compositor"
+	"m31labs.dev/fluffyui/backend"
+	"m31labs.dev/fluffyui/compositor"
 )
 
 // EasingFunc identifies a CSS-like easing function for transitions.

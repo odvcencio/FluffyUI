@@ -1,6 +1,6 @@
 package fur
 
-import "github.com/odvcencio/fluffyui/theme"
+import "m31labs.dev/fluffyui/theme"
 
 // Theme is an alias to the FluffyUI theme.
 type Theme = theme.Theme

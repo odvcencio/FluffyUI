@@ -1,6 +1,6 @@
 package widgets
 
-import "github.com/odvcencio/fluffyui/runtime"
+import "m31labs.dev/fluffyui/runtime"
 
 // TrackSizeMode defines how a grid track is sized.
 type TrackSizeMode int

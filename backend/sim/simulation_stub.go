@@ -6,8 +6,8 @@ package sim
 import (
 	"errors"
 
-	"github.com/odvcencio/fluffyui/backend"
-	"github.com/odvcencio/fluffyui/terminal"
+	"m31labs.dev/fluffyui/backend"
+	"m31labs.dev/fluffyui/terminal"
 )
 
 var errNotSupported = errors.New("sim backend not supported on WASM")

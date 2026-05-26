@@ -29,8 +29,8 @@ import (
 	"syscall"
 	"time"
 
-	mcp "github.com/odvcencio/fluffyui/agent/mcp"
-	"github.com/odvcencio/fluffyui/accessibility/tts"
+	mcp "m31labs.dev/fluffyui/agent/mcp"
+	"m31labs.dev/fluffyui/accessibility/tts"
 )
 
 var (

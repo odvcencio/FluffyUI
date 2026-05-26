@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	mcp "github.com/odvcencio/fluffyui/agent/mcp"
+	mcp "m31labs.dev/fluffyui/agent/mcp"
 )
 
 // Announce generates utterances from snapshot changes using ARIA semantics.

@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/odvcencio/fluffyui/audio"
+	"m31labs.dev/fluffyui/audio"
 )
 
 func TestExpandArgs(t *testing.T) {

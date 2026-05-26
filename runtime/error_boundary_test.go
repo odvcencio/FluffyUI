@@ -3,7 +3,7 @@ package runtime
 import (
 	"testing"
 
-	"github.com/odvcencio/fluffyui/backend"
+	"m31labs.dev/fluffyui/backend"
 )
 
 // panickingWidget panics in the specified method(s).

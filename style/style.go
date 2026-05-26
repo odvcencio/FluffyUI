@@ -1,8 +1,8 @@
 package style
 
 import (
-	"github.com/odvcencio/fluffyui/backend"
-	"github.com/odvcencio/fluffyui/compositor"
+	"m31labs.dev/fluffyui/backend"
+	"m31labs.dev/fluffyui/compositor"
 )
 
 // ToBackend converts a compositor.Style to backend.Style.

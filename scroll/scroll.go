@@ -4,8 +4,8 @@ package scroll
 import (
 	"image"
 
-	"github.com/odvcencio/fluffyui/backend"
-	"github.com/odvcencio/fluffyui/runtime"
+	"m31labs.dev/fluffyui/backend"
+	"m31labs.dev/fluffyui/runtime"
 )
 
 // ScrollPolicy configures when scrollbars appear.

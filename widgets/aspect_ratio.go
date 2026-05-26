@@ -4,8 +4,8 @@ import (
 	"math"
 	"strings"
 
-	"github.com/odvcencio/fluffyui/accessibility"
-	"github.com/odvcencio/fluffyui/runtime"
+	"m31labs.dev/fluffyui/accessibility"
+	"m31labs.dev/fluffyui/runtime"
 )
 
 // AspectRatio constrains a child to a fixed width/height ratio.

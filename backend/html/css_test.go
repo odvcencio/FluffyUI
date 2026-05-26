@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/odvcencio/fluffyui/compositor"
-	"github.com/odvcencio/fluffyui/style"
+	"m31labs.dev/fluffyui/compositor"
+	"m31labs.dev/fluffyui/style"
 )
 
 func TestSelectorToCSS_Type(t *testing.T) {

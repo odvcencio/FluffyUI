@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/odvcencio/fluffyui/runtime"
+	"m31labs.dev/fluffyui/runtime"
 )
 
 func TestVideoPlayerSeek(t *testing.T) {

@@ -3,13 +3,13 @@ package demo
 import (
 	"time"
 
-	"github.com/odvcencio/fluffyui/accessibility"
-	_ "github.com/odvcencio/fluffyui/agent/mcp" // register MCP enabler for FLUFFY_MCP env
-	"github.com/odvcencio/fluffyui/backend"
-	"github.com/odvcencio/fluffyui/clipboard"
-	"github.com/odvcencio/fluffyui/fluffy"
-	"github.com/odvcencio/fluffyui/keybind"
-	"github.com/odvcencio/fluffyui/runtime"
+	"m31labs.dev/fluffyui/accessibility"
+	_ "m31labs.dev/fluffyui/agent/mcp" // register MCP enabler for FLUFFY_MCP env
+	"m31labs.dev/fluffyui/backend"
+	"m31labs.dev/fluffyui/clipboard"
+	"m31labs.dev/fluffyui/fluffy"
+	"m31labs.dev/fluffyui/keybind"
+	"m31labs.dev/fluffyui/runtime"
 )
 
 // Options configures demo app setup.

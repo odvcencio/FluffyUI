@@ -3,8 +3,8 @@ package main
 import (
 	"log"
 
-	"github.com/odvcencio/fluffyui/fluffy"
-	"github.com/odvcencio/fluffyui/runtime"
+	"m31labs.dev/fluffyui/fluffy"
+	"m31labs.dev/fluffyui/runtime"
 )
 
 func main() {

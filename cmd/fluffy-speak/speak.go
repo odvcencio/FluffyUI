@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	mcp "github.com/odvcencio/fluffyui/agent/mcp"
+	mcp "m31labs.dev/fluffyui/agent/mcp"
 )
 
 type speakRunner struct {

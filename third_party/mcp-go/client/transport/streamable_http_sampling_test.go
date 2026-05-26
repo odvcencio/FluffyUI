@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/odvcencio/fluffyui/third_party/mcp-go/mcp"
+	"m31labs.dev/fluffyui/third_party/mcp-go/mcp"
 )
 
 // TestStreamableHTTP_SamplingFlow tests the complete sampling flow with HTTP transport

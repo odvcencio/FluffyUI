@@ -12,7 +12,7 @@ import (
 	"strings"
 	"unsafe"
 
-	"github.com/odvcencio/fluffyui/gpu/metal/mtl"
+	"m31labs.dev/fluffyui/gpu/metal/mtl"
 )
 
 type metalDriver struct {

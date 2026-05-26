@@ -8,9 +8,9 @@ import (
 	_ "image/png"
 	"os"
 
-	"github.com/odvcencio/fluffyui/accessibility"
-	"github.com/odvcencio/fluffyui/graphics"
-	"github.com/odvcencio/fluffyui/runtime"
+	"m31labs.dev/fluffyui/accessibility"
+	"m31labs.dev/fluffyui/graphics"
+	"m31labs.dev/fluffyui/runtime"
 )
 
 // ImageFit controls how images are sized within their bounds.

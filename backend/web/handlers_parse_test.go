@@ -5,7 +5,7 @@ package web
 import (
 	"testing"
 
-	"github.com/odvcencio/fluffyui/terminal"
+	"m31labs.dev/fluffyui/terminal"
 )
 
 func TestParseCSI_MousePress(t *testing.T) {

@@ -8,7 +8,7 @@ import (
 	"runtime"
 	"unsafe"
 
-	"github.com/odvcencio/fluffyui/gpu/opengl/gl"
+	"m31labs.dev/fluffyui/gpu/opengl/gl"
 )
 
 type openglDriver struct {

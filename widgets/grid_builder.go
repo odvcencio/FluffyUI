@@ -1,6 +1,6 @@
 package widgets
 
-import "github.com/odvcencio/fluffyui/runtime"
+import "m31labs.dev/fluffyui/runtime"
 
 // GridBuilder provides a declarative API for constructing grids.
 //

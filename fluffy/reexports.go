@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"image"
 
-	"github.com/odvcencio/fluffyui/backend"
-	"github.com/odvcencio/fluffyui/runtime"
-	"github.com/odvcencio/fluffyui/state"
-	"github.com/odvcencio/fluffyui/style"
-	"github.com/odvcencio/fluffyui/theme"
-	"github.com/odvcencio/fluffyui/widgets"
+	"m31labs.dev/fluffyui/backend"
+	"m31labs.dev/fluffyui/runtime"
+	"m31labs.dev/fluffyui/state"
+	"m31labs.dev/fluffyui/style"
+	"m31labs.dev/fluffyui/theme"
+	"m31labs.dev/fluffyui/widgets"
 )
 
 // =============================================================================

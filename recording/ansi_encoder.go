@@ -1,10 +1,10 @@
 package recording
 
 import (
-	"github.com/odvcencio/fluffyui/backend"
-	"github.com/odvcencio/fluffyui/compositor"
-	"github.com/odvcencio/fluffyui/runtime"
-	"github.com/odvcencio/fluffyui/style"
+	"m31labs.dev/fluffyui/backend"
+	"m31labs.dev/fluffyui/compositor"
+	"m31labs.dev/fluffyui/runtime"
+	"m31labs.dev/fluffyui/style"
 )
 
 // ANSIEncoder encodes buffer updates as ANSI sequences.

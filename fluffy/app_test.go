@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/odvcencio/fluffyui/backend"
-	"github.com/odvcencio/fluffyui/backend/sim"
-	"github.com/odvcencio/fluffyui/runtime"
-	fluffytest "github.com/odvcencio/fluffyui/testing"
+	"m31labs.dev/fluffyui/backend"
+	"m31labs.dev/fluffyui/backend/sim"
+	"m31labs.dev/fluffyui/runtime"
+	fluffytest "m31labs.dev/fluffyui/testing"
 )
 
 type quitOnTickWidget struct{}

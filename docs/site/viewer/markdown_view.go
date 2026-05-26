@@ -5,14 +5,14 @@ import (
 
 	"github.com/mattn/go-runewidth"
 
-	"github.com/odvcencio/fluffyui/accessibility"
-	"github.com/odvcencio/fluffyui/backend"
-	"github.com/odvcencio/fluffyui/compositor"
-	"github.com/odvcencio/fluffyui/markdown"
-	"github.com/odvcencio/fluffyui/runtime"
-	"github.com/odvcencio/fluffyui/scroll"
-	"github.com/odvcencio/fluffyui/terminal"
-	"github.com/odvcencio/fluffyui/widgets"
+	"m31labs.dev/fluffyui/accessibility"
+	"m31labs.dev/fluffyui/backend"
+	"m31labs.dev/fluffyui/compositor"
+	"m31labs.dev/fluffyui/markdown"
+	"m31labs.dev/fluffyui/runtime"
+	"m31labs.dev/fluffyui/scroll"
+	"m31labs.dev/fluffyui/terminal"
+	"m31labs.dev/fluffyui/widgets"
 )
 
 // MarkdownView renders styled markdown lines with internal scrolling.

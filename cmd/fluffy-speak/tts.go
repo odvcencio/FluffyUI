@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/odvcencio/fluffyui/accessibility"
-	"github.com/odvcencio/fluffyui/accessibility/tts"
+	"m31labs.dev/fluffyui/accessibility"
+	"m31labs.dev/fluffyui/accessibility/tts"
 )
 
 // Speaker is an alias for accessibility.Speaker.

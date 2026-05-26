@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/odvcencio/fluffyui/graphics"
+	"m31labs.dev/fluffyui/graphics"
 )
 
 func TestAnimatableLerp(t *testing.T) {

@@ -7,14 +7,14 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/odvcencio/fluffyui/accessibility"
-	"github.com/odvcencio/fluffyui/backend"
-	backendtcell "github.com/odvcencio/fluffyui/backend/tcell"
-	"github.com/odvcencio/fluffyui/clipboard"
-	"github.com/odvcencio/fluffyui/docs/site/content"
-	"github.com/odvcencio/fluffyui/docs/site/viewer"
-	"github.com/odvcencio/fluffyui/keybind"
-	"github.com/odvcencio/fluffyui/runtime"
+	"m31labs.dev/fluffyui/accessibility"
+	"m31labs.dev/fluffyui/backend"
+	backendtcell "m31labs.dev/fluffyui/backend/tcell"
+	"m31labs.dev/fluffyui/clipboard"
+	"m31labs.dev/fluffyui/docs/site/content"
+	"m31labs.dev/fluffyui/docs/site/viewer"
+	"m31labs.dev/fluffyui/keybind"
+	"m31labs.dev/fluffyui/runtime"
 )
 
 func main() {

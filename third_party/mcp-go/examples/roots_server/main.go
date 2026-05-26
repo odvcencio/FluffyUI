@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/odvcencio/fluffyui/third_party/mcp-go/mcp"
-	"github.com/odvcencio/fluffyui/third_party/mcp-go/server"
+	"m31labs.dev/fluffyui/third_party/mcp-go/mcp"
+	"m31labs.dev/fluffyui/third_party/mcp-go/server"
 )
 
 // handleNotification handles JSON-RPC notifications by printing the notification method to standard output.

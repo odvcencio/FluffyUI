@@ -3,7 +3,7 @@ package theme
 import (
 	"testing"
 
-	"github.com/odvcencio/fluffyui/compositor"
+	"m31labs.dev/fluffyui/compositor"
 )
 
 func TestDefaultTheme(t *testing.T) {

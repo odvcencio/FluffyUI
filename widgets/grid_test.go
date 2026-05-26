@@ -3,8 +3,8 @@ package widgets
 import (
 	"testing"
 
-	"github.com/odvcencio/fluffyui/accessibility"
-	"github.com/odvcencio/fluffyui/runtime"
+	"m31labs.dev/fluffyui/accessibility"
+	"m31labs.dev/fluffyui/runtime"
 )
 
 // gridTestWidget is a minimal widget for grid tests with a configurable preferred size.

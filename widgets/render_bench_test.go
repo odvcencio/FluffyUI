@@ -4,8 +4,8 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/odvcencio/fluffyui/backend"
-	"github.com/odvcencio/fluffyui/runtime"
+	"m31labs.dev/fluffyui/backend"
+	"m31labs.dev/fluffyui/runtime"
 )
 
 func BenchmarkLabelRender(b *testing.B) {

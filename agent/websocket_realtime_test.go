@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/odvcencio/fluffyui/backend/sim"
-	"github.com/odvcencio/fluffyui/runtime"
+	"m31labs.dev/fluffyui/backend/sim"
+	"m31labs.dev/fluffyui/runtime"
 )
 
 func readWSResponse(t *testing.T, conn *websocket.Conn, wantID string) wsResponse {

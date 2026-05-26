@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/odvcencio/fluffyui/compositor"
+	"m31labs.dev/fluffyui/compositor"
 )
 
 // Live provides updating display without full TUI.

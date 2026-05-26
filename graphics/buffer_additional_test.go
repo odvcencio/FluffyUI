@@ -3,7 +3,7 @@ package graphics
 import (
 	"testing"
 
-	"github.com/odvcencio/fluffyui/backend"
+	"m31labs.dev/fluffyui/backend"
 )
 
 type testBlitter struct{}

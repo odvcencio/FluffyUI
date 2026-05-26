@@ -3,7 +3,7 @@
 // simulation backends (testing), enabling golden-frame tests.
 package backend
 
-import "github.com/odvcencio/fluffyui/terminal"
+import "m31labs.dev/fluffyui/terminal"
 
 // Backend is the terminal abstraction layer.
 // Implementations handle terminal I/O, input events, and screen rendering.

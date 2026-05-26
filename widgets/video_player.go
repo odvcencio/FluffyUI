@@ -6,9 +6,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/odvcencio/fluffyui/graphics"
-	"github.com/odvcencio/fluffyui/runtime"
-	"github.com/odvcencio/fluffyui/video"
+	"m31labs.dev/fluffyui/graphics"
+	"m31labs.dev/fluffyui/runtime"
+	"m31labs.dev/fluffyui/video"
 )
 
 // VideoPlayer renders video frames onto a canvas.

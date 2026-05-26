@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/odvcencio/fluffyui/runtime"
+	"m31labs.dev/fluffyui/runtime"
 )
 
 // UpdateSnapshots controls whether Snapshot overwrites golden files instead of

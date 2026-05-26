@@ -3,8 +3,8 @@ package keybind
 import (
 	"testing"
 
-	"github.com/odvcencio/fluffyui/runtime"
-	"github.com/odvcencio/fluffyui/terminal"
+	"m31labs.dev/fluffyui/runtime"
+	"m31labs.dev/fluffyui/terminal"
 )
 
 func TestParseKeySequence(t *testing.T) {

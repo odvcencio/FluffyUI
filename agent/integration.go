@@ -31,7 +31,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/odvcencio/fluffyui/runtime"
+	"m31labs.dev/fluffyui/runtime"
 )
 
 // EnableFromEnv enables the agent server from environment variables.

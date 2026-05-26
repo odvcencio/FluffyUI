@@ -11,7 +11,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/odvcencio/fluffyui/accessibility"
+	"m31labs.dev/fluffyui/accessibility"
 )
 
 type ssipSpeaker struct {

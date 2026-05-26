@@ -4,7 +4,7 @@ import (
 	"image"
 	"testing"
 
-	"github.com/odvcencio/fluffyui/runtime"
+	"m31labs.dev/fluffyui/runtime"
 )
 
 func TestViewportClampOffset(t *testing.T) {

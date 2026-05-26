@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/odvcencio/fluffyui/third_party/mcp-go/server"
+	"m31labs.dev/fluffyui/third_party/mcp-go/server"
 )
 
 // TestSSE_StartIdempotency tests that SSE Start() is idempotent

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/odvcencio/fluffyui/third_party/mcp-go/client/transport"
+	"m31labs.dev/fluffyui/third_party/mcp-go/client/transport"
 )
 
 // NewStdioMCPClient creates a new stdio-based MCP client that communicates with a subprocess.

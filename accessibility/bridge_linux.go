@@ -3,7 +3,7 @@
 package accessibility
 
 import (
-	"github.com/odvcencio/fluffyui/accessibility/atspi"
+	"m31labs.dev/fluffyui/accessibility/atspi"
 )
 
 // NewBridge returns an AT-SPI bridge for Linux.

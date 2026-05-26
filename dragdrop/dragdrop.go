@@ -1,7 +1,7 @@
 // Package dragdrop provides drag-and-drop interfaces.
 package dragdrop
 
-import "github.com/odvcencio/fluffyui/runtime"
+import "m31labs.dev/fluffyui/runtime"
 
 // DropPosition describes a drop location.
 type DropPosition struct {

@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/odvcencio/fluffyui/accessibility"
-	"github.com/odvcencio/fluffyui/animation"
-	"github.com/odvcencio/fluffyui/backend"
-	"github.com/odvcencio/fluffyui/effects"
-	"github.com/odvcencio/fluffyui/graphics"
-	"github.com/odvcencio/fluffyui/runtime"
+	"m31labs.dev/fluffyui/accessibility"
+	"m31labs.dev/fluffyui/animation"
+	"m31labs.dev/fluffyui/backend"
+	"m31labs.dev/fluffyui/effects"
+	"m31labs.dev/fluffyui/graphics"
+	"m31labs.dev/fluffyui/runtime"
 )
 
 // GaugeColors defines the colors used for the animated gauge.

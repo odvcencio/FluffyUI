@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/odvcencio/fluffyui/backend/sim"
-	"github.com/odvcencio/fluffyui/runtime"
-	mcp "github.com/odvcencio/fluffyui/third_party/mcp-go/mcp"
-	mcpserver "github.com/odvcencio/fluffyui/third_party/mcp-go/server"
+	"m31labs.dev/fluffyui/backend/sim"
+	"m31labs.dev/fluffyui/runtime"
+	mcp "m31labs.dev/fluffyui/third_party/mcp-go/mcp"
+	mcpserver "m31labs.dev/fluffyui/third_party/mcp-go/server"
 )
 
 func newThemeTestServer(t *testing.T) *Server {

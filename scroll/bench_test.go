@@ -3,8 +3,8 @@ package scroll
 import (
 	"testing"
 
-	"github.com/odvcencio/fluffyui/backend"
-	"github.com/odvcencio/fluffyui/runtime"
+	"m31labs.dev/fluffyui/backend"
+	"m31labs.dev/fluffyui/runtime"
 )
 
 // BenchmarkVirtualListSetSelected_10K measures SetSelected on a 10K-item list

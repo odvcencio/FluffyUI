@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/odvcencio/fluffyui/backend"
+	"m31labs.dev/fluffyui/backend"
 )
 
 func TestEncodeKittyBasic(t *testing.T) {

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/odvcencio/fluffyui/compositor"
-	"github.com/odvcencio/fluffyui/style"
+	"m31labs.dev/fluffyui/compositor"
+	"m31labs.dev/fluffyui/style"
 )
 
 // StylesheetToCSS converts an FSS stylesheet to CSS.

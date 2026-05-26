@@ -3,7 +3,7 @@ package runtime
 import (
 	"time"
 
-	"github.com/odvcencio/fluffyui/terminal"
+	"m31labs.dev/fluffyui/terminal"
 )
 
 // Message represents an event flowing into the UI.

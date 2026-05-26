@@ -11,9 +11,9 @@ import (
 	"fmt"
 	"context"
 	"strings"
-	"github.com/odvcencio/fluffyui/fluffy"
-	"github.com/odvcencio/fluffyui/widgets"
-	"github.com/odvcencio/fluffyui/state"
+	"m31labs.dev/fluffyui/fluffy"
+	"m31labs.dev/fluffyui/widgets"
+	"m31labs.dev/fluffyui/state"
 )
 
 func main() { fmt.Println("hi"); _ = context.Background(); _ = strings.ToUpper; _ = fluffy.Run; _ = widgets.NewButton; _ = state.New[int] }

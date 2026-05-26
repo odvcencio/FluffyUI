@@ -3,12 +3,12 @@ package widgets
 import (
 	"testing"
 
-	"github.com/odvcencio/fluffyui/backend"
-	"github.com/odvcencio/fluffyui/clipboard"
-	"github.com/odvcencio/fluffyui/forms"
-	"github.com/odvcencio/fluffyui/runtime"
-	"github.com/odvcencio/fluffyui/terminal"
-	flufftest "github.com/odvcencio/fluffyui/testing"
+	"m31labs.dev/fluffyui/backend"
+	"m31labs.dev/fluffyui/clipboard"
+	"m31labs.dev/fluffyui/forms"
+	"m31labs.dev/fluffyui/runtime"
+	"m31labs.dev/fluffyui/terminal"
+	flufftest "m31labs.dev/fluffyui/testing"
 )
 
 func TestInputCursorAndClipboard(t *testing.T) {

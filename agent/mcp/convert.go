@@ -4,9 +4,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/odvcencio/fluffyui/accessibility"
-	"github.com/odvcencio/fluffyui/agent"
-	"github.com/odvcencio/fluffyui/runtime"
+	"m31labs.dev/fluffyui/accessibility"
+	"m31labs.dev/fluffyui/agent"
+	"m31labs.dev/fluffyui/runtime"
 )
 
 func snapshotFromAgent(snap agent.Snapshot, includeText bool) Snapshot {

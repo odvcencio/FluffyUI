@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/odvcencio/fluffyui/runtime"
-	fluffytest "github.com/odvcencio/fluffyui/testing"
+	"m31labs.dev/fluffyui/runtime"
+	fluffytest "m31labs.dev/fluffyui/testing"
 )
 
 func TestCard_NewCard(t *testing.T) {

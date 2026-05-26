@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/odvcencio/fluffyui/backend"
+	"m31labs.dev/fluffyui/backend"
 )
 
 // Role describes the semantic role of a widget.

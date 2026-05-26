@@ -1,7 +1,7 @@
 package metal
 
 import (
-	"github.com/odvcencio/fluffyui/gpu"
+	"m31labs.dev/fluffyui/gpu"
 )
 
 // New returns a Metal driver when available.

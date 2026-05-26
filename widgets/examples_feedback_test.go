@@ -1,9 +1,9 @@
 package widgets_test
 
 import (
-	"github.com/odvcencio/fluffyui/state"
-	"github.com/odvcencio/fluffyui/toast"
-	"github.com/odvcencio/fluffyui/widgets"
+	"m31labs.dev/fluffyui/state"
+	"m31labs.dev/fluffyui/toast"
+	"m31labs.dev/fluffyui/widgets"
 )
 
 func ExampleDialog() {

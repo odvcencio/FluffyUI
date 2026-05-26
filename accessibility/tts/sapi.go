@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/odvcencio/fluffyui/accessibility"
+	"m31labs.dev/fluffyui/accessibility"
 )
 
 // sapiSpeaker uses a persistent PowerShell process with System.Speech.

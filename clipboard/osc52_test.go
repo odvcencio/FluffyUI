@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/odvcencio/fluffyui/terminal"
+	"m31labs.dev/fluffyui/terminal"
 )
 
 func TestOSC52Write(t *testing.T) {

@@ -6,9 +6,9 @@ import (
 	"image"
 	"sync"
 
-	"github.com/odvcencio/fluffyui/backend"
-	"github.com/odvcencio/fluffyui/graphics"
-	"github.com/odvcencio/fluffyui/runtime"
+	"m31labs.dev/fluffyui/backend"
+	"m31labs.dev/fluffyui/graphics"
+	"m31labs.dev/fluffyui/runtime"
 )
 
 // AsyncImage loads an image asynchronously and renders it when ready.

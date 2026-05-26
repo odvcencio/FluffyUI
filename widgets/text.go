@@ -5,11 +5,11 @@ import (
 	"html/template"
 	"strings"
 
-	"github.com/odvcencio/fluffyui/accessibility"
-	"github.com/odvcencio/fluffyui/backend"
-	"github.com/odvcencio/fluffyui/i18n"
-	"github.com/odvcencio/fluffyui/runtime"
-	uistyle "github.com/odvcencio/fluffyui/style"
+	"m31labs.dev/fluffyui/accessibility"
+	"m31labs.dev/fluffyui/backend"
+	"m31labs.dev/fluffyui/i18n"
+	"m31labs.dev/fluffyui/runtime"
+	uistyle "m31labs.dev/fluffyui/style"
 )
 
 // Text is a simple text display widget.

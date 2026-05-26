@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/odvcencio/fluffyui/widgets"
+	"m31labs.dev/fluffyui/widgets"
 )
 
 func TestHarnessCapture(t *testing.T) {

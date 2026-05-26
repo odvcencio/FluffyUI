@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/odvcencio/fluffyui/third_party/mcp-go/client/transport"
-	"github.com/odvcencio/fluffyui/third_party/mcp-go/mcp"
+	"m31labs.dev/fluffyui/third_party/mcp-go/client/transport"
+	"m31labs.dev/fluffyui/third_party/mcp-go/mcp"
 )
 
 // mockProtocolTransport implements transport.Interface for testing protocol negotiation

@@ -3,11 +3,11 @@ package widgets
 import (
 	"strings"
 
-	"github.com/odvcencio/fluffyui/accessibility"
-	"github.com/odvcencio/fluffyui/backend"
-	"github.com/odvcencio/fluffyui/runtime"
-	uistyle "github.com/odvcencio/fluffyui/style"
-	"github.com/odvcencio/fluffyui/terminal"
+	"m31labs.dev/fluffyui/accessibility"
+	"m31labs.dev/fluffyui/backend"
+	"m31labs.dev/fluffyui/runtime"
+	uistyle "m31labs.dev/fluffyui/style"
+	"m31labs.dev/fluffyui/terminal"
 )
 
 // Combobox is a dropdown select that also accepts free-text input.

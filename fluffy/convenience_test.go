@@ -3,7 +3,7 @@ package fluffy
 import (
 	"testing"
 
-	"github.com/odvcencio/fluffyui/style"
+	"m31labs.dev/fluffyui/style"
 )
 
 func TestThemeToggle(t *testing.T) {

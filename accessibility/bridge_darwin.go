@@ -3,7 +3,7 @@
 package accessibility
 
 import (
-	"github.com/odvcencio/fluffyui/accessibility/nsaccessibility"
+	"m31labs.dev/fluffyui/accessibility/nsaccessibility"
 )
 
 // NewBridge returns an NSAccessibility bridge for macOS.

@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/odvcencio/fluffyui/accessibility"
-	"github.com/odvcencio/fluffyui/runtime"
+	"m31labs.dev/fluffyui/accessibility"
+	"m31labs.dev/fluffyui/runtime"
 )
 
 // A11ySeverity describes audit severity.

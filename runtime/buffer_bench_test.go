@@ -3,7 +3,7 @@ package runtime
 import (
 	"testing"
 
-	"github.com/odvcencio/fluffyui/backend"
+	"m31labs.dev/fluffyui/backend"
 )
 
 // BenchmarkBuffer_Set measures single cell writes.

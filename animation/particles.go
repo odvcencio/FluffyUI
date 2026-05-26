@@ -4,8 +4,8 @@ import (
 	"math"
 	"math/rand"
 
-	"github.com/odvcencio/fluffyui/backend"
-	"github.com/odvcencio/fluffyui/graphics"
+	"m31labs.dev/fluffyui/backend"
+	"m31labs.dev/fluffyui/graphics"
 )
 
 // Vector2 is a 2D vector.

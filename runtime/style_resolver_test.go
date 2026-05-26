@@ -3,7 +3,7 @@ package runtime
 import (
 	"testing"
 
-	"github.com/odvcencio/fluffyui/style"
+	"m31labs.dev/fluffyui/style"
 )
 
 type styleTestWidget struct {

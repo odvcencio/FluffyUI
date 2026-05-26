@@ -1,6 +1,6 @@
 package graphics
 
-import "github.com/odvcencio/fluffyui/backend"
+import "m31labs.dev/fluffyui/backend"
 
 // BrailleBlitter renders 2x4 pixels per cell using braille patterns.
 type BrailleBlitter struct{}
