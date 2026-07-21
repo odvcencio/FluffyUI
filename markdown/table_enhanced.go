@@ -4,24 +4,24 @@ import (
 	"strings"
 
 	"github.com/mattn/go-runewidth"
+	extast "github.com/yuin/goldmark/extension/ast"
 	"m31labs.dev/fluffyui/compositor"
 	"m31labs.dev/fluffyui/theme"
-	extast "github.com/yuin/goldmark/extension/ast"
 )
 
 // Box drawing characters for table borders
 type BoxDrawings struct {
-	Horizontal       string
-	Vertical         string
-	TopLeft          string
-	TopRight         string
-	BottomLeft       string
-	BottomRight      string
-	LeftT            string
-	RightT           string
-	TopT             string
-	BottomT          string
-	Cross            string
+	Horizontal  string
+	Vertical    string
+	TopLeft     string
+	TopRight    string
+	BottomLeft  string
+	BottomRight string
+	LeftT       string
+	RightT      string
+	TopT        string
+	BottomT     string
+	Cross       string
 }
 
 // RoundedBoxDrawings uses rounded corners for a softer look
@@ -161,7 +161,7 @@ func ParseTable(table *extast.Table, source []byte) *EnhancedTable {
 
 	for row := table.FirstChild(); row != nil; row = row.NextSibling() {
 		tr := TableRow{}
-		
+
 		switch r := row.(type) {
 		case *extast.TableHeader:
 			tr.IsHeader = true
@@ -189,7 +189,7 @@ func ParseTable(table *extast.Table, source []byte) *EnhancedTable {
 				}
 			}
 		}
-		
+
 		if len(tr.Cells) > 0 {
 			et.Rows = append(et.Rows, tr)
 			if len(tr.Cells) > et.Columns {
@@ -272,24 +272,32 @@ func (t *EnhancedTable) redistributeWidths(maxWidth int, config TableRendererCon
 		return
 	}
 
-	// Redistribute proportionally
-	scale := float64(available) / float64(totalContent)
-	newTotal := 0
-	for i := range t.ColWidths {
-		newWidth := int(float64(t.ColWidths[i]) * scale)
-		if newWidth < config.MinColumnWidth {
-			newWidth = config.MinColumnWidth
+	minWidth := config.MinColumnWidth
+	if minWidth < 1 {
+		minWidth = 1
+	}
+	if available < minWidth*t.Columns {
+		minWidth = 1
+	}
+
+	// Shrink the widest columns first. This guarantees that the emitted border
+	// and row widths agree with TotalWidth instead of merely recording maxWidth
+	// after minimum-width clamping has made the table wider than the viewport.
+	for totalContent > available {
+		widest := -1
+		for i, width := range t.ColWidths {
+			if width > minWidth && (widest < 0 || width > t.ColWidths[widest]) {
+				widest = i
+			}
 		}
-		t.ColWidths[i] = newWidth
-		newTotal += newWidth
+		if widest < 0 {
+			break
+		}
+		t.ColWidths[widest]--
+		totalContent--
 	}
 
-	// Distribute any remaining space to last column
-	if newTotal < available {
-		t.ColWidths[t.Columns-1] += available - newTotal
-	}
-
-	t.TotalWidth = maxWidth
+	t.TotalWidth = (1 + t.Columns + 1) + (t.Columns * config.Padding * 2) + totalContent
 }
 
 // Render renders the table to styled lines
@@ -307,7 +315,7 @@ func (t *EnhancedTable) Render(config TableRendererConfig) []StyledLine {
 	// Render rows
 	for i, row := range t.Rows {
 		lines = append(lines, t.renderRow(row, config))
-		
+
 		// Add separator after header
 		if row.IsHeader && i < len(t.Rows)-1 {
 			lines = append(lines, t.renderBorder(box.LeftT, box.Cross, box.RightT, config))
@@ -325,18 +333,18 @@ func (t *EnhancedTable) renderBorder(left, middle, right string, config TableRen
 	borderStyle := config.BorderStyle
 
 	spans = append(spans, StyledSpan{Text: left, Style: borderStyle})
-	
+
 	for i, width := range t.ColWidths {
 		padding := strings.Repeat(config.BoxDrawings.Horizontal, config.Padding*2+width)
 		spans = append(spans, StyledSpan{Text: padding, Style: borderStyle})
-		
+
 		if i < len(t.ColWidths)-1 {
 			spans = append(spans, StyledSpan{Text: middle, Style: borderStyle})
 		}
 	}
-	
+
 	spans = append(spans, StyledSpan{Text: right, Style: borderStyle})
-	
+
 	return StyledLine{Spans: spans}
 }
 
@@ -364,13 +372,13 @@ func (t *EnhancedTable) renderRow(row TableRow, config TableRendererConfig) Styl
 
 		// Pad content according to alignment
 		content := t.alignText(cell.Text, width, cell.Alignment)
-		
+
 		// Add padding spaces
 		padding := strings.Repeat(" ", config.Padding)
 		spans = append(spans, StyledSpan{Text: padding, Style: config.CellStyle})
 		spans = append(spans, StyledSpan{Text: content, Style: style})
 		spans = append(spans, StyledSpan{Text: padding, Style: config.CellStyle})
-		
+
 		spans = append(spans, StyledSpan{Text: box.Vertical, Style: config.BorderStyle})
 	}
 
@@ -419,7 +427,7 @@ func (r *EnhancedTableRenderer) RenderTable(table *extast.Table, source []byte, 
 	if et.Columns == 0 {
 		return nil
 	}
-	
+
 	et.CalculateWidths(r.config, maxWidth)
 	return et.Render(r.config)
 }

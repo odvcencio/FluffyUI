@@ -5,10 +5,10 @@ import (
 	"strconv"
 	"strings"
 
-	"m31labs.dev/fluffyui/compositor"
-	"m31labs.dev/fluffyui/theme"
 	"github.com/yuin/goldmark/ast"
 	extast "github.com/yuin/goldmark/extension/ast"
+	"m31labs.dev/fluffyui/compositor"
+	"m31labs.dev/fluffyui/theme"
 )
 
 // Renderer turns markdown into styled lines for the TUI.
@@ -35,9 +35,15 @@ func NewRenderer(t *theme.Theme) *Renderer {
 
 // Render parses markdown and returns styled lines for the given source.
 func (r *Renderer) Render(source, content string) []StyledLine {
+	return r.RenderWidth(source, content, 0)
+}
+
+// RenderWidth parses markdown and constrains width-sensitive blocks such as
+// tables to maxWidth. A non-positive width keeps their natural size.
+func (r *Renderer) RenderWidth(source, content string, maxWidth int) []StyledLine {
 	cfg := r.configForSource(source)
 	root := r.parser.ParseString(content)
-	return r.renderASTWithConfig(root, []byte(content), cfg)
+	return r.renderASTWithConfig(root, []byte(content), cfg, maxWidth)
 }
 
 // CodeBlockBackground returns the default code block background style.
@@ -79,18 +85,24 @@ func baseStyleForSource(source string, t *theme.Theme) compositor.Style {
 
 // RenderAST renders a pre-parsed markdown AST.
 func (r *Renderer) RenderAST(source string, root ast.Node, content string) []StyledLine {
-	cfg := r.configForSource(source)
-	return r.renderASTWithConfig(root, []byte(content), cfg)
+	return r.RenderASTWidth(source, root, content, 0)
 }
 
-func (r *Renderer) renderASTWithConfig(root ast.Node, source []byte, cfg *StyleConfig) []StyledLine {
+// RenderASTWidth renders a pre-parsed AST with width-sensitive blocks
+// constrained to maxWidth.
+func (r *Renderer) RenderASTWidth(source string, root ast.Node, content string, maxWidth int) []StyledLine {
+	cfg := r.configForSource(source)
+	return r.renderASTWithConfig(root, []byte(content), cfg, maxWidth)
+}
+
+func (r *Renderer) renderASTWithConfig(root ast.Node, source []byte, cfg *StyleConfig, maxWidth int) []StyledLine {
 	if cfg == nil {
 		return nil
 	}
 	if root == nil {
 		return nil
 	}
-	state := newRenderState(cfg, source, r.highlighter)
+	state := newRenderState(cfg, source, r.highlighter, maxWidth)
 
 	for node := root.FirstChild(); node != nil; node = node.NextSibling() {
 		r.renderBlock(node, state, false)
@@ -108,14 +120,16 @@ type renderState struct {
 	current     []StyledSpan
 	prefix      []StyledSpan
 	highlighter *Highlighter
+	maxWidth    int
 }
 
-func newRenderState(cfg *StyleConfig, source []byte, highlighter *Highlighter) *renderState {
+func newRenderState(cfg *StyleConfig, source []byte, highlighter *Highlighter, maxWidth int) *renderState {
 	return &renderState{
 		cfg:         cfg,
 		source:      source,
 		baseStyle:   cfg.Text,
 		highlighter: highlighter,
+		maxWidth:    maxWidth,
 	}
 }
 
@@ -484,7 +498,7 @@ func (r *Renderer) renderTable(table *extast.Table, state *renderState) {
 	}
 
 	renderer := NewEnhancedTableRenderer(config)
-	lines := renderer.RenderTable(table, state.source, 0) // 0 = no max width limit
+	lines := renderer.RenderTable(table, state.source, state.maxWidth)
 
 	for _, line := range lines {
 		line.Prefix = append([]StyledSpan{}, state.prefix...)

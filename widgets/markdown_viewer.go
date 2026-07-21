@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/extension"
 	"m31labs.dev/fluffyui/accessibility"
 	"m31labs.dev/fluffyui/backend"
 	"m31labs.dev/fluffyui/markdown"
@@ -12,7 +14,6 @@ import (
 	"m31labs.dev/fluffyui/scroll"
 	"m31labs.dev/fluffyui/terminal"
 	"m31labs.dev/fluffyui/theme"
-	"github.com/yuin/goldmark"
 )
 
 // MarkdownViewerOption configures a MarkdownViewer widget.
@@ -216,7 +217,7 @@ func (m *MarkdownViewer) Render(ctx runtime.RenderContext) {
 // RenderHTML renders the markdown content as static HTML.
 func (m *MarkdownViewer) RenderHTML(ctx runtime.HTMLContext) runtime.HTML {
 	var buf bytes.Buffer
-	md := goldmark.New()
+	md := goldmark.New(goldmark.WithExtensions(extension.GFM))
 	_ = md.Convert([]byte(m.content), &buf)
 	return runtime.HTML(fmt.Sprintf(`<article class="fluffy-MarkdownViewer">%s</article>`, buf.String()))
 }
@@ -359,6 +360,12 @@ func (m *MarkdownViewer) wrap(width int) {
 		return
 	}
 	m.width = width
+	if strings.TrimSpace(m.content) != "" {
+		if m.renderer == nil {
+			m.renderer = markdown.NewRenderer(m.mdTheme)
+		}
+		m.lines = m.renderer.RenderWidth("", m.content, width)
+	}
 	if m.wordWrap {
 		m.wrapped = wrapRichTextLines(m.lines, width)
 	} else {
