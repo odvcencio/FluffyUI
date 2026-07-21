@@ -25,7 +25,7 @@ import (
     "context"
     "log"
 
-    "github.com/odvcencio/fluffyui/fluffy"
+    "m31labs.dev/fluffyui/fluffy"
 )
 
 func main() {
@@ -99,9 +99,9 @@ This is the pattern used by Buckley.
 package main
 
 import (
-    "github.com/odvcencio/fluffyui/backend/tcell"
-    "github.com/odvcencio/fluffyui/runtime"
-    "github.com/odvcencio/fluffyui/terminal"
+    "m31labs.dev/fluffyui/backend/tcell"
+    "m31labs.dev/fluffyui/runtime"
+    "m31labs.dev/fluffyui/terminal"
 )
 
 type App struct {
@@ -294,7 +294,7 @@ func (w *MyWidget) HandleMessage(msg runtime.Message) runtime.HandleResult {
 FluffyUI provides reactive primitives for automatic UI updates:
 
 ```go
-import "github.com/odvcencio/fluffyui/state"
+import "m31labs.dev/fluffyui/state"
 
 // Create signals
 counter := state.NewSignal(0)
@@ -402,10 +402,10 @@ package main
 
 import (
     "context"
-    "github.com/odvcencio/fluffyui/backend/tcell"
-    "github.com/odvcencio/fluffyui/runtime"
-    "github.com/odvcencio/fluffyui/state"
-    "github.com/odvcencio/fluffyui/widgets"
+    "m31labs.dev/fluffyui/backend/tcell"
+    "m31labs.dev/fluffyui/runtime"
+    "m31labs.dev/fluffyui/state"
+    "m31labs.dev/fluffyui/widgets"
 )
 
 func main() {

@@ -9,7 +9,7 @@ A batteries-included Terminal User Interface (TUI) framework for Go. Build inter
 </p>
 
 ```bash
-go get github.com/odvcencio/fluffyui@latest
+go get m31labs.dev/fluffyui@latest
 ```
 
 ## Features

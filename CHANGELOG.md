@@ -1,5 +1,23 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+- Markdown tables now redistribute columns to the available viewport width instead of overflowing narrow terminal layouts.
+- `MarkdownViewer` rerenders width-sensitive blocks after layout changes and uses GFM for HTML output.
+
+### Changed
+- Public installation and import examples now use the canonical `m31labs.dev/fluffyui` module path.
+
+### Release
+- Added semantic-tag validation, cross-platform CLI artifacts, checksums, GitHub Releases, and a post-release vanity-path install check.
+
+## [0.6.0] - 2026-05-26
+
+### Changed
+- Migrated the module and internal imports to `m31labs.dev/fluffyui`.
+- Renamed the bundled MCP dependency to the FluffyUI vanity module namespace.
+
 ## v0.5.0 - 2026-02-09
 
 ### Highlights

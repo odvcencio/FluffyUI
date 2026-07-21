@@ -42,8 +42,8 @@ export FLUFFYUI_AGENT_ALLOWED_ORIGINS=https://app.example.com,https://admin.exam
 package main
 
 import (
-    "github.com/odvcencio/fluffyui/agent"
-    "github.com/odvcencio/fluffyui/runtime"
+    "m31labs.dev/fluffyui/agent"
+    "m31labs.dev/fluffyui/runtime"
 )
 
 func main() {
@@ -363,10 +363,10 @@ import (
     "context"
     "log"
     
-    "github.com/odvcencio/fluffyui/agent"
-    "github.com/odvcencio/fluffyui/backend/tcell"
-    "github.com/odvcencio/fluffyui/runtime"
-    "github.com/odvcencio/fluffyui/widgets"
+    "m31labs.dev/fluffyui/agent"
+    "m31labs.dev/fluffyui/backend/tcell"
+    "m31labs.dev/fluffyui/runtime"
+    "m31labs.dev/fluffyui/widgets"
 )
 
 func main() {

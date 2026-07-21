@@ -89,7 +89,7 @@ func TestSearchWidget_RenderHTML(t *testing.T) {
 }
 
 func TestMarkdownViewer_RenderHTML(t *testing.T) {
-	m := NewMarkdownViewer("# Hello\n\nSome **bold** text.")
+	m := NewMarkdownViewer("# Hello\n\nSome **bold** text.\n\n| A | B |\n| - | - |\n| 1 | 2 |")
 	got := string(m.RenderHTML(runtime.HTMLContext{}))
 	if !strings.Contains(got, `class="fluffy-MarkdownViewer"`) {
 		t.Errorf("missing class: %s", got)
@@ -99,6 +99,9 @@ func TestMarkdownViewer_RenderHTML(t *testing.T) {
 	}
 	if !strings.Contains(got, "<strong>bold</strong>") {
 		t.Errorf("missing bold: %s", got)
+	}
+	if !strings.Contains(got, "<table>") {
+		t.Errorf("missing GFM table: %s", got)
 	}
 }
 

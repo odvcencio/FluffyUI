@@ -4,10 +4,11 @@ import (
 	"strings"
 	"testing"
 
-	"m31labs.dev/fluffyui/compositor"
-	"m31labs.dev/fluffyui/theme"
+	"github.com/mattn/go-runewidth"
 	"github.com/yuin/goldmark/ast"
 	extast "github.com/yuin/goldmark/extension/ast"
+	"m31labs.dev/fluffyui/compositor"
+	"m31labs.dev/fluffyui/theme"
 )
 
 func TestParserWalk(t *testing.T) {
@@ -82,6 +83,22 @@ func TestEnhancedTableRender(t *testing.T) {
 	text := spansText(lines[0].Spans)
 	if !strings.Contains(text, cfg.BoxDrawings.TopLeft) {
 		t.Fatalf("expected top border, got %q", text)
+	}
+	for _, line := range lines {
+		if width := runewidth.StringWidth(spansText(line.Spans)); width > 40 {
+			t.Fatalf("table line width = %d, want <= 40: %q", width, spansText(line.Spans))
+		}
+	}
+}
+
+func TestRendererRenderWidth_ConstrainsWideTable(t *testing.T) {
+	r := NewRenderer(theme.DefaultTheme())
+	src := "| Name | Description |\n| --- | --- |\n| Ada | A deliberately long description that must fit |\n"
+	lines := r.RenderWidth("assistant", src, 28)
+	for _, line := range lines {
+		if width := runewidth.StringWidth(spansText(line.Spans)); width > 28 {
+			t.Fatalf("rendered line width = %d, want <= 28: %q", width, spansText(line.Spans))
+		}
 	}
 }
 

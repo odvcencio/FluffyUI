@@ -11,8 +11,8 @@ The `backend/sim` package provides a testable backend:
 ```go
 import (
     "testing"
-    "github.com/odvcencio/fluffyui/backend/sim"
-    "github.com/odvcencio/fluffyui/runtime"
+    "m31labs.dev/fluffyui/backend/sim"
+    "m31labs.dev/fluffyui/runtime"
 )
 
 func TestMyWidget(t *testing.T) {
@@ -46,7 +46,7 @@ The `testing` package provides utilities for common test patterns.
 Render a widget to a string without a backend:
 
 ```go
-import "github.com/odvcencio/fluffyui/testing"
+import "m31labs.dev/fluffyui/testing"
 
 func TestWidgetRender(t *testing.T) {
     widget := widgets.NewLabel("Hello")
@@ -86,8 +86,8 @@ import (
     "strings"
     "time"
 
-    "github.com/odvcencio/fluffyui/testing/widgettest"
-    "github.com/odvcencio/fluffyui/widgets"
+    "m31labs.dev/fluffyui/testing/widgettest"
+    "m31labs.dev/fluffyui/widgets"
 )
 
 h := widgettest.New(t, widgets.NewInput(), 40, 3)
