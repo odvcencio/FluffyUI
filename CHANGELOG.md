@@ -2,15 +2,18 @@
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-07-21
+
 ### Fixed
-- Markdown tables now redistribute columns to the available viewport width instead of overflowing narrow terminal layouts.
+- Markdown tables redistribute columns to the available viewport width instead of overflowing narrow terminal layouts.
 - `MarkdownViewer` rerenders width-sensitive blocks after layout changes and uses GFM for HTML output.
 
 ### Changed
 - Public installation and import examples now use the canonical `m31labs.dev/fluffyui` module path.
+- FluffyUI is now explicitly distributed under the MIT License.
 
 ### Release
-- Added semantic-tag validation, cross-platform CLI artifacts, checksums, GitHub Releases, and a post-release vanity-path install check.
+- Added branded release titles, annotated-tag and mainline validation, categorized release notes, cross-platform CLI artifacts, checksums, and a post-release vanity-path install check.
 
 ## [0.6.0] - 2026-05-26
 

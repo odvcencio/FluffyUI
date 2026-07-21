@@ -1,0 +1,38 @@
+changelog:
+  exclude:
+    labels:
+      - skip-changelog
+      - dependencies
+    authors:
+      - dependabot[bot]
+  categories:
+    - title: Breaking changes
+      labels:
+        - breaking-change
+    - title: New capabilities
+      labels:
+        - enhancement
+        - feature
+    - title: Rendering and performance
+      labels:
+        - rendering
+        - performance
+    - title: Accessibility
+      labels:
+        - accessibility
+    - title: Agent tooling
+      labels:
+        - agent
+        - mcp
+    - title: Fixes
+      labels:
+        - bug
+        - fix
+    - title: Maintenance
+      labels:
+        - documentation
+        - maintenance
+        - ci
+    - title: Other changes
+      labels:
+        - '*'
