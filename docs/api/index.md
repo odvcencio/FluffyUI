@@ -16,5 +16,5 @@ Run `go doc` locally or visit `pkg.go.dev` once the module is published.
 Example:
 
 ```bash
-go doc github.com/odvcencio/fluffyui/widgets
+go doc m31labs.dev/fluffyui/widgets
 ```

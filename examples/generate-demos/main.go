@@ -1307,7 +1307,7 @@ func (t *tabsDemo) Render(ctx runtime.RenderContext) {
 	}{
 		{"Overview", "Welcome to FluffyUI! A batteries-included TUI framework.", "◉"},
 		{"Features", "35+ widgets, reactive state, accessibility built-in.", "★"},
-		{"Install", "go get github.com/odvcencio/fluffyui", "↓"},
+		{"Install", "go get m31labs.dev/fluffyui", "↓"},
 		{"Docs", "Comprehensive guides and examples included.", "📖"},
 	}
 
@@ -2630,7 +2630,7 @@ func (h *heroDemo) Render(ctx runtime.RenderContext) {
 
 	// Install command with pulsing highlight
 	installY := bounds.Y + bounds.Height - 3
-	install := " go get github.com/odvcencio/fluffyui "
+	install := " go get m31labs.dev/fluffyui "
 	ix := (bounds.Width - len(install)) / 2
 	installColor := rainbowColors[(h.frame/5)%len(rainbowColors)]
 	ctx.Buffer.SetString(ix, installY, install, backend.DefaultStyle().Background(installColor).Foreground(backend.ColorBlack).Bold(true))

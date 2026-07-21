@@ -19,7 +19,7 @@ The `fur` package provides rich format renderers for displaying structured data 
 Render CSV data as beautifully formatted tables with Unicode box-drawing characters.
 
 ```go
-import "github.com/odvcencio/fluffyui/fur"
+import "m31labs.dev/fluffyui/fur"
 
 // From CSV string
 csvData := `Name,Role,Department
@@ -327,7 +327,7 @@ func (p *DataPanel) Render(ctx runtime.RenderContext) {
 package main
 
 import (
-    "github.com/odvcencio/fluffyui/fur"
+    "m31labs.dev/fluffyui/fur"
 )
 
 func main() {

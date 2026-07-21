@@ -4,8 +4,9 @@
 
 88 widgets. CSS-like styling. Built-in accessibility. AI-ready.
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/odvcencio/fluffyui.svg)](https://pkg.go.dev/github.com/odvcencio/fluffyui)
+[![Go Reference](https://pkg.go.dev/badge/m31labs.dev/fluffyui.svg)](https://pkg.go.dev/m31labs.dev/fluffyui)
 [![CI](https://github.com/odvcencio/fluffyui/actions/workflows/ci.yml/badge.svg)](https://github.com/odvcencio/fluffyui/actions/workflows/ci.yml)
+[![Release](https://github.com/odvcencio/fluffyui/actions/workflows/release.yml/badge.svg)](https://github.com/odvcencio/fluffyui/actions/workflows/release.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/odvcencio/fluffyui)](https://goreportcard.com/report/github.com/odvcencio/fluffyui)
 
 <p align="center">
@@ -36,7 +37,7 @@ Agents working with FluffyUI should use the [using-fluffyui](https://github.com/
 ```go
 package main
 
-import "github.com/odvcencio/fluffyui/fluffy"
+import "m31labs.dev/fluffyui/fluffy"
 
 func main() {
     app, _ := fluffy.NewApp(
@@ -54,7 +55,7 @@ func main() {
 ## Installation
 
 ```bash
-go get github.com/odvcencio/fluffyui@latest
+go get m31labs.dev/fluffyui@latest
 ```
 
 **Requirements:** Go 1.24 or later.
@@ -62,7 +63,7 @@ go get github.com/odvcencio/fluffyui@latest
 Scaffold a new project:
 
 ```bash
-go install github.com/odvcencio/fluffyui/cmd/fluffy@latest
+go install m31labs.dev/fluffyui/cmd/fluffy@latest
 fluffy create my-app --template full
 cd my-app && go run .
 ```
@@ -149,7 +150,7 @@ widget.AccessibleState()  // Focused, selected, expanded, ...
 FluffyUI exposes 145+ MCP tools so AI agents can read, navigate, and control your TUI:
 
 ```go
-import "github.com/odvcencio/fluffyui/agent"
+import "m31labs.dev/fluffyui/agent"
 
 srv, _ := agent.NewServer(agent.ServerOptions{
     Addr: "unix:/tmp/fluffyui.sock",
