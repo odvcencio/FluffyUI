@@ -13,6 +13,12 @@ examples/aria-demo/aria-demo
 docs/demos/candy-wars.cast
 examples/candy-wars/examples/candy-wars/candy-wars-meta.json
 
+# Private working notes
+.claude/
+docs/blog-outlines/
+docs/plans/
+docs/superpowers/
+
 # Pre-built native libraries (too large for git)
 backend/ghostty/libs/**/*.so
 backend/ghostty/libs/**/*.dylib
