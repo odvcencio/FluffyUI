@@ -17,7 +17,7 @@ require (
 	golang.org/x/term v0.40.0
 	golang.org/x/time v0.14.0
 	gopkg.in/yaml.v3 v3.0.1
-	m31labs.dev/fluffyui/third_party/mcp-go v0.43.2-fluffy.1
+	m31labs.dev/fluffyui/third_party/mcp-go v0.43.2-fluffy.2
 )
 
 require (
@@ -39,5 +39,3 @@ require (
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	golang.org/x/text v0.34.0 // indirect
 )
-
-replace m31labs.dev/fluffyui/third_party/mcp-go => ./third_party/mcp-go

@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [0.6.3] - 2026-07-22
+
+### Fixed
+- Versioned `go install m31labs.dev/fluffyui/cmd/fluffy@...` works without a development-only module replacement.
+- Release verification now rejects root-module `replace` directives before artifacts are published.
+
 ## [0.6.2] - 2026-07-22
 
 ### Fixed

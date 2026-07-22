@@ -159,4 +159,6 @@ gopkg.in/yaml.v2 v2.2.8 h1:obN1ZagJSUGI0Ek/LBmuj4SNLPfIny3KsKFopxRdj10=
 gopkg.in/yaml.v2 v2.2.8/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
 gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
 gopkg.in/yaml.v3 v3.0.1/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
+m31labs.dev/fluffyui/third_party/mcp-go v0.43.2-fluffy.2 h1:U9echFtnaL28czm6InR2ED/0Nf76yf8L7aS82KmPIT4=
+m31labs.dev/fluffyui/third_party/mcp-go v0.43.2-fluffy.2/go.mod h1:5SBVecWZGOFh1v1fS9PJvYlW8pH7wFDqGWaD0E+VZ/w=
 sigs.k8s.io/yaml v1.2.0/go.mod h1:yfXDCHCao9+ENCvLSE62v9VSji2MKu5jeNfTrofGhJc=

@@ -54,6 +54,10 @@ jobs:
           grep -Fq "## [${version}]" CHANGELOG.md
           grep -Fq "MIT License" LICENSE
           test "$(go list -m)" = "m31labs.dev/fluffyui"
+          if grep -Eq '^replace[[:space:](]' go.mod; then
+            echo 'release go.mod must not contain replace directives' >&2
+            exit 1
+          fi
           curl --fail --silent --show-error 'https://m31labs.dev/fluffyui?go-get=1' \
             | grep -F 'm31labs.dev/fluffyui git https://github.com/odvcencio/fluffyui'
 
