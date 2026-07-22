@@ -3,7 +3,9 @@ name: ci
 on:
   push:
     branches: [main]
+    paths-ignore: [gosxscene/**]
   pull_request:
+    paths-ignore: [gosxscene/**]
 
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
