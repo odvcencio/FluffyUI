@@ -314,7 +314,7 @@ func (t *EnhancedTable) Render(config TableRendererConfig) []StyledLine {
 
 	// Render rows
 	for i, row := range t.Rows {
-		lines = append(lines, t.renderRow(row, config))
+		lines = append(lines, t.renderRows(row, config)...)
 
 		// Add separator after header
 		if row.IsHeader && i < len(t.Rows)-1 {
@@ -348,49 +348,126 @@ func (t *EnhancedTable) renderBorder(left, middle, right string, config TableRen
 	return StyledLine{Spans: spans}
 }
 
-func (t *EnhancedTable) renderRow(row TableRow, config TableRendererConfig) StyledLine {
-	var spans []StyledSpan
-	box := config.BoxDrawings
-
-	spans = append(spans, StyledSpan{Text: box.Vertical, Style: config.BorderStyle})
-
-	for i, cell := range row.Cells {
-		if i >= t.Columns {
-			break
+func (t *EnhancedTable) renderRows(row TableRow, config TableRendererConfig) []StyledLine {
+	wrapped := make([][]string, t.Columns)
+	height := 1
+	for column := 0; column < t.Columns; column++ {
+		text := ""
+		if column < len(row.Cells) {
+			text = row.Cells[column].Text
 		}
-
-		width := t.ColWidths[i]
-		if i < len(t.ColWidths) {
-			width = t.ColWidths[i]
+		wrapped[column] = wrapTableCell(text, t.ColWidths[column])
+		if len(wrapped[column]) > height {
+			height = len(wrapped[column])
 		}
+	}
 
-		// Get style based on cell type
+	lines := make([]StyledLine, 0, height)
+	for lineIndex := 0; lineIndex < height; lineIndex++ {
+		lines = append(lines, t.renderRowLine(row, wrapped, lineIndex, config))
+	}
+	return lines
+}
+
+func (t *EnhancedTable) renderRowLine(row TableRow, wrapped [][]string, lineIndex int, config TableRendererConfig) StyledLine {
+	spans := []StyledSpan{{Text: config.BoxDrawings.Vertical, Style: config.BorderStyle}}
+	padding := strings.Repeat(" ", config.Padding)
+	for column := 0; column < t.Columns; column++ {
+		cell := TableCell{Alignment: getAlignment(t.ColAligns, column)}
+		if column < len(row.Cells) {
+			cell = row.Cells[column]
+		}
 		style := config.CellStyle
 		if cell.IsHeader || row.IsHeader {
 			style = config.HeaderStyle
 		}
-
-		// Pad content according to alignment
-		content := t.alignText(cell.Text, width, cell.Alignment)
-
-		// Add padding spaces
-		padding := strings.Repeat(" ", config.Padding)
-		spans = append(spans, StyledSpan{Text: padding, Style: config.CellStyle})
-		spans = append(spans, StyledSpan{Text: content, Style: style})
-		spans = append(spans, StyledSpan{Text: padding, Style: config.CellStyle})
-
-		spans = append(spans, StyledSpan{Text: box.Vertical, Style: config.BorderStyle})
+		content := ""
+		if lineIndex < len(wrapped[column]) {
+			content = wrapped[column][lineIndex]
+		}
+		content = t.alignText(content, t.ColWidths[column], cell.Alignment)
+		spans = append(spans,
+			StyledSpan{Text: padding, Style: config.CellStyle},
+			StyledSpan{Text: content, Style: style},
+			StyledSpan{Text: padding, Style: config.CellStyle},
+			StyledSpan{Text: config.BoxDrawings.Vertical, Style: config.BorderStyle},
+		)
 	}
-
-	// Fill empty cells if row has fewer cells than columns
-	for i := len(row.Cells); i < t.Columns; i++ {
-		width := t.ColWidths[i]
-		padding := strings.Repeat(" ", config.Padding*2+width)
-		spans = append(spans, StyledSpan{Text: padding, Style: config.CellStyle})
-		spans = append(spans, StyledSpan{Text: box.Vertical, Style: config.BorderStyle})
-	}
-
 	return StyledLine{Spans: spans}
+}
+
+func wrapTableCell(text string, width int) []string {
+	if width <= 0 || text == "" {
+		return []string{""}
+	}
+	if runewidth.StringWidth(text) <= width {
+		return []string{text}
+	}
+
+	var lines []string
+	var line strings.Builder
+	lineWidth := 0
+	flush := func() {
+		if line.Len() > 0 {
+			lines = append(lines, line.String())
+			line.Reset()
+			lineWidth = 0
+		}
+	}
+	for _, word := range strings.Fields(text) {
+		wordWidth := runewidth.StringWidth(word)
+		if lineWidth > 0 && lineWidth+1+wordWidth <= width {
+			line.WriteByte(' ')
+			line.WriteString(word)
+			lineWidth += 1 + wordWidth
+			continue
+		}
+		if lineWidth > 0 {
+			flush()
+		}
+		if wordWidth <= width {
+			line.WriteString(word)
+			lineWidth = wordWidth
+			continue
+		}
+		chunks := splitTableWord(word, width)
+		for i, chunk := range chunks {
+			if i < len(chunks)-1 || runewidth.StringWidth(chunk) == width {
+				lines = append(lines, chunk)
+			} else {
+				line.WriteString(chunk)
+				lineWidth = runewidth.StringWidth(chunk)
+			}
+		}
+	}
+	flush()
+	if len(lines) == 0 {
+		return []string{""}
+	}
+	return lines
+}
+
+func splitTableWord(word string, width int) []string {
+	var chunks []string
+	var chunk strings.Builder
+	chunkWidth := 0
+	for _, r := range word {
+		runeWidth := runewidth.RuneWidth(r)
+		if runeWidth < 0 {
+			runeWidth = 0
+		}
+		if chunkWidth > 0 && chunkWidth+runeWidth > width {
+			chunks = append(chunks, chunk.String())
+			chunk.Reset()
+			chunkWidth = 0
+		}
+		chunk.WriteRune(r)
+		chunkWidth += runeWidth
+	}
+	if chunk.Len() > 0 {
+		chunks = append(chunks, chunk.String())
+	}
+	return chunks
 }
 
 func (t *EnhancedTable) alignText(text string, width int, align TableAlignment) string {
