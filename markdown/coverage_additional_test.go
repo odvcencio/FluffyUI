@@ -102,6 +102,24 @@ func TestRendererRenderWidth_ConstrainsWideTable(t *testing.T) {
 	}
 }
 
+func TestRendererRenderWidth_WrapsTableCellsWithoutLosingContent(t *testing.T) {
+	r := NewRenderer(theme.DefaultTheme())
+	src := "| Item | Description |\n| --- | --- |\n| Parser | A deliberately long description that must retain its final fallback marker |\n"
+	lines := r.RenderWidth("assistant", src, 34)
+	var rendered strings.Builder
+	for _, line := range lines {
+		text := spansText(line.Spans)
+		if width := runewidth.StringWidth(text); width > 34 {
+			t.Fatalf("rendered line width = %d, want <= 34: %q", width, text)
+		}
+		rendered.WriteString(text)
+		rendered.WriteByte('\n')
+	}
+	if !strings.Contains(rendered.String(), "fallback") || !strings.Contains(rendered.String(), "marker") {
+		t.Fatalf("wrapped table lost cell content:\n%s", rendered.String())
+	}
+}
+
 func TestStyleConfigAndMerge(t *testing.T) {
 	cfg := DefaultStyleConfig(theme.DefaultTheme())
 	base := compositor.DefaultStyle().WithBold(true)
