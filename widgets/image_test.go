@@ -68,6 +68,54 @@ func TestImage_SetProtocol(t *testing.T) {
 	}
 }
 
+func TestImage_ProtocolSelectsTransport(t *testing.T) {
+	tests := []struct {
+		protocol ImageProtocol
+		want     string
+	}{
+		{protocol: ImageProtocolKitty, want: "kitty"},
+		{protocol: ImageProtocolSixel, want: "sixel"},
+		{protocol: ImageProtocolITerm2, want: "halfblock"},
+		{protocol: ImageProtocolHalfBlock, want: "halfblock"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.want, func(t *testing.T) {
+			w := NewImage(nil)
+			w.SetProtocol(tt.protocol)
+			if got := w.blitter().Name(); got != tt.want {
+				t.Fatalf("blitter = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestImage_ProtocolRenderingQueuesImage(t *testing.T) {
+	for _, protocol := range []ImageProtocol{ImageProtocolKitty, ImageProtocolSixel} {
+		t.Run(protocolName(protocol), func(t *testing.T) {
+			w := NewImage(newTestImage(20, 20, color.RGBA{R: 96, G: 112, B: 255, A: 255}))
+			w.SetProtocol(protocol)
+			size := w.Measure(runtime.Constraints{MaxWidth: 80, MaxHeight: 24})
+			w.Layout(runtime.Rect{X: 0, Y: 0, Width: size.Width, Height: size.Height})
+			buf := runtime.NewBuffer(size.Width, size.Height)
+			w.Render(runtime.RenderContext{Buffer: buf})
+			if got := len(buf.ImageOps()); got != 1 {
+				t.Fatalf("queued image operations = %d, want 1", got)
+			}
+		})
+	}
+}
+
+func protocolName(protocol ImageProtocol) string {
+	switch protocol {
+	case ImageProtocolKitty:
+		return "kitty"
+	case ImageProtocolSixel:
+		return "sixel"
+	default:
+		return "unknown"
+	}
+}
+
 func TestImage_SetFit(t *testing.T) {
 	w := NewImage(nil)
 	if w.Fit() != ImageFitContain {
@@ -197,10 +245,10 @@ func TestImage_MeasureFitModes(t *testing.T) {
 	img := newTestImage(20, 10, color.White)
 
 	tests := []struct {
-		name string
-		fit  ImageFit
-		maxW int
-		maxH int
+		name  string
+		fit   ImageFit
+		maxW  int
+		maxH  int
 		wantW int
 		wantH int
 	}{

@@ -16,7 +16,7 @@ func main() {
 	view, err := gosxscene.New(demoScene(), gosxscene.Options{
 		Preview:  preview.Options{Width: 960, Height: 540},
 		Fit:      widgets.ImageFitContain,
-		Protocol: widgets.ImageProtocolHalfBlock,
+		Protocol: widgets.ImageProtocolAuto,
 		Label:    "GoSX Scene3D terminal demo",
 	})
 	if err != nil {
