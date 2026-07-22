@@ -11,6 +11,7 @@ import (
 	"m31labs.dev/fluffyui/accessibility"
 	"m31labs.dev/fluffyui/graphics"
 	"m31labs.dev/fluffyui/runtime"
+	"m31labs.dev/fluffyui/terminal"
 )
 
 // ImageFit controls how images are sized within their bounds.
@@ -108,7 +109,12 @@ func (w *Image) SetProtocol(proto ImageProtocol) {
 	if w == nil {
 		return
 	}
+	if w.protocol == proto {
+		return
+	}
 	w.protocol = proto
+	w.canvas = nil
+	w.Invalidate()
 }
 
 // Protocol returns the current protocol setting.
@@ -151,10 +157,8 @@ func (w *Image) StyleType() string {
 	return "Image"
 }
 
-// Measure returns the desired size based on the image aspect ratio and
-// constraints. Each terminal cell is approximately 2:1 (twice as tall as
-// wide), so for half-block rendering one cell row represents 2 image pixels
-// vertically and 1 pixel horizontally.
+// Measure returns the desired size based on the image aspect ratio and the
+// selected terminal transport's pixel density.
 func (w *Image) Measure(constraints runtime.Constraints) runtime.Size {
 	return w.measureWithStyle(constraints, func(cc runtime.Constraints) runtime.Size {
 		if w.source == nil {
@@ -167,10 +171,15 @@ func (w *Image) Measure(constraints runtime.Constraints) runtime.Size {
 			return cc.Constrain(runtime.Size{Width: 1, Height: 1})
 		}
 
-		// Convert image pixels to cell dimensions.
-		// Each cell is 1 pixel wide and 2 pixels tall (half-block).
-		cellW := imgW
-		cellH := (imgH + 1) / 2
+		pixelW, pixelH := w.blitter().PixelsPerCell()
+		if pixelW <= 0 {
+			pixelW = 1
+		}
+		if pixelH <= 0 {
+			pixelH = 1
+		}
+		cellW := (imgW + pixelW - 1) / pixelW
+		cellH := (imgH + pixelH - 1) / pixelH
 
 		desiredW, desiredH := w.fitDimensions(cellW, cellH, cc.MaxWidth, cc.MaxHeight)
 		return cc.Constrain(runtime.Size{Width: desiredW, Height: desiredH})
@@ -256,13 +265,13 @@ func (w *Image) Layout(bounds runtime.Rect) {
 		return
 	}
 	if w.canvas == nil || content.Width != w.cellWidth || content.Height != w.cellHeight {
-		w.canvas = graphics.NewCanvasWithBlitter(content.Width, content.Height, &graphics.HalfBlockBlitter{})
+		w.canvas = graphics.NewCanvasWithBlitter(content.Width, content.Height, w.blitter())
 		w.cellWidth = content.Width
 		w.cellHeight = content.Height
 	}
 }
 
-// Render draws the image to the terminal using the half-block fallback.
+// Render draws the image through the selected terminal protocol or text fallback.
 func (w *Image) Render(ctx runtime.RenderContext) {
 	if w == nil {
 		return
@@ -286,6 +295,30 @@ func (w *Image) Render(ctx runtime.RenderContext) {
 
 	w.canvas.DrawImageScaled(0, 0, pixW, pixH, w.source)
 	w.canvas.Render(ctx.Buffer, content.X, content.Y)
+}
+
+func (w *Image) blitter() graphics.Blitter {
+	if w == nil {
+		return &graphics.HalfBlockBlitter{}
+	}
+	switch w.protocol {
+	case ImageProtocolKitty:
+		return &graphics.KittyBlitter{}
+	case ImageProtocolSixel:
+		return &graphics.SixelBlitter{}
+	case ImageProtocolAuto:
+		caps := terminal.DetectCapabilities()
+		if caps.Kitty {
+			return &graphics.KittyBlitter{}
+		}
+		if caps.Sixel {
+			return &graphics.SixelBlitter{}
+		}
+		return &graphics.HalfBlockBlitter{}
+	default:
+		// iTerm2 has no backend image writer yet; retain a readable fallback.
+		return &graphics.HalfBlockBlitter{}
+	}
 }
 
 // HandleMessage returns unhandled (non-interactive widget).
