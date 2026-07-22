@@ -8,6 +8,7 @@
 [![CI](https://github.com/odvcencio/fluffyui/actions/workflows/ci.yml/badge.svg)](https://github.com/odvcencio/fluffyui/actions/workflows/ci.yml)
 [![Release](https://github.com/odvcencio/fluffyui/actions/workflows/release.yml/badge.svg)](https://github.com/odvcencio/fluffyui/actions/workflows/release.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/odvcencio/fluffyui)](https://goreportcard.com/report/github.com/odvcencio/fluffyui)
+[![License: MIT](https://img.shields.io/badge/license-MIT-14171a.svg)](LICENSE)
 
 <p align="center">
   <img src="docs/demos/hero.gif" alt="FluffyUI Demo" width="640">
@@ -59,6 +60,8 @@ go get m31labs.dev/fluffyui@latest
 ```
 
 **Requirements:** Go 1.24 or later.
+
+FluffyUI is released under the [MIT License](LICENSE).
 
 Scaffold a new project:
 

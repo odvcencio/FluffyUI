@@ -25,12 +25,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           ref: ${{ inputs.tag || github.ref_name }}
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
           cache: true
@@ -43,11 +43,16 @@ jobs:
       - name: Validate tag and vanity module path
         run: |
           set -euo pipefail
-          if [[ ! "${RELEASE_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([+-][0-9A-Za-z.-]+)?$ ]]; then
+          if [[ ! "${RELEASE_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
             echo "release tag must be semantic versioning: ${RELEASE_TAG}" >&2
             exit 1
           fi
           test "$(git describe --tags --exact-match)" = "${RELEASE_TAG}"
+          test "$(git cat-file -t "${RELEASE_TAG}")" = "tag"
+          git merge-base --is-ancestor "${RELEASE_TAG}^{commit}" origin/main
+          version="${RELEASE_TAG#v}"
+          grep -Fq "## [${version}]" CHANGELOG.md
+          grep -Fq "MIT License" LICENSE
           test "$(go list -m)" = "m31labs.dev/fluffyui"
           curl --fail --silent --show-error 'https://m31labs.dev/fluffyui?go-get=1' \
             | grep -F 'm31labs.dev/fluffyui git https://github.com/odvcencio/fluffyui'
@@ -59,7 +64,8 @@ jobs:
           # The generated OpenGL bindings intentionally convert pointers for C APIs.
           # Vet the rest of the module while tests cover those platform adapters.
           go list ./... | grep -v '^m31labs.dev/fluffyui/gpu' | xargs go vet
-          CGO_ENABLED=0 go build ./cmd/fluffy
+          CGO_ENABLED=0 go build -o "${RUNNER_TEMP}/fluffy" ./cmd/fluffy
+          "${RUNNER_TEMP}/fluffy" --help >/dev/null
 
   build:
     needs: verify
@@ -71,11 +77,11 @@ jobs:
         goos: [linux, darwin, windows]
         goarch: [amd64, arm64]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ inputs.tag || github.ref_name }}
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
 
@@ -88,11 +94,11 @@ jobs:
           ext=""
           if [[ "${GOOS}" = "windows" ]]; then ext=".exe"; fi
           CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" \
-            -o "fluffy-${GOOS}-${GOARCH}${ext}" ./cmd/fluffy
+            -o "fluffy-${RELEASE_TAG}-${GOOS}-${GOARCH}${ext}" ./cmd/fluffy
 
       - uses: actions/upload-artifact@v4
         with:
-          name: fluffy-${{ matrix.goos }}-${{ matrix.goarch }}
+          name: fluffy-${{ env.RELEASE_TAG }}-${{ matrix.goos }}-${{ matrix.goarch }}
           retention-days: 7
           path: fluffy-*
 
@@ -101,7 +107,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ inputs.tag || github.ref_name }}
 
@@ -113,18 +119,20 @@ jobs:
       - name: Generate checksums
         run: |
           cd artifacts
-          sha256sum fluffy-* > checksums.txt
+          sha256sum fluffy-* | sort -k2 > "fluffy-${RELEASE_TAG}-checksums.txt"
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.RELEASE_TAG }}
+          name: FluffyUI ${{ env.RELEASE_TAG }} · Go-native terminal interfaces
+          prerelease: ${{ contains(env.RELEASE_TAG, '-') }}
+          make_latest: ${{ !contains(env.RELEASE_TAG, '-') }}
           files: |
             artifacts/fluffy-*
-            artifacts/checksums.txt
           generate_release_notes: true
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
 
