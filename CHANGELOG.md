@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [0.6.2] - 2026-07-22
+
+### Fixed
+- Width-constrained Markdown tables now wrap long cell content across aligned physical rows instead of truncating values or allowing downstream viewports to split borders.
+
 ## [0.6.1] - 2026-07-21
 
 ### Fixed
