@@ -61,11 +61,7 @@
 
 # Architecture Decisions
 
-- [ADR Index](adr/README.md)
-  - [ADR-0001: Record Architecture Decisions](adr/0001-record-architecture-decisions.md)
-  - [ADR-0002: Widget Options and Event Naming](adr/0002-widget-options-and-event-naming.md)
-  - [ADR-0003: Go 1.24 Minimum](adr/0003-go-1-24-minimum.md)
-  - [ADR-0004: Render Sampling Dashboard](adr/0004-render-sampling-dashboard.md)
+- [ADR template](adr/README.md)
 
 # Demos
 
