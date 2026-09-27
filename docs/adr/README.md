@@ -1,7 +1,7 @@
-# Architecture Decision Records
+# Architecture Decision Record Template
 
-This directory captures key architectural decisions for FluffyUI. Each ADR is
-numbered and recorded using a short, consistent template.
+This directory contains the template for recording FluffyUI architecture
+decisions. Accepted decision records are stored in Hyphae.
 
 ## Template
 
@@ -17,10 +17,3 @@ numbered and recorded using a short, consistent template.
 
 ## Consequences
 ```
-
-## Index
-
-- 0001: Record architecture decisions
-- 0002: Standardize widget options + event naming
-- 0003: Go 1.24 minimum
-- 0004: Render sampling + performance dashboard
